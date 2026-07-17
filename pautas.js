@@ -1,32 +1,21 @@
 const express = require('express');
 const router = express.Router();
+const db = require('./banco');
 
-// "Banco de dados" temporário, só na memória (por enquanto)
-let pautas = [
-  {
-    id: 1,
-    retranca: "CHUVAS-COHAMA",
-    editoria: "Geral",
-    produtor: "Ana Kelly",
-    reporter: "Pedro Reis",
-    editor: "Marcos Lima",
-    status: "em_producao",
-    prazo: "hoje 16h"
-  },
-  {
-    id: 2,
-    retranca: "VACINA-UFMA",
-    editoria: "Geral",
-    produtor: "Ana Kelly",
-    reporter: "Carla Dias",
-    editor: "",
-    status: "aprovada",
-    prazo: "hoje 17h"
-  }
-];
+// Se a tabela estiver vazia, insere as duas pautas de exemplo
+const contagem = db.prepare('SELECT COUNT(*) AS total FROM pautas').get();
+if (contagem.total === 0) {
+  const inserir = db.prepare(`
+    INSERT INTO pautas (retranca, editoria, produtor, reporter, editor, status, data, prazo)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  inserir.run("CHUVAS-COHAMA", "Geral", "Ana Kelly", "Pedro Reis", "Marcos Lima", "em_producao", "2026-07-17", "hoje 16h");
+  inserir.run("VACINA-UFMA", "Geral", "Ana Kelly", "Carla Dias", "", "aprovada", "2026-07-17", "hoje 17h");
+}
 
 // GET /pautas -> lista todas as pautas
 router.get('/', (req, res) => {
+  const pautas = db.prepare('SELECT * FROM pautas').all();
   res.json(pautas);
 });
 
@@ -38,9 +27,9 @@ router.get('/buscar', (req, res) => {
     return res.status(400).json({ erro: "Informe a retranca na busca" });
   }
 
-  const encontrada = pautas.find(
-    p => p.retranca && p.retranca.toUpperCase() === retrancaBuscada.toUpperCase()
-  );
+  const encontrada = db.prepare(
+    'SELECT * FROM pautas WHERE UPPER(retranca) = UPPER(?)'
+  ).get(retrancaBuscada);
 
   if (!encontrada) {
     return res.status(404).json({ erro: "Nenhuma pauta encontrada com essa retranca" });
@@ -51,50 +40,55 @@ router.get('/buscar', (req, res) => {
 
 // POST /pautas -> cria uma nova pauta
 router.post('/', (req, res) => {
-  const novaPauta = {
-    id: Date.now(),
-    retranca: req.body.retranca,
-    editoria: req.body.editoria,
-    produtor: req.body.produtor,
-    reporter: req.body.reporter,
-    editor: req.body.editor,
-    status: "sugerida",
-    prazo: req.body.prazo
-  };
-  pautas.push(novaPauta);
+  const { retranca, editoria, produtor, reporter, editor, data, prazo } = req.body;
+
+  const resultado = db.prepare(`
+    INSERT INTO pautas (retranca, editoria, produtor, reporter, editor, status, data, prazo)
+    VALUES (?, ?, ?, ?, ?, 'sugerida', ?, ?)
+  `).run(retranca, editoria, produtor, reporter, editor, data, prazo);
+
+  const novaPauta = db.prepare('SELECT * FROM pautas WHERE id = ?').get(resultado.lastInsertRowid);
   res.status(201).json(novaPauta);
 });
 
 // PATCH /pautas/:id -> atualiza uma pauta existente
 router.patch('/:id', (req, res) => {
   const id = Number(req.params.id);
-  const pauta = pautas.find(p => p.id === id);
+  const pauta = db.prepare('SELECT * FROM pautas WHERE id = ?').get(id);
 
   if (!pauta) {
     return res.status(404).json({ erro: "Pauta não encontrada" });
   }
 
-  if (req.body.retranca !== undefined) pauta.retranca = req.body.retranca;
-  if (req.body.editoria !== undefined) pauta.editoria = req.body.editoria;
-  if (req.body.produtor !== undefined) pauta.produtor = req.body.produtor;
-  if (req.body.reporter !== undefined) pauta.reporter = req.body.reporter;
-  if (req.body.editor !== undefined) pauta.editor = req.body.editor;
-  if (req.body.status !== undefined) pauta.status = req.body.status;
-  if (req.body.prazo !== undefined) pauta.prazo = req.body.prazo;
+const atualizada = {
+    retranca: req.body.retranca !== undefined ? req.body.retranca : pauta.retranca,
+    editoria: req.body.editoria !== undefined ? req.body.editoria : pauta.editoria,
+    produtor: req.body.produtor !== undefined ? req.body.produtor : pauta.produtor,
+    reporter: req.body.reporter !== undefined ? req.body.reporter : pauta.reporter,
+    editor: req.body.editor !== undefined ? req.body.editor : pauta.editor,
+    status: req.body.status !== undefined ? req.body.status : pauta.status,
+    data: req.body.data !== undefined ? req.body.data : pauta.data,
+    prazo: req.body.prazo !== undefined ? req.body.prazo : pauta.prazo,
+  };
 
-  res.json(pauta);
+  db.prepare(`
+    UPDATE pautas SET retranca = ?, editoria = ?, produtor = ?, reporter = ?, editor = ?, status = ?, data = ?, prazo = ?
+    WHERE id = ?
+  `).run(atualizada.retranca, atualizada.editoria, atualizada.produtor, atualizada.reporter, atualizada.editor, atualizada.status, atualizada.data, atualizada.prazo, id);
+
+  const pautaAtualizada = db.prepare('SELECT * FROM pautas WHERE id = ?').get(id);
+  res.json(pautaAtualizada);
 });
 
 // DELETE /pautas/:id -> remove uma pauta
 router.delete('/:id', (req, res) => {
   const id = Number(req.params.id);
-  const indice = pautas.findIndex(p => p.id === id);
+  const resultado = db.prepare('DELETE FROM pautas WHERE id = ?').run(id);
 
-  if (indice === -1) {
+  if (resultado.changes === 0) {
     return res.status(404).json({ erro: "Pauta não encontrada" });
   }
 
-  pautas.splice(indice, 1);
   res.status(204).send();
 });
 
