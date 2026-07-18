@@ -12,7 +12,8 @@ db.exec(`
     editor TEXT,
     status TEXT,
     data TEXT,
-    prazo TEXT
+    prazo TEXT,
+    texto_pauta TEXT
   )
 `);
 
@@ -51,5 +52,16 @@ try {
 } catch (e) {
   // Coluna já existe — tudo bem, ignora o erro
 }
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS materia_itens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pauta_id INTEGER,
+    ordem INTEGER,
+    tipo TEXT,
+    texto TEXT,
+    FOREIGN KEY (pauta_id) REFERENCES pautas(id)
+  )
+`);
 
 module.exports = db;

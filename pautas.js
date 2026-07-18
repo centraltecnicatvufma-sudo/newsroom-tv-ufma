@@ -42,9 +42,9 @@ router.get('/buscar', (req, res) => {
 router.post('/', (req, res) => {
   const { retranca, editoria, produtor, reporter, editor, data, prazo } = req.body;
 
-  const resultado = db.prepare(`
-    INSERT INTO pautas (retranca, editoria, produtor, reporter, editor, status, data, prazo)
-    VALUES (?, ?, ?, ?, ?, 'sugerida', ?, ?)
+ const resultado = db.prepare(`
+    INSERT INTO pautas (retranca, editoria, produtor, reporter, editor, status, data, prazo, texto_pauta)
+    VALUES (?, ?, ?, ?, ?, 'sugerida', ?, ?, '')
   `).run(retranca, editoria, produtor, reporter, editor, data, prazo);
 
   const novaPauta = db.prepare('SELECT * FROM pautas WHERE id = ?').get(resultado.lastInsertRowid);
@@ -69,12 +69,13 @@ const atualizada = {
     status: req.body.status !== undefined ? req.body.status : pauta.status,
     data: req.body.data !== undefined ? req.body.data : pauta.data,
     prazo: req.body.prazo !== undefined ? req.body.prazo : pauta.prazo,
+    texto_pauta: req.body.texto_pauta !== undefined ? req.body.texto_pauta : pauta.texto_pauta,
   };
 
   db.prepare(`
-    UPDATE pautas SET retranca = ?, editoria = ?, produtor = ?, reporter = ?, editor = ?, status = ?, data = ?, prazo = ?
+    UPDATE pautas SET retranca = ?, editoria = ?, produtor = ?, reporter = ?, editor = ?, status = ?, data = ?, prazo = ?, texto_pauta = ?
     WHERE id = ?
-  `).run(atualizada.retranca, atualizada.editoria, atualizada.produtor, atualizada.reporter, atualizada.editor, atualizada.status, atualizada.data, atualizada.prazo, id);
+  `).run(atualizada.retranca, atualizada.editoria, atualizada.produtor, atualizada.reporter, atualizada.editor, atualizada.status, atualizada.data, atualizada.prazo, atualizada.texto_pauta, id);
 
   const pautaAtualizada = db.prepare('SELECT * FROM pautas WHERE id = ?').get(id);
   res.json(pautaAtualizada);
