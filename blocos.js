@@ -41,7 +41,7 @@ router.post('/', (req, res) => {
   res.status(201).json(novoBloco);
 });
 
-// PATCH /blocos/:id/ordem -> reordena um bloco (recebe a nova ordem)
+// PATCH /blocos/:id/ordem -> move um bloco para uma nova posição, reorganizando os outros
 router.patch('/:id/ordem', (req, res) => {
   const id = Number(req.params.id);
   const { nova_ordem } = req.body;
@@ -51,10 +51,34 @@ router.patch('/:id/ordem', (req, res) => {
     return res.status(404).json({ erro: "Bloco não encontrado" });
   }
 
+  const ordemAntiga = bloco.ordem;
+  const espelhoId = bloco.espelho_id;
+
+  if (nova_ordem === ordemAntiga) {
+    return res.json(bloco); // nada muda
+  }
+
+  if (nova_ordem > ordemAntiga) {
+    // Bloco desceu: os que estavam entre a posição antiga e a nova sobem uma posição
+    db.prepare(`
+      UPDATE blocos SET ordem = ordem - 1
+      WHERE espelho_id = ? AND ordem > ? AND ordem <= ?
+    `).run(espelhoId, ordemAntiga, nova_ordem);
+  } else {
+    // Bloco subiu: os que estavam entre a nova posição e a antiga descem uma posição
+    db.prepare(`
+      UPDATE blocos SET ordem = ordem + 1
+      WHERE espelho_id = ? AND ordem >= ? AND ordem < ?
+    `).run(espelhoId, nova_ordem, ordemAntiga);
+  }
+
   db.prepare('UPDATE blocos SET ordem = ? WHERE id = ?').run(nova_ordem, id);
 
-  const blocoAtualizado = db.prepare('SELECT * FROM blocos WHERE id = ?').get(id);
-  res.json(blocoAtualizado);
+  const blocosAtualizados = db.prepare(
+    'SELECT * FROM blocos WHERE espelho_id = ? ORDER BY ordem ASC'
+  ).all(espelhoId);
+
+  res.json(blocosAtualizados);
 });
 
 // PATCH /blocos/:id/status -> muda o status, respeitando as regras de permissão
