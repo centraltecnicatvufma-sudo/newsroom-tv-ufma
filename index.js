@@ -4,10 +4,12 @@ const porta = 3000;
 
 const pautasRouter = require('./pautas');
 const espelhosRouter = require('./espelhos');
+const blocosRouter = require('./blocos');
 
 app.use(express.json());
 app.use('/pautas', pautasRouter);
 app.use('/espelhos', espelhosRouter);
+app.use('/blocos', blocosRouter);
 
 app.get('/', (req, res) => {
   res.send('Newsroom TV UFMA está no ar!');
