@@ -129,5 +129,36 @@ router.delete('/:id', (req, res) => {
 
   res.status(204).send();
 });
+// PATCH /blocos/:id/duracao-alvo-vt -> ajusta ou trava a duração-alvo do VT
+router.patch('/:id/duracao-alvo-vt', (req, res) => {
+  const id = Number(req.params.id);
+  const { nova_duracao, travar, perfil } = req.body;
 
+  const bloco = db.prepare('SELECT * FROM blocos WHERE id = ?').get(id);
+  if (!bloco) {
+    return res.status(404).json({ erro: "Bloco não encontrado" });
+  }
+
+  if (bloco.tipo !== 'vt') {
+    return res.status(400).json({ erro: "Duração-alvo só se aplica a blocos do tipo VT" });
+  }
+
+  // Se o bloco já está travado, só diretor ou chefe de redação podem alterar
+  if (bloco.duracao_alvo_travada === 1 && perfil !== 'diretor' && perfil !== 'chefe_redacao') {
+    return res.status(403).json({ erro: "Duração-alvo já travada — só diretor ou chefe de redação podem alterar" });
+  }
+
+  // Só diretor ou chefe de redação podem travar o valor
+  if (travar && perfil !== 'diretor' && perfil !== 'chefe_redacao') {
+    return res.status(403).json({ erro: "Só diretor ou chefe de redação podem travar a duração-alvo" });
+  }
+
+  db.prepare(`
+    UPDATE blocos SET duracao_alvo_vt = ?, duracao_alvo_travada = ?
+    WHERE id = ?
+  `).run(nova_duracao, travar ? 1 : 0, id);
+
+  const blocoAtualizado = db.prepare('SELECT * FROM blocos WHERE id = ?').get(id);
+  res.json(blocoAtualizado);
+});
 module.exports = router;

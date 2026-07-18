@@ -1,5 +1,5 @@
 const Database = require('better-sqlite3');
-const db = new Database('newsroom.db'); // isso cria um arquivo chamado newsroom.db na pasta do projeto
+const db = new Database('newsroom.db');
 
 // Cria a tabela de pautas, caso ainda não exista
 db.exec(`
@@ -15,6 +15,7 @@ db.exec(`
     prazo TEXT
   )
 `);
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS espelhos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,4 +44,12 @@ db.exec(`
     FOREIGN KEY (pauta_id) REFERENCES pautas(id)
   )
 `);
+
+// Adiciona a coluna duracao_alvo_travada, caso ainda não exista (evita erro se já rodou antes)
+try {
+  db.exec(`ALTER TABLE blocos ADD COLUMN duracao_alvo_travada INTEGER DEFAULT 0`);
+} catch (e) {
+  // Coluna já existe — tudo bem, ignora o erro
+}
+
 module.exports = db;
