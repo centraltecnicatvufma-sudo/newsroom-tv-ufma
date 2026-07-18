@@ -4,20 +4,54 @@
   <meta charset="UTF-8">
   <title>Espelho — Newsroom TV UFMA</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #1b1f24; color: #eee; padding: 20px; }
-    h1 { font-size: 20px; }
-    .bloco { display: flex; align-items: center; gap: 10px; background: #2a2f36; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
-    .cor { width: 6px; align-self: stretch; border-radius: 3px; }
-    .info { flex: 1; }
-    .titulo { font-size: 15px; }
-    .meta { font-size: 12px; color: #999; margin-top: 4px; }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #0f1216; color: #eee; margin: 0; padding: 20px; }
+    .layout { display: flex; gap: 0; border: 1px solid #2a2f36; border-radius: 12px; overflow: hidden; min-height: 560px; }
+
+    .col-edicoes { width: 180px; flex-shrink: 0; background: #171b21; border-right: 1px solid #2a2f36; padding: 16px 12px; }
+    .col-edicoes .item { padding: 8px 10px; border-radius: 6px; font-size: 13px; margin-bottom: 4px; color: #aaa; }
+    .col-edicoes .item.ativo { background: #1e3a5f; color: #7fb8ff; }
+
+    .col-rundown { flex: 1; min-width: 0; padding: 16px 20px; display: flex; flex-direction: column; }
+    .col-rundown h1 { font-size: 18px; margin: 0 0 2px 0; }
+    .col-rundown .subtitulo { font-size: 12px; color: #999; margin-bottom: 14px; }
+
+    .bloco { display: flex; align-items: center; gap: 10px; background: #1a1f26; border-radius: 8px; padding: 10px; margin-bottom: 8px; cursor: pointer; }
+    .bloco.selecionado { background: #232a33; }
+    .cor { width: 4px; align-self: stretch; border-radius: 3px; }
+    .info { flex: 1; min-width: 0; }
+    .titulo { font-size: 14px; }
+    .meta { font-size: 12px; color: #999; margin-top: 2px; }
     .status { font-size: 12px; padding: 2px 8px; border-radius: 6px; background: #3a3f46; margin-top: 6px; display: inline-block; cursor: pointer; border: none; color: #eee; }
-    .dur { font-family: monospace; font-size: 14px; color: #ccc; }
+    .dur { font-family: monospace; font-size: 13px; color: #ccc; }
+
+    .col-painel { width: 420px; flex-shrink: 0; background: #171b21; border-left: 1px solid #2a2f36; padding: 16px; display: flex; flex-direction: column; }
+    .col-painel.fullscreen { width: 100%; border-left: none; }
+    .painel-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .painel-header .tipo { font-size: 12px; color: #999; }
+    .painel-header .titulo { font-size: 15px; margin-top: 2px; }
+    .btn-toggle { background: transparent; border: 1px solid #2a2f36; color: #eee; border-radius: 6px; padding: 4px 8px; cursor: pointer; }
+    label { font-size: 12px; color: #999; display: block; margin: 10px 0 4px; }
+    textarea { width: 100%; background: #0f1216; color: #eee; border: 1px solid #2a2f36; border-radius: 6px; padding: 8px; font-size: 13px; resize: none; flex: 1; min-height: 400px; }
+    button.salvar { margin-top: 10px; background: #2563eb; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-size: 13px; }
   </style>
 </head>
 <body>
-  <h1>Jornal UFMA 1ª edição</h1>
-  <div id="lista-blocos">Carregando...</div>
+  <div class="layout">
+    <div class="col-edicoes" id="col-edicoes">
+      <div class="item ativo">Jornal UFMA 1ª edição</div>
+    </div>
+
+    <div class="col-rundown" id="col-rundown">
+      <h1>Jornal UFMA 1ª edição</h1>
+      <div class="subtitulo">Espelho — 17/07/2026</div>
+      <div id="lista-blocos">Carregando...</div>
+    </div>
+
+    <div class="col-painel" id="col-painel">
+      <div id="painel-conteudo"></div>
+    </div>
+  </div>
 
   <script>
     const cores = { vt: '#3b82f6', sonora: '#22c55e', vivo: '#ef4444', escalada: '#eab308', cabeca: '#888' };
@@ -26,21 +60,36 @@
       producao: 'em produção', chefia: 'aguardo chefia', externa: 'liberada externa',
       produzindo_vt: 'produzindo VT', edicao: 'em edição', revisao: 'aguardo revisão', pronto: 'pronto'
     };
-function formatarTempo(segundosTotais) {
-  const minutos = Math.floor(segundosTotais / 60);
-  const segundos = segundosTotais % 60;
-  return `${minutos}'${String(segundos).padStart(2, '0')}''`;
-}
+
+    let blocos = [];
+    let selecionadoId = null;
+    let telaCheia = false;
+
+    function formatarTempo(segundosTotais) {
+      const minutos = Math.floor(segundosTotais / 60);
+      const segundos = segundosTotais % 60;
+      return `${minutos}'${String(segundos).padStart(2, '0')}''`;
+    }
+
     async function carregarBlocos() {
       const resposta = await fetch('/blocos?espelho_id=1');
-      const blocos = await resposta.json();
+      blocos = await resposta.json();
 
+      if (!selecionadoId && blocos.length > 0) {
+        selecionadoId = blocos[0].id;
+      }
+
+      renderRundown();
+      renderPainel();
+    }
+
+    function renderRundown() {
       const container = document.getElementById('lista-blocos');
       container.innerHTML = '';
 
       blocos.forEach(bloco => {
         const div = document.createElement('div');
-        div.className = 'bloco';
+        div.className = 'bloco' + (bloco.id === selecionadoId ? ' selecionado' : '');
         div.innerHTML = `
           <div class="cor" style="background:${cores[bloco.tipo] || '#888'}"></div>
           <div class="info">
@@ -52,12 +101,18 @@ function formatarTempo(segundosTotais) {
           </div>
           <div class="dur">${formatarTempo(bloco.duracao_estimada)}</div>
         `;
+        div.addEventListener('click', (e) => {
+          if (e.target.classList.contains('status')) return; // não seleciona ao clicar no status
+          selecionadoId = bloco.id;
+          renderRundown();
+          renderPainel();
+        });
         container.appendChild(div);
       });
 
-      // Clique no status avança para a próxima etapa (como chefe_redacao, que pode tudo)
       document.querySelectorAll('.status').forEach(btn => {
-        btn.addEventListener('click', async () => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
           const id = btn.dataset.id;
           const atual = btn.dataset.status;
           const proximoIndex = (ordemStatus.indexOf(atual) + 1) % ordemStatus.length;
@@ -69,8 +124,59 @@ function formatarTempo(segundosTotais) {
             body: JSON.stringify({ novo_status: novoStatus, perfil: 'chefe_redacao' })
           });
 
-          carregarBlocos(); // recarrega a lista depois de mudar
+          carregarBlocos();
         });
+      });
+    }
+
+    function renderPainel() {
+      const bloco = blocos.find(b => b.id === selecionadoId);
+      const painel = document.getElementById('painel-conteudo');
+      const colPainel = document.getElementById('col-painel');
+      const colEdicoes = document.getElementById('col-edicoes');
+      const colRundown = document.getElementById('col-rundown');
+
+      if (telaCheia) {
+        colEdicoes.style.display = 'none';
+        colRundown.style.display = 'none';
+        colPainel.classList.add('fullscreen');
+      } else {
+        colEdicoes.style.display = '';
+        colRundown.style.display = 'flex';
+        colPainel.classList.remove('fullscreen');
+      }
+
+      if (!bloco) {
+        painel.innerHTML = '<div class="meta">Selecione um bloco</div>';
+        return;
+      }
+
+      painel.innerHTML = `
+        <div class="painel-header">
+          <div>
+            <div class="tipo">${bloco.tipo} · bloco ${bloco.id}</div>
+            <div class="titulo">${bloco.titulo}</div>
+          </div>
+          <button class="btn-toggle" id="btn-toggle">${telaCheia ? '⤡' : '⤢'}</button>
+        </div>
+        <label>texto (teleprompter)</label>
+        <textarea id="texto-script" style="font-size:${telaCheia ? '17px' : '13px'}">${bloco.texto_script || ''}</textarea>
+        <button class="salvar" id="btn-salvar">Salvar texto</button>
+      `;
+
+      document.getElementById('btn-toggle').addEventListener('click', () => {
+        telaCheia = !telaCheia;
+        renderPainel();
+      });
+
+      document.getElementById('btn-salvar').addEventListener('click', async () => {
+        const novoTexto = document.getElementById('texto-script').value;
+        await fetch(`/blocos/${bloco.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texto_script: novoTexto })
+        });
+        carregarBlocos();
       });
     }
 
