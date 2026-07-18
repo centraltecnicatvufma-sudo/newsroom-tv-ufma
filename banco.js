@@ -15,4 +15,32 @@ db.exec(`
     prazo TEXT
   )
 `);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS espelhos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    programa TEXT,
+    data TEXT,
+    duracao_total_prevista INTEGER,
+    status_espelho TEXT
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS blocos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    espelho_id INTEGER,
+    pauta_id INTEGER,
+    ordem INTEGER,
+    tipo TEXT,
+    titulo TEXT,
+    responsavel TEXT,
+    duracao_estimada INTEGER,
+    duracao_alvo_vt INTEGER,
+    status TEXT,
+    editor_atual TEXT,
+    texto_script TEXT,
+    FOREIGN KEY (espelho_id) REFERENCES espelhos(id),
+    FOREIGN KEY (pauta_id) REFERENCES pautas(id)
+  )
+`);
 module.exports = db;
