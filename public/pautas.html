@@ -21,12 +21,19 @@
 
     .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
     .overlay.aberto { display: flex; }
-    .painel { background: #171b21; border: 1px solid #2a2f36; border-radius: 12px; padding: 20px; width: 380px; max-height: 85vh; overflow-y: auto; }
+    .painel { background: #171b21; border: 1px solid #2a2f36; border-radius: 12px; padding: 20px; width: 460px; max-height: 85vh; overflow-y: auto; }
     .painel-header { display: flex; justify-content: space-between; align-items: flex-start; }
     .painel-header button { background: transparent; border: none; color: #eee; font-size: 18px; cursor: pointer; }
     label { font-size: 12px; color: #999; display: block; margin: 12px 0 4px; }
     input, select { width: 100%; background: #0f1216; color: #eee; border: 1px solid #2a2f36; border-radius: 6px; padding: 6px 8px; font-size: 13px; }
     .btn-salvar { width: 100%; margin-top: 16px; background: #2563eb; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-size: 13px; }
+    textarea { width: 100%; background: #0f1216; color: #eee; border: 1px solid #2a2f36; border-radius: 6px; padding: 8px; font-size: 13px; resize: vertical; min-height: 220px; }
+.materia-item { background: #0f1216; border: 1px solid #2a2f36; border-radius: 6px; padding: 8px; margin-bottom: 8px; }
+.materia-item .rotulo { font-size: 11px; color: #7fb8ff; font-weight: bold; margin-bottom: 4px; }
+.materia-item .remover { float: right; background: transparent; border: none; color: #999; cursor: pointer; font-size: 12px; }
+.btn-expandir { background: transparent; border: 1px solid #2a2f36; color: #eee; border-radius: 6px; padding: 2px 8px; cursor: pointer; font-size: 12px; margin-left: 6px; }
+.botoes-materia { display: flex; gap: 6px; margin-top: 8px; }
+.botoes-materia button { flex: 1; background: #2a2f36; color: #eee; border: none; border-radius: 6px; padding: 6px; cursor: pointer; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -39,6 +46,17 @@
 
   <div class="overlay" id="overlay">
     <div class="painel" id="painel"></div>
+  </div>
+
+  <div class="overlay" id="overlay-fullscreen">
+    <div class="painel" id="painel-fullscreen" style="width: 90vw; max-width: 900px; height: 85vh; display: flex; flex-direction: column;">
+      <div class="painel-header">
+        <div id="fullscreen-titulo">Editando texto</div>
+        <button id="fechar-fullscreen">✕</button>
+      </div>
+      <textarea id="fullscreen-textarea" style="flex: 1; min-height: 0; font-size: 15px;"></textarea>
+      <button class="btn-salvar" id="btn-salvar-fullscreen">Salvar e fechar</button>
+    </div>
   </div>
 
   <script>
@@ -114,15 +132,34 @@
         <label>Prazo</label>
         <input id="f-prazo" value="${p.prazo || ''}">
 
-        <label>Status</label>
+       <label>Status</label>
         <select id="f-status">
           ${colunas.map(c => `<option value="${c.chave}" ${c.chave === p.status ? 'selected' : ''}>${c.label}</option>`).join('')}
         </select>
 
+        <label>Texto da pauta (briefing para repórter/cinegrafista) <button class="btn-expandir" id="expandir-pauta">⤢ tela cheia</button></label>
+        <textarea id="f-texto-pauta" style="min-height:300px;">${p.texto_pauta || ''}</textarea>
+
         <button class="btn-salvar" id="btn-salvar">Salvar</button>
+
+        <label style="margin-top:20px; border-top:1px solid #2a2f36; padding-top:14px;">Matéria (texto do repórter)</label>
+        <div id="lista-materia"></div>
+        <div class="botoes-materia">
+          <button id="add-off">+ OFF</button>
+          <button id="add-sonora">+ SONORA</button>
+          <button id="add-passagem">+ PASSAGEM</button>
+        </div>
       `;
 
       overlay.classList.add('aberto');
+      document.getElementById('expandir-pauta').addEventListener('click', () => {
+        abrirFullscreen('Texto da pauta', document.getElementById('f-texto-pauta').value, { tipo: 'pauta' });
+      });
+      carregarMateria(p.id);
+
+      document.getElementById('add-off').addEventListener('click', () => adicionarItemMateria(p.id, 'off'));
+      document.getElementById('add-sonora').addEventListener('click', () => adicionarItemMateria(p.id, 'sonora'));
+      document.getElementById('add-passagem').addEventListener('click', () => adicionarItemMateria(p.id, 'passagem'));
 
       document.getElementById('fechar-painel').addEventListener('click', () => {
         overlay.classList.remove('aberto');
@@ -138,6 +175,7 @@
           data: document.getElementById('f-data').value,
           prazo: document.getElementById('f-prazo').value,
           status: document.getElementById('f-status').value,
+          texto_pauta: document.getElementById('f-texto-pauta').value,
         };
 
         await fetch(`/pautas/${p.id}`, {
@@ -151,6 +189,139 @@
       });
     }
 
+    async function carregarMateria(pautaId) {
+      pautaAtualId = pautaId;
+      const resposta = await fetch(`/materia?pauta_id=${pautaId}`);
+      const itens = await resposta.json();
+      renderMateria(itens);
+    }
+
+    let pautaAtualId = null;
+    let alvoFullscreen = null; // guarda o que estamos editando: {tipo: 'pauta'} ou {tipo: 'materia', id: X}
+
+    function abrirFullscreen(titulo, textoAtual, alvo) {
+      alvoFullscreen = alvo;
+      document.getElementById('fullscreen-titulo').textContent = titulo;
+      document.getElementById('fullscreen-textarea').value = textoAtual;
+      document.getElementById('overlay-fullscreen').classList.add('aberto');
+    }
+
+    document.getElementById('fechar-fullscreen').addEventListener('click', () => {
+      document.getElementById('overlay-fullscreen').classList.remove('aberto');
+    });
+
+    document.getElementById('btn-salvar-fullscreen').addEventListener('click', async () => {
+      const novoTexto = document.getElementById('fullscreen-textarea').value;
+
+      if (alvoFullscreen.tipo === 'pauta') {
+        document.getElementById('f-texto-pauta').value = novoTexto;
+        await fetch(`/pautas/${pautaAtualId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texto_pauta: novoTexto })
+        });
+      } else if (alvoFullscreen.tipo === 'materia') {
+        await fetch(`/materia/${alvoFullscreen.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texto: novoTexto })
+        });
+        carregarMateria(pautaAtualId);
+      }
+
+      document.getElementById('overlay-fullscreen').classList.remove('aberto');
+    });
+
+    function renderMateria(itens) {
+      const container = document.getElementById('lista-materia');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const contadores = { off: 0, sonora: 0, passagem: 0 };
+
+      itens.forEach(item => {
+        contadores[item.tipo] = (contadores[item.tipo] || 0) + 1;
+        const numero = contadores[item.tipo];
+        const rotulo = item.tipo.toUpperCase() + ' ' + numero;
+
+        const div = document.createElement('div');
+        div.className = 'materia-item';
+        div.draggable = true;
+        div.dataset.id = item.id;
+        div.innerHTML = `
+          <div class="rotulo">⠿ ${rotulo}
+            <button class="btn-expandir expandir-item" data-id="${item.id}" data-texto="${(item.texto || '').replace(/"/g, '&quot;')}">⤢</button>
+            <button class="remover" data-id="${item.id}">remover</button>
+          </div>
+          <textarea data-id="${item.id}">${item.texto || ''}</textarea>
+        `;
+        container.appendChild(div);
+      });
+
+      container.querySelectorAll('textarea').forEach(area => {
+        area.addEventListener('blur', async () => {
+          await fetch(`/materia/${area.dataset.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ texto: area.value })
+          });
+        });
+      });
+
+      container.querySelectorAll('.remover').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          await fetch(`/materia/${btn.dataset.id}`, { method: 'DELETE' });
+          carregarMateria(pautaAtualId);
+        });
+      });
+      container.querySelectorAll('.expandir-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const textareaAtual = container.querySelector(`textarea[data-id="${btn.dataset.id}"]`);
+          abrirFullscreen('Editando item da matéria', textareaAtual.value, { tipo: 'materia', id: btn.dataset.id });
+        });
+      });
+      let itemArrastado = null;
+
+      container.querySelectorAll('.materia-item').forEach(div => {
+        div.addEventListener('dragstart', () => {
+          itemArrastado = div;
+          div.style.opacity = '0.4';
+        });
+
+        div.addEventListener('dragend', () => {
+          div.style.opacity = '1';
+        });
+
+        div.addEventListener('dragover', (e) => {
+          e.preventDefault();
+        });
+
+        div.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          if (!itemArrastado || itemArrastado === div) return;
+
+          const todos = [...container.querySelectorAll('.materia-item')];
+          const posicaoNova = todos.indexOf(div) + 1;
+
+          await fetch(`/materia/${itemArrastado.dataset.id}/ordem`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nova_ordem: posicaoNova })
+          });
+
+          carregarMateria(pautaAtualId);
+        });
+      });
+    }
+
+    async function adicionarItemMateria(pautaId, tipo) {
+      await fetch('/materia', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pauta_id: pautaId, tipo: tipo, texto: '' })
+      });
+      carregarMateria(pautaId);
+    }
     document.getElementById('nova-pauta').addEventListener('click', async () => {
       const resposta = await fetch('/pautas', {
         method: 'POST',

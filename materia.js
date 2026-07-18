@@ -64,4 +64,42 @@ router.delete('/:id', (req, res) => {
   res.status(204).send();
 });
 
+// PATCH /materia/:id/ordem -> move um item para uma nova posição, reorganizando os outros
+router.patch('/:id/ordem', (req, res) => {
+  const id = Number(req.params.id);
+  const { nova_ordem } = req.body;
+
+  const item = db.prepare('SELECT * FROM materia_itens WHERE id = ?').get(id);
+  if (!item) {
+    return res.status(404).json({ erro: "Item não encontrado" });
+  }
+
+  const ordemAntiga = item.ordem;
+  const pautaId = item.pauta_id;
+
+  if (nova_ordem === ordemAntiga) {
+    return res.json(item);
+  }
+
+  if (nova_ordem > ordemAntiga) {
+    db.prepare(`
+      UPDATE materia_itens SET ordem = ordem - 1
+      WHERE pauta_id = ? AND ordem > ? AND ordem <= ?
+    `).run(pautaId, ordemAntiga, nova_ordem);
+  } else {
+    db.prepare(`
+      UPDATE materia_itens SET ordem = ordem + 1
+      WHERE pauta_id = ? AND ordem >= ? AND ordem < ?
+    `).run(pautaId, nova_ordem, ordemAntiga);
+  }
+
+  db.prepare('UPDATE materia_itens SET ordem = ? WHERE id = ?').run(nova_ordem, id);
+
+  const itensAtualizados = db.prepare(
+    'SELECT * FROM materia_itens WHERE pauta_id = ? ORDER BY ordem ASC'
+  ).all(pautaId);
+
+  res.json(itensAtualizados);
+});
+
 module.exports = router;
