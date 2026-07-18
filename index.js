@@ -7,6 +7,7 @@ const espelhosRouter = require('./espelhos');
 const blocosRouter = require('./blocos');
 
 app.use(express.json());
+app.use(express.static('public'));
 app.use('/pautas', pautasRouter);
 app.use('/espelhos', espelhosRouter);
 app.use('/blocos', blocosRouter);

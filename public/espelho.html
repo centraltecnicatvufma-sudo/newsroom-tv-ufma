@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Espelho — Newsroom TV UFMA</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #1b1f24; color: #eee; padding: 20px; }
+    h1 { font-size: 20px; }
+    .bloco { display: flex; align-items: center; gap: 10px; background: #2a2f36; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+    .cor { width: 6px; align-self: stretch; border-radius: 3px; }
+    .info { flex: 1; }
+    .titulo { font-size: 15px; }
+    .meta { font-size: 12px; color: #999; margin-top: 4px; }
+    .status { font-size: 12px; padding: 2px 8px; border-radius: 6px; background: #3a3f46; margin-top: 6px; display: inline-block; cursor: pointer; border: none; color: #eee; }
+    .dur { font-family: monospace; font-size: 14px; color: #ccc; }
+  </style>
+</head>
+<body>
+  <h1>Jornal UFMA 1ª edição</h1>
+  <div id="lista-blocos">Carregando...</div>
+
+  <script>
+    const cores = { vt: '#3b82f6', sonora: '#22c55e', vivo: '#ef4444', escalada: '#eab308', cabeca: '#888' };
+    const ordemStatus = ['producao', 'chefia', 'externa', 'produzindo_vt', 'edicao', 'revisao', 'pronto'];
+    const labelStatus = {
+      producao: 'em produção', chefia: 'aguardo chefia', externa: 'liberada externa',
+      produzindo_vt: 'produzindo VT', edicao: 'em edição', revisao: 'aguardo revisão', pronto: 'pronto'
+    };
+function formatarTempo(segundosTotais) {
+  const minutos = Math.floor(segundosTotais / 60);
+  const segundos = segundosTotais % 60;
+  return `${minutos}'${String(segundos).padStart(2, '0')}''`;
+}
+    async function carregarBlocos() {
+      const resposta = await fetch('/blocos?espelho_id=1');
+      const blocos = await resposta.json();
+
+      const container = document.getElementById('lista-blocos');
+      container.innerHTML = '';
+
+      blocos.forEach(bloco => {
+        const div = document.createElement('div');
+        div.className = 'bloco';
+        div.innerHTML = `
+          <div class="cor" style="background:${cores[bloco.tipo] || '#888'}"></div>
+          <div class="info">
+            <div class="titulo">${bloco.titulo}</div>
+            <div class="meta">${bloco.tipo} · ${bloco.responsavel}</div>
+            <button class="status" data-id="${bloco.id}" data-status="${bloco.status}">
+              ${labelStatus[bloco.status] || bloco.status}
+            </button>
+          </div>
+          <div class="dur">${formatarTempo(bloco.duracao_estimada)}</div>
+        `;
+        container.appendChild(div);
+      });
+
+      // Clique no status avança para a próxima etapa (como chefe_redacao, que pode tudo)
+      document.querySelectorAll('.status').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          const atual = btn.dataset.status;
+          const proximoIndex = (ordemStatus.indexOf(atual) + 1) % ordemStatus.length;
+          const novoStatus = ordemStatus[proximoIndex];
+
+          await fetch(`/blocos/${id}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ novo_status: novoStatus, perfil: 'chefe_redacao' })
+          });
+
+          carregarBlocos(); // recarrega a lista depois de mudar
+        });
+      });
+    }
+
+    carregarBlocos();
+  </script>
+</body>
+</html>
