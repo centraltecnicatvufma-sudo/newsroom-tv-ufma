@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Teleprompter — Newsroom TV UFMA</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #0f1216; color: #eee; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; }
+
+    .toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #171b21; border-bottom: 1px solid #2a2f36; }
+    .toolbar button { background: #2a2f36; color: #eee; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 13px; }
+    .toolbar button:hover { background: #343b45; }
+    .toolbar .separador { width: 1px; height: 24px; background: #2a2f36; margin: 0 4px; }
+    .toolbar .velocidade { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+
+    .corpo { flex: 1; display: flex; min-height: 0; }
+
+    .coluna-textos { width: 260px; flex-shrink: 0; background: #171b21; border-right: 1px solid #2a2f36; overflow-y: auto; }
+    .coluna-textos .item { padding: 10px 12px; border-bottom: 1px solid #2a2f36; cursor: pointer; font-size: 13px; }
+    .coluna-textos .item:hover { background: #1e242c; }
+    .coluna-textos .item.ativo { background: #1e3a5f; color: #7fb8ff; }
+    .coluna-textos .item .tipo { font-size: 11px; color: #999; }
+
+    .area-edicao { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .painel-editar { flex: 1; border-bottom: 1px solid #2a2f36; padding: 10px; display: flex; flex-direction: column; }
+    .painel-editar label { font-size: 11px; color: #999; margin-bottom: 4px; }
+    .painel-editar textarea { flex: 1; background: #0f1216; color: #eee; border: 1px solid #2a2f36; border-radius: 6px; padding: 10px; font-size: 14px; resize: none; }
+
+    .painel-rolagem { flex: 1; overflow: hidden; position: relative; background: #000; }
+    .texto-rolagem { position: absolute; width: 100%; padding: 20px; font-size: 32px; line-height: 1.6; text-align: center; color: #fff; white-space: pre-wrap; }
+
+    .toolbar-inferior { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #171b21; border-top: 1px solid #2a2f36; }
+  </style>
+</head>
+<body>
+
+ <div class="toolbar">
+    <button id="btn-abrir">📂 Abrir</button>
+    <button id="btn-salvar">💾 Salvar</button>
+    <div class="separador"></div>
+    <input id="campo-buscar" type="text" placeholder="Localizar..." style="background:#0f1216; color:#eee; border:1px solid #2a2f36; border-radius:6px; padding:6px 8px; font-size:13px; width:160px;">
+    <button id="btn-localizar">🔍 Localizar</button>
+    <div class="separador"></div>
+    <div class="velocidade">
+      Velocidade: <span id="valor-velocidade">3</span>
+    </div>
+  </div>
+
+  <div class="corpo">
+    <div class="coluna-textos" id="coluna-textos">Carregando...</div>
+
+    <div class="area-edicao">
+      <div class="painel-editar">
+        <label>Texto (edição)</label>
+        <textarea id="texto-editar" placeholder="Cole, digite ou selecione um item da lista..."></textarea>
+      </div>
+      <div class="painel-rolagem" id="painel-rolagem">
+        <div class="texto-rolagem" id="texto-rolagem"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar-inferior">
+    <button id="btn-stop">⏹ Stop</button>
+    <button id="btn-pause">⏸ Pause</button>
+    <button id="btn-play">▶ Play</button>
+    <button id="btn-reverso">◀ Reverso</button>
+    <button id="btn-menos">➖</button>
+    <button id="btn-mais">➕</button>
+  </div>
+
+  <input type="file" id="input-arquivo" accept=".txt" style="display:none">
+
+  <script>
+    let itens = []; // lista de textos: {origem: 'bloco'|'manual', titulo, texto, id}
+    let itemAtivoIndex = null;
+
+    async function carregarBlocosDoEspelho() {
+      const resposta = await fetch('/blocos?espelho_id=1');
+      const blocos = await resposta.json();
+
+      itens = blocos.map(b => ({
+        origem: 'bloco',
+        id: b.id,
+        titulo: b.titulo,
+        tipo: b.tipo,
+        texto: b.texto_script || ''
+      }));
+
+      renderListaTextos();
+
+      if (itens.length > 0) {
+        selecionarItem(0);
+      }
+    }
+
+    function renderListaTextos() {
+      const container = document.getElementById('coluna-textos');
+      container.innerHTML = '';
+
+      itens.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'item' + (index === itemAtivoIndex ? ' ativo' : '');
+        div.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>${item.titulo}</div>
+            <div>
+              <button class="btn-loop" data-index="${index}" style="background:${item.loop ? '#2563eb' : '#2a2f36'}; border:none; color:#eee; border-radius:4px; padding:2px 6px; font-size:11px; cursor:pointer;">🔁</button>
+              <button class="btn-remover-item" data-index="${index}" style="background:transparent; border:none; color:#999; cursor:pointer; font-size:12px;">✕</button>
+            </div>
+          </div>
+          <div class="tipo">${item.tipo || 'manual'}</div>
+        `;
+        div.addEventListener('click', (e) => {
+          if (e.target.classList.contains('btn-loop') || e.target.classList.contains('btn-remover-item')) return;
+          selecionarItem(index);
+        });
+        container.appendChild(div);
+      });
+
+      container.querySelectorAll('.btn-loop').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const index = Number(btn.dataset.index);
+          itens[index].loop = !itens[index].loop;
+          renderListaTextos();
+        });
+      });
+
+      container.querySelectorAll('.btn-remover-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const index = Number(btn.dataset.index);
+          itens.splice(index, 1);
+          if (itemAtivoIndex === index) itemAtivoIndex = null;
+          renderListaTextos();
+        });
+      });
+
+      const btnNovo = document.createElement('div');
+      btnNovo.className = 'item';
+      btnNovo.style.textAlign = 'center';
+      btnNovo.style.color = '#7fb8ff';
+      btnNovo.textContent = '+ item manual';
+      btnNovo.addEventListener('click', adicionarItemManual);
+      container.appendChild(btnNovo);
+    }
+
+    function selecionarItem(index) {
+      itemAtivoIndex = index;
+      const item = itens[index];
+      document.getElementById('texto-editar').value = item.texto;
+      const textoEl = document.getElementById('texto-rolagem');
+      textoEl.textContent = item.texto;
+      posicaoY = 0;
+      textoEl.style.transform = 'translateY(0px)';
+      renderListaTextos();
+    }
+
+    function adicionarItemManual() {
+      itens.push({ origem: 'manual', id: null, titulo: 'Novo texto', tipo: 'manual', texto: '' });
+      renderListaTextos();
+      selecionarItem(itens.length - 1);
+    }
+
+    // Ao editar o texto, atualiza a rolagem e guarda na lista
+    document.getElementById('texto-editar').addEventListener('input', (e) => {
+      const texto = e.target.value;
+      document.getElementById('texto-rolagem').textContent = texto;
+      if (itemAtivoIndex !== null) {
+        itens[itemAtivoIndex].texto = texto;
+      }
+    });
+
+    // Salvar texto de volta no bloco (se for de origem 'bloco')
+    document.getElementById('btn-salvar').addEventListener('click', async () => {
+      const item = itens[itemAtivoIndex];
+      if (!item) return;
+
+      if (item.origem === 'bloco') {
+        await fetch(`/blocos/${item.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texto_script: item.texto })
+        });
+        alert('Texto salvo no bloco do espelho!');
+      } else {
+        // Salva como arquivo .txt
+        const blob = new Blob([item.texto], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (item.titulo || 'texto') + '.txt';
+        a.click();
+      }
+    });
+
+    // Abrir arquivo .txt
+    document.getElementById('btn-abrir').addEventListener('click', () => {
+      document.getElementById('input-arquivo').click();
+    });
+
+    document.getElementById('input-arquivo').addEventListener('change', (e) => {
+      const arquivo = e.target.files[0];
+      if (!arquivo) return;
+
+      const leitor = new FileReader();
+      leitor.onload = (evento) => {
+        const texto = evento.target.result;
+        itens.push({ origem: 'manual', id: null, titulo: arquivo.name, tipo: 'arquivo', texto: texto });
+        renderListaTextos();
+        selecionarItem(itens.length - 1);
+      };
+      leitor.readAsText(arquivo);
+    });
+
+  let velocidade = 3;
+    let rodando = false;
+    let direcao = 1; // 1 = para frente (para cima), -1 = para trás (para baixo)
+    let posicaoY = 0;
+    let animacaoId = null;
+
+    function atualizarVelocidadeNaTela() {
+      document.getElementById('valor-velocidade').textContent = velocidade;
+    }
+
+    function itemAtivo() {
+      return itemAtivoIndex !== null ? itens[itemAtivoIndex] : null;
+    }
+
+    function passoAnimacao() {
+      if (!rodando) return;
+
+     const textoEl = document.getElementById('texto-rolagem');
+      const alturaTexto = textoEl.scrollHeight;
+      const limiteFinal = -alturaTexto; // texto some completamente no topo (relativo à posição inicial)
+
+      posicaoY -= direcao * velocidade * 0.5;
+
+      const item = itemAtivo();
+      const loopAtivo = item && item.loop;
+
+     if (direcao === 1 && posicaoY <= limiteFinal) {
+        if (loopAtivo) {
+          posicaoY = posicaoInicial(); // reinicia entrando de baixo pra cima, igual ao início
+        } else {
+          posicaoY = limiteFinal;
+          rodando = false;
+        }
+      }
+
+  if (direcao === -1 && posicaoY >= 0) {
+        if (loopAtivo) {
+          posicaoY = limiteFinal;
+        } else {
+          posicaoY = 0;
+          rodando = false;
+        }
+      }
+
+      textoEl.style.transform = 'translateY(' + posicaoY + 'px)';
+
+      if (rodando) {
+        animacaoId = requestAnimationFrame(passoAnimacao);
+      }
+    }
+
+    function play() {
+      if (rodando) return;
+      rodando = true;
+      animacaoId = requestAnimationFrame(passoAnimacao);
+    }
+
+    function pause() {
+      rodando = false;
+      if (animacaoId) cancelAnimationFrame(animacaoId);
+    }
+
+   function posicaoInicial() {
+      const containerEl = document.getElementById('painel-rolagem');
+      return containerEl.clientHeight; // começa uma tela inteira abaixo, fora da vista
+    }
+
+   function stop() {
+      pause();
+      direcao = 1;
+      posicaoY = 0;
+      const textoEl = document.getElementById('texto-rolagem');
+      textoEl.style.transform = 'translateY(0px)';
+    }
+
+    function reverso() {
+      direcao = direcao * -1;
+      if (!rodando) {
+        play();
+      }
+    }
+
+    document.getElementById('btn-play').addEventListener('click', function() {
+      if (!rodando && posicaoY === 0) {
+        posicaoY = posicaoInicial();
+        const textoEl = document.getElementById('texto-rolagem');
+        textoEl.style.transform = 'translateY(' + posicaoY + 'px)';
+      }
+      play();
+    });
+    document.getElementById('btn-pause').addEventListener('click', pause);
+    document.getElementById('btn-stop').addEventListener('click', stop);
+    document.getElementById('btn-reverso').addEventListener('click', reverso);
+
+    document.getElementById('btn-mais').addEventListener('click', function() {
+      velocidade = Math.min(velocidade + 1, 20);
+      atualizarVelocidadeNaTela();
+    });
+
+    document.getElementById('btn-menos').addEventListener('click', function() {
+      velocidade = Math.max(velocidade - 1, 1);
+      atualizarVelocidadeNaTela();
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowUp') {
+        velocidade = Math.min(velocidade + 1, 20);
+        atualizarVelocidadeNaTela();
+      } else if (e.key === 'ArrowDown') {
+        velocidade = Math.max(velocidade - 1, 1);
+        atualizarVelocidadeNaTela();
+     } else if (e.key === 'ArrowLeft') {
+        if (rodando) {
+          if (direcao === 1) pause(); // rodando pra frente -> pausa
+          // se já roda pra trás, seta esquerda não faz nada (já é a direção dela)
+        } else {
+          if (direcao === 1) {
+            direcao = -1; // pausado vindo de frente -> passa a rodar pra trás
+            play();
+          } else {
+            play(); // pausado vindo de trás -> retoma pra trás
+          }
+        }
+      } else if (e.key === 'ArrowRight') {
+        if (rodando) {
+          if (direcao === -1) pause(); // rodando pra trás -> pausa
+          // se já roda pra frente, seta direita não faz nada
+        } else {
+          if (direcao === -1) {
+            direcao = 1; // pausado vindo de trás -> passa a rodar pra frente
+            play();
+          } else {
+            play(); // pausado vindo de frente -> retoma pra frente
+          }
+        }
+      }
+    });
+
+    document.getElementById('btn-localizar').addEventListener('click', function() {
+      const termo = document.getElementById('campo-buscar').value.trim();
+      if (!termo) return;
+
+      const item = itemAtivo();
+      if (!item) return;
+
+      const texto = item.texto || '';
+      const posicaoEncontrada = texto.toLowerCase().indexOf(termo.toLowerCase());
+
+      if (posicaoEncontrada === -1) {
+        alert('Termo não encontrado no texto atual.');
+        return;
+      }
+
+      // Calcula a proporção do texto até o termo encontrado, e rola até lá
+      const proporcao = posicaoEncontrada / texto.length;
+      const textoEl = document.getElementById('texto-rolagem');
+      const alturaTexto = textoEl.scrollHeight;
+      const containerEl = document.getElementById('painel-rolagem');
+      const alturaContainer = containerEl.clientHeight;
+
+      pause();
+      direcao = 1;
+      posicaoY = -(proporcao * alturaTexto) + (alturaContainer / 2);
+      textoEl.style.transform = 'translateY(' + posicaoY + 'px)';
+    });
+    carregarBlocosDoEspelho();
+  </script>
+</body>
+</html>
