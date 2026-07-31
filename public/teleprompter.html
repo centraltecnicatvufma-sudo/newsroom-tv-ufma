@@ -38,8 +38,7 @@
     <button id="btn-abrir">📂 Abrir</button>
     <button id="btn-salvar">💾 Salvar</button>
     <div class="separador"></div>
-    <input id="campo-buscar" type="text" placeholder="Localizar..." style="background:#0f1216; color:#eee; border:1px solid #2a2f36; border-radius:6px; padding:6px 8px; font-size:13px; width:160px;">
-    <button id="btn-localizar">🔍 Localizar</button>
+   <input id="campo-buscar" type="text" placeholder="Localizar item na lista..." style="background:#0f1216; color:#eee; border:1px solid #2a2f36; border-radius:6px; padding:6px 8px; font-size:13px; width:200px;">
     <div class="separador"></div>
     <div class="velocidade">
       Velocidade: <span id="valor-velocidade">3</span>
@@ -74,6 +73,7 @@
   <script>
     let itens = []; // lista de textos: {origem: 'bloco'|'manual', titulo, texto, id}
     let itemAtivoIndex = null;
+    let historicoRemovidos = []; // pilha de {item, posicao} para desfazer remoções
 
     async function carregarBlocosDoEspelho() {
       const resposta = await fetch('/blocos?espelho_id=1');
@@ -94,11 +94,16 @@
       }
     }
 
-    function renderListaTextos() {
+ function renderListaTextos() {
       const container = document.getElementById('coluna-textos');
       container.innerHTML = '';
 
+      const termoBusca = (document.getElementById('campo-buscar').value || '').toLowerCase();
+
       itens.forEach((item, index) => {
+        if (termoBusca && !item.titulo.toLowerCase().includes(termoBusca)) {
+          return; // pula esse item, não bate com a busca
+        }
         const div = document.createElement('div');
         div.className = 'item' + (index === itemAtivoIndex ? ' ativo' : '');
         div.innerHTML = `
@@ -131,6 +136,7 @@
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           const index = Number(btn.dataset.index);
+          historicoRemovidos.push({ item: itens[index], posicao: index });
           itens.splice(index, 1);
           if (itemAtivoIndex === index) itemAtivoIndex = null;
           renderListaTextos();
@@ -158,11 +164,23 @@
     }
 
     function adicionarItemManual() {
-      itens.push({ origem: 'manual', id: null, titulo: 'Novo texto', tipo: 'manual', texto: '' });
+      const titulo = window.prompt('Título do novo item:', '');
+      if (!titulo) return; // se cancelar ou deixar vazio, não cria nada
+
+      itens.push({ origem: 'manual', id: null, titulo: titulo, tipo: 'manual', texto: '' });
       renderListaTextos();
       selecionarItem(itens.length - 1);
     }
 
+    function desfazerRemocao() {
+      if (historicoRemovidos.length === 0) return;
+
+      const ultimo = historicoRemovidos.pop();
+      const posicaoRestaurar = Math.min(ultimo.posicao, itens.length);
+      itens.splice(posicaoRestaurar, 0, ultimo.item);
+      renderListaTextos();
+      selecionarItem(posicaoRestaurar);
+    }
     // Ao editar o texto, atualiza a rolagem e guarda na lista
     document.getElementById('texto-editar').addEventListener('input', (e) => {
       const texto = e.target.value;
@@ -319,65 +337,36 @@
     });
 
     document.addEventListener('keydown', function(e) {
-      if (e.key === 'ArrowUp') {
-        velocidade = Math.min(velocidade + 1, 20);
-        atualizarVelocidadeNaTela();
-      } else if (e.key === 'ArrowDown') {
-        velocidade = Math.max(velocidade - 1, 1);
-        atualizarVelocidadeNaTela();
-     } else if (e.key === 'ArrowLeft') {
-        if (rodando) {
-          if (direcao === 1) pause(); // rodando pra frente -> pausa
-          // se já roda pra trás, seta esquerda não faz nada (já é a direção dela)
-        } else {
-          if (direcao === 1) {
-            direcao = -1; // pausado vindo de frente -> passa a rodar pra trás
-            play();
-          } else {
-            play(); // pausado vindo de trás -> retoma pra trás
-          }
-        }
-      } else if (e.key === 'ArrowRight') {
-        if (rodando) {
-          if (direcao === -1) pause(); // rodando pra trás -> pausa
-          // se já roda pra frente, seta direita não faz nada
-        } else {
-          if (direcao === -1) {
-            direcao = 1; // pausado vindo de trás -> passa a rodar pra frente
-            play();
-          } else {
-            play(); // pausado vindo de frente -> retoma pra frente
-          }
-        }
-      }
-    });
+  const digitando = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
 
-    document.getElementById('btn-localizar').addEventListener('click', function() {
-      const termo = document.getElementById('campo-buscar').value.trim();
-      if (!termo) return;
-
-      const item = itemAtivo();
-      if (!item) return;
-
-      const texto = item.texto || '';
-      const posicaoEncontrada = texto.toLowerCase().indexOf(termo.toLowerCase());
-
-      if (posicaoEncontrada === -1) {
-        alert('Termo não encontrado no texto atual.');
-        return;
-      }
-
-      // Calcula a proporção do texto até o termo encontrado, e rola até lá
-      const proporcao = posicaoEncontrada / texto.length;
-      const textoEl = document.getElementById('texto-rolagem');
-      const alturaTexto = textoEl.scrollHeight;
-      const containerEl = document.getElementById('painel-rolagem');
-      const alturaContainer = containerEl.clientHeight;
-
+  if (e.key === 'ArrowUp' && !digitando) {
+    velocidade = Math.min(velocidade + 1, 20);
+    atualizarVelocidadeNaTela();
+  } else if (e.key === 'ArrowDown' && !digitando) {
+    velocidade = Math.max(velocidade - 1, 1);
+    atualizarVelocidadeNaTela();
+  } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !digitando) {
+    reverso();
+  } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey) && !digitando) {
+    e.preventDefault();
+    desfazerRemocao();
+  } else if (e.key === ' ' && !digitando) {
+    e.preventDefault();
+    if (rodando) {
       pause();
-      direcao = 1;
-      posicaoY = -(proporcao * alturaTexto) + (alturaContainer / 2);
-      textoEl.style.transform = 'translateY(' + posicaoY + 'px)';
+    } else {
+      if (posicaoY === 0) {
+        posicaoY = posicaoInicial();
+        const textoEl = document.getElementById('texto-rolagem');
+        textoEl.style.transform = 'translateY(' + posicaoY + 'px)';
+      }
+      play();
+    }
+  }
+});
+
+  document.getElementById('campo-buscar').addEventListener('input', function(e) {
+      renderListaTextos();
     });
     carregarBlocosDoEspelho();
   </script>
