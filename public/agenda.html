@@ -28,6 +28,23 @@
     }
     .abas-inferior button.ativo { color: #336699; font-weight: bold; }
     .abas-inferior button .icone { font-size: 18px; }
+    .lista-simples { list-style: none; padding: 0; margin: 0; }
+    .lista-simples li { background: #fff; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 15px; }
+    .lista-simples li .tag-tipo { font-size: 11px; color: #fff; background: #336699; padding: 2px 8px; border-radius: 4px; margin-left: 8px; text-transform: uppercase; }
+
+    .btn-flutuante { position: fixed; bottom: 76px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: #336699; color: #fff; border: none; font-size: 28px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+    .overlay-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 10; }
+    .overlay-modal.aberto { display: flex; }
+    .modal { background: #fff; border-radius: 10px; padding: 20px; width: 360px; }
+    .modal h2 { font-size: 16px; margin: 0 0 16px; }
+    .modal label { font-size: 12px; color: #5b6472; display: block; margin: 12px 0 4px; }
+    .modal input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+    .modal .opcoes-tipo { display: flex; gap: 12px; font-size: 14px; }
+    .modal .botoes-modal { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+    .modal .botoes-modal button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .modal .btn-cancelar { background: #eee; color: #333; }
+    .modal .btn-confirmar { background: #336699; color: #fff; }
   </style>
 </head>
 <body>
@@ -36,6 +53,23 @@
     <!-- conteúdo da aba ativa entra aqui -->
   </div>
 
+  <div class="overlay-modal" id="modal-programa">
+    <div class="modal">
+      <h2>Cadastrar Item</h2>
+      <label>Tipo</label>
+      <div class="opcoes-tipo">
+        <label><input type="radio" name="tipo-programa" value="programa" checked> Programa</label>
+        <label><input type="radio" name="tipo-programa" value="inter-programa"> Inter-programa</label>
+        <label><input type="radio" name="tipo-programa" value="quadro"> Quadro</label>
+      </div>
+      <label>Nome</label>
+      <input type="text" id="input-nome-programa" placeholder="Nome do programa/quadro">
+      <div class="botoes-modal">
+        <button class="btn-cancelar" id="cancelar-programa">Cancelar</button>
+        <button class="btn-confirmar" id="confirmar-programa">Cadastrar</button>
+      </div>
+    </div>
+  </div>
   <div class="abas-inferior">
     <button data-aba="programas" id="aba-programas"><span class="icone">🎬</span>Programa/Quadro</button>
     <button data-aba="equipe" id="aba-equipe"><span class="icone">👥</span>Equipe</button>
@@ -47,6 +81,7 @@
     let abaAtiva = 'relatorio';
     let paginaAtual = 1;
     const ITENS_POR_PAGINA = 8;
+    let idEmEdicaoGlobal = null;
 
     function trocarAba(aba) {
       abaAtiva = aba;
@@ -108,9 +143,90 @@
       });
     }
 
-    function renderProgramas() {
-      document.getElementById('conteudo').innerHTML = '<h1>PROGRAMAS E QUADROS</h1><p style="text-align:center; color:#999;">Em construção — próximo passo.</p>';
+    async function renderProgramas() {
+      const conteudo = document.getElementById('conteudo');
+      conteudo.innerHTML = '<h1>PROGRAMAS E QUADROS</h1><p>Carregando...</p>';
+
+      const resposta = await fetch('/agenda/programas');
+      const lista = await resposta.json();
+
+      const rotuloTipo = { programa: 'Programa', 'inter-programa': 'Inter-programa', quadro: 'Quadro' };
+
+      let itensHtml = lista.map(p => `
+        <li style="display:flex; justify-content:space-between; align-items:center;">
+          <div>${p.nome} <span class="tag-tipo">${rotuloTipo[p.tipo] || p.tipo}</span></div>
+          <div>
+            <button class="btn-editar-programa" data-id="${p.id}" data-nome="${p.nome}" data-tipo="${p.tipo}" style="background:transparent; border:none; cursor:pointer; font-size:14px;">✏️</button>
+            <button class="btn-excluir-programa" data-id="${p.id}" style="background:transparent; border:none; cursor:pointer; font-size:14px;">🗑️</button>
+          </div>
+        </li>
+      `).join('');
+
+      if (lista.length === 0) {
+        itensHtml = '<li style="text-align:center; color:#999; box-shadow:none;">Nenhum programa ou quadro cadastrado ainda.</li>';
+      }
+
+      conteudo.innerHTML = `
+        <h1>PROGRAMAS E QUADROS</h1>
+        <ul class="lista-simples">${itensHtml}</ul>
+        <button class="btn-flutuante" id="btn-add-programa">+</button>
+      `;
+
+      document.getElementById('btn-add-programa').addEventListener('click', () => {
+        idEmEdicaoGlobal = null;
+        document.getElementById('input-nome-programa').value = '';
+        document.querySelector('input[name="tipo-programa"][value="programa"]').checked = true;
+        document.getElementById('modal-programa').classList.add('aberto');
+      });
+      // (linha removida — já temos idEmEdicaoGlobal declarado no topo do script)
+
+      document.querySelectorAll('.btn-editar-programa').forEach(btn => {
+        btn.addEventListener('click', () => {
+          idEmEdicaoGlobal = Number(btn.dataset.id);idEmEdicao = Number(btn.dataset.id);
+          document.getElementById('input-nome-programa').value = btn.dataset.nome;
+          document.querySelector(`input[name="tipo-programa"][value="${btn.dataset.tipo}"]`).checked = true;
+          document.getElementById('modal-programa').classList.add('aberto');
+        });
+      });
+
+      document.querySelectorAll('.btn-excluir-programa').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const confirmar = window.confirm('Tem certeza que deseja excluir este item?');
+          if (!confirmar) return;
+
+          await fetch(`/agenda/programas/${btn.dataset.id}`, { method: 'DELETE' });
+          renderProgramas();
+        });
+      });
     }
+
+    document.getElementById('cancelar-programa').addEventListener('click', () => {
+      document.getElementById('modal-programa').classList.remove('aberto');
+    });
+
+    document.getElementById('confirmar-programa').addEventListener('click', async () => {
+      const nome = document.getElementById('input-nome-programa').value.trim();
+      if (!nome) return;
+
+      const tipo = document.querySelector('input[name="tipo-programa"]:checked').value;
+
+      if (idEmEdicaoGlobal !== null) {
+        await fetch(`/agenda/programas/${idEmEdicaoGlobal}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipo, nome })
+        });
+      } else {
+        await fetch('/agenda/programas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipo, nome })
+        });
+      }
+
+      document.getElementById('modal-programa').classList.remove('aberto');
+      renderProgramas();
+    });
 
     function renderEquipe() {
       document.getElementById('conteudo').innerHTML = '<h1>CADASTRO DE EQUIPE</h1><p style="text-align:center; color:#999;">Em construção — próximo passo.</p>';

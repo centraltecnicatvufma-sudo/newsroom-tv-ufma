@@ -91,6 +91,61 @@ router.post('/programas', (req, res) => {
   res.status(201).json(novo);
 });
 
+router.patch('/programas/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const item = db.prepare('SELECT * FROM programas_quadros WHERE id = ?').get(id);
+
+  if (!item) {
+    return res.status(404).json({ erro: "Item não encontrado" });
+  }
+
+  const tipo = req.body.tipo !== undefined ? req.body.tipo : item.tipo;
+  const nome = req.body.nome !== undefined ? req.body.nome : item.nome;
+
+  db.prepare('UPDATE programas_quadros SET tipo = ?, nome = ? WHERE id = ?').run(tipo, nome, id);
+
+  const atualizado = db.prepare('SELECT * FROM programas_quadros WHERE id = ?').get(id);
+  res.json(atualizado);
+});
+
+router.delete('/programas/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const resultado = db.prepare('DELETE FROM programas_quadros WHERE id = ?').run(id);
+
+  if (resultado.changes === 0) {
+    return res.status(404).json({ erro: "Item não encontrado" });
+  }
+
+  res.status(204).send();
+});
+
+router.patch('/programas/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const item = db.prepare('SELECT * FROM programas_quadros WHERE id = ?').get(id);
+
+  if (!item) {
+    return res.status(404).json({ erro: "Item não encontrado" });
+  }
+
+  const tipo = req.body.tipo !== undefined ? req.body.tipo : item.tipo;
+  const nome = req.body.nome !== undefined ? req.body.nome : item.nome;
+
+  db.prepare('UPDATE programas_quadros SET tipo = ?, nome = ? WHERE id = ?').run(tipo, nome, id);
+
+  const atualizado = db.prepare('SELECT * FROM programas_quadros WHERE id = ?').get(id);
+  res.json(atualizado);
+});
+
+router.delete('/programas/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const resultado = db.prepare('DELETE FROM programas_quadros WHERE id = ?').run(id);
+
+  if (resultado.changes === 0) {
+    return res.status(404).json({ erro: "Item não encontrado" });
+  }
+
+  res.status(204).send();
+});
 // --- Equipe ---
 
 router.get('/equipe', (req, res) => {
