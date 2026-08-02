@@ -15,6 +15,9 @@
     .cartao-agendamento .data-hora { font-size: 22px; font-weight: bold; color: #336699; }
     .cartao-agendamento .programa { font-size: 20px; font-weight: bold; margin-top: 6px; }
     .cartao-agendamento .local { font-size: 16px; color: #5b6472; margin-top: 4px; }
+    .cartao-agendamento { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .cartao-agendamento .info-cartao { flex: 1; }
+    .selo-status { flex-shrink: 0; background: #8D0333; color: #fff; font-weight: bold; text-transform: uppercase; font-size: 15px; padding: 10px 16px; border-radius: 8px; text-align: center; min-width: 110px; }
 
     .paginacao { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 16px; }
     .paginacao button { background: #336699; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-size: 13px; }
@@ -55,6 +58,7 @@
     .card-agendamento { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.12); padding: 14px 18px; margin-bottom: 12px; }
     .card-agendamento .status-badge { font-size: 10px; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; color: #fff; }
     .status-agendado { background: #336699; }
+    .status-gravando { background: #C98A1F; }
     .status-concluido { background: #2e8b57; }
     .status-cancelado { background: #8D0333; }
     .card-agendamento .titulo-card { font-size: 16px; font-weight: bold; margin-top: 8px; }
@@ -62,6 +66,15 @@
     .card-agendamento .linha-acoes { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
     .card-agendamento select { padding: 4px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
     .card-agendamento .btn-editar-agendamento { background: transparent; border: none; cursor: pointer; font-size: 13px; color: #336699; }
+    .formulario-agendamento label { font-size: 12px; color: #5b6472; display: block; margin: 14px 0 4px; }
+    .formulario-agendamento select, .formulario-agendamento input, .formulario-agendamento textarea {
+      width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;
+    }
+    .formulario-agendamento textarea { min-height: 80px; resize: vertical; }
+    .formulario-agendamento .linha-dupla { display: flex; gap: 12px; }
+    .formulario-agendamento .linha-dupla > div { flex: 1; }
+    .btn-salvar-agendamento { margin-top: 20px; background: #8D0333; color: #fff; border: none; border-radius: 8px; padding: 12px; width: 100%; font-size: 15px; cursor: pointer; }
+    .btn-voltar { background: transparent; border: none; color: #336699; cursor: pointer; font-size: 14px; margin-bottom: 12px; }
   </style>
 </head>
 <body>
@@ -141,11 +154,16 @@
       const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
       const pagina = todos.slice(inicio, inicio + ITENS_POR_PAGINA);
 
+      const rotulosStatusRelatorio = { agendado: 'Agendado', gravando: 'Gravando', concluido: 'Concluído', cancelado: 'Cancelado' };
+
       let cartoes = pagina.map(item => `
         <div class="cartao-agendamento">
-          <div class="data-hora">${item.data || ''} · ${item.hora || ''}</div>
-          <div class="programa">${item.programa_nome || ''}</div>
-          <div class="local">📍 ${item.local || ''}</div>
+          <div class="info-cartao">
+            <div class="data-hora">${item.data || ''} · ${item.hora || ''}</div>
+            <div class="programa">${item.programa_nome || ''}</div>
+            <div class="local">📍 ${item.local || ''}</div>
+          </div>
+          <div class="selo-status">${rotulosStatusRelatorio[item.status] || item.status || 'Agendado'}</div>
         </div>
       `).join('');
 
@@ -387,7 +405,7 @@
       const resposta = await fetch('/agenda?data=' + dataSelecionadaISO);
       const agendamentos = await resposta.json();
 
-      const rotulosStatus = { agendado: 'Agendado', concluido: 'Concluído', cancelado: 'Cancelado' };
+      const rotulosStatus = { agendado: 'Agendado', gravando: 'Gravando', concluido: 'Concluído', cancelado: 'Cancelado' };
 
       let cardsHtml = agendamentos.map(a => `
         <div class="card-agendamento">
@@ -398,6 +416,7 @@
             <button class="btn-editar-agendamento" data-id="${a.id}">✏️ Editar</button>
             <select class="select-status" data-id="${a.id}">
               <option value="agendado" ${a.status === 'agendado' ? 'selected' : ''}>Agendado</option>
+              <option value="gravando" ${a.status === 'gravando' ? 'selected' : ''}>Gravando</option>
               <option value="concluido" ${a.status === 'concluido' ? 'selected' : ''}>Concluído</option>
               <option value="cancelado" ${a.status === 'cancelado' ? 'selected' : ''}>Cancelado</option>
             </select>
@@ -435,11 +454,109 @@
       });
 
       document.getElementById('btn-add-agendamento').addEventListener('click', () => {
-        alert('A tela de Novo Agendamento é o próximo passo que vamos construir juntos!');
+        abrirFormularioAgendamento(null);
+      });
+
+      document.querySelectorAll('.btn-editar-agendamento').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = Number(btn.dataset.id);
+          const item = agendamentos.find(a => a.id === id);
+          abrirFormularioAgendamento(item);
+        });
       });
     }
 
     trocarAba('relatorio');
-  </script>
+  let agendamentoEmEdicao = null; // guarda o objeto do agendamento, se estiver editando
+
+    async function abrirFormularioAgendamento(agendamento) {
+      agendamentoEmEdicao = agendamento || null;
+
+      const conteudo = document.getElementById('conteudo');
+      conteudo.innerHTML = '<p>Carregando...</p>';
+
+      const [respProgramas, respEquipe] = await Promise.all([
+        fetch('/agenda/programas'),
+        fetch('/agenda/equipe')
+      ]);
+      const programas = await respProgramas.json();
+      const equipeLista = await respEquipe.json();
+
+      const opcoesPrograma = programas.map(p =>
+        `<option value="${p.id}" ${agendamentoEmEdicao && agendamentoEmEdicao.programa_quadro_id === p.id ? 'selected' : ''}>${p.nome}</option>`
+      ).join('');
+
+      const equipeAtualNomes = agendamentoEmEdicao ? (agendamentoEmEdicao.equipe || '').split(',').map(s => s.trim()) : [];
+
+      const opcoesEquipe = equipeLista.map(m =>
+        `<option value="${m.nome}" ${equipeAtualNomes.includes(m.nome) ? 'selected' : ''}>${m.nome} (${m.funcao})</option>`
+      ).join('');
+
+      conteudo.innerHTML = `
+        <button class="btn-voltar" id="btn-voltar-agenda">← Voltar</button>
+        <h1>${agendamentoEmEdicao ? 'EDITAR AGENDAMENTO' : 'NOVO AGENDAMENTO'}</h1>
+        <div class="formulario-agendamento">
+          <label>Programa/Quadro</label>
+          <select id="form-programa">${opcoesPrograma}</select>
+
+          <div class="linha-dupla">
+            <div>
+              <label>Data</label>
+              <input type="date" id="form-data" value="${agendamentoEmEdicao ? agendamentoEmEdicao.data : formatarDataISO(diaSelecionado)}">
+            </div>
+            <div>
+              <label>Hora</label>
+              <input type="text" id="form-hora" placeholder="Ex: 09h00" value="${agendamentoEmEdicao ? agendamentoEmEdicao.hora : ''}">
+            </div>
+          </div>
+
+          <label>Local</label>
+          <input type="text" id="form-local" placeholder="Ex: Estúdio Juarez Lisboa" value="${agendamentoEmEdicao ? agendamentoEmEdicao.local : ''}">
+
+          <label>Equipe (segure Cmd/Ctrl para selecionar mais de um)</label>
+          <select id="form-equipe" multiple size="4">${opcoesEquipe}</select>
+
+          <label>Observação</label>
+          <textarea id="form-observacao">${agendamentoEmEdicao ? (agendamentoEmEdicao.observacao || '') : ''}</textarea>
+
+          <button class="btn-salvar-agendamento" id="btn-salvar-agendamento">SALVAR</button>
+        </div>
+      `;
+
+      document.getElementById('btn-voltar-agenda').addEventListener('click', () => {
+        renderAgendaDia();
+      });
+
+      document.getElementById('btn-salvar-agendamento').addEventListener('click', async () => {
+        const programa_quadro_id = Number(document.getElementById('form-programa').value);
+        const data = document.getElementById('form-data').value;
+        const hora = document.getElementById('form-hora').value.trim();
+        const local = document.getElementById('form-local').value.trim();
+        const observacao = document.getElementById('form-observacao').value.trim();
+
+        const selecionados = Array.from(document.getElementById('form-equipe').selectedOptions).map(o => o.value);
+        const equipe = selecionados.join(', ');
+
+        if (!hora) { alert('Informe a hora.'); return; }
+
+        if (agendamentoEmEdicao) {
+          await fetch(`/agenda/${agendamentoEmEdicao.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ programa_quadro_id, data, hora, local, equipe, observacao })
+          });
+        } else {
+          await fetch('/agenda', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ programa_quadro_id, data, hora, local, equipe, observacao })
+          });
+        }
+
+        diaSelecionado = new Date(data + 'T12:00:00');
+        renderAgendaDia();
+      });
+    }
+    </script>
 </body>
 </html>
