@@ -1,0 +1,88 @@
+const express = require('express');
+const router = express.Router();
+const db = require('./banco');
+
+// GET /sugestoes?status=nova -> lista sugestões, opcionalmente filtradas por status
+router.get('/', (req, res) => {
+  const statusFiltro = req.query.status;
+
+  let query = 'SELECT * FROM sugestoes';
+  const params = [];
+
+  if (statusFiltro) {
+    query += ' WHERE status = ?';
+    params.push(statusFiltro);
+  }
+
+  query += ' ORDER BY id DESC';
+
+  const lista = db.prepare(query).all(...params);
+  res.json(lista);
+});
+
+// POST /sugestoes -> cria uma nova sugestão
+router.post('/', (req, res) => {
+  const {
+    titulo, editoria, resumo, data_prevista, hora_prevista, local, fontes,
+    destino_tv, destino_instagram, destino_youtube, destino_site,
+    urgencia, enviado_por
+  } = req.body;
+
+  const resultado = db.prepare(`
+    INSERT INTO sugestoes (
+      titulo, editoria, resumo, data_prevista, hora_prevista, local, fontes,
+      destino_tv, destino_instagram, destino_youtube, destino_site,
+      urgencia, enviado_por, status
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'nova')
+  `).run(
+    titulo, editoria, resumo, data_prevista, hora_prevista, local, fontes || '',
+    destino_tv ? 1 : 0, destino_instagram ? 1 : 0, destino_youtube ? 1 : 0, destino_site ? 1 : 0,
+    urgencia || 'rotina', enviado_por || ''
+  );
+
+  const nova = db.prepare('SELECT * FROM sugestoes WHERE id = ?').get(resultado.lastInsertRowid);
+  res.status(201).json(nova);
+});
+
+// PATCH /sugestoes/:id -> edita/atualiza status
+router.patch('/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const item = db.prepare('SELECT * FROM sugestoes WHERE id = ?').get(id);
+
+  if (!item) {
+    return res.status(404).json({ erro: "Sugestão não encontrada" });
+  }
+
+  const campos = ['titulo', 'editoria', 'resumo', 'data_prevista', 'hora_prevista', 'local', 'fontes', 'urgencia', 'status', 'pauta_id'];
+  const atualizado = {};
+  campos.forEach(c => {
+    atualizado[c] = req.body[c] !== undefined ? req.body[c] : item[c];
+  });
+
+  db.prepare(`
+    UPDATE sugestoes SET titulo=?, editoria=?, resumo=?, data_prevista=?, hora_prevista=?, local=?, fontes=?, urgencia=?, status=?, pauta_id=?
+    WHERE id = ?
+  `).run(
+    atualizado.titulo, atualizado.editoria, atualizado.resumo, atualizado.data_prevista,
+    atualizado.hora_prevista, atualizado.local, atualizado.fontes, atualizado.urgencia,
+    atualizado.status, atualizado.pauta_id, id
+  );
+
+  const item_atualizado = db.prepare('SELECT * FROM sugestoes WHERE id = ?').get(id);
+  res.json(item_atualizado);
+});
+
+// DELETE /sugestoes/:id
+router.delete('/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const resultado = db.prepare('DELETE FROM sugestoes WHERE id = ?').run(id);
+
+  if (resultado.changes === 0) {
+    return res.status(404).json({ erro: "Sugestão não encontrada" });
+  }
+
+  res.status(204).send();
+});
+
+module.exports = router;

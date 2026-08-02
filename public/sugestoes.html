@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Sugestões de Pauta — Newsroom TV UFMA</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+
+    .topo { background: #336699; color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .topo h1 { font-size: 18px; margin: 0; }
+    .topo button { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-size: 13px; }
+
+    .abas-topo { display: flex; background: #fff; border-bottom: 1px solid #ddd; }
+    .abas-topo button { flex: 1; background: transparent; border: none; padding: 12px 0; cursor: pointer; font-size: 13px; color: #5b6472; }
+    .abas-topo button.ativo { color: #336699; font-weight: bold; border-bottom: 3px solid #336699; }
+
+    .filtros { display: flex; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; }
+    .filtros select { padding: 6px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
+
+    .conteudo { flex: 1; overflow-y: auto; padding: 20px; }
+
+    .card-sugestao { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); padding: 16px 20px; margin-bottom: 14px; }
+    .card-sugestao .tags { display: flex; gap: 6px; margin-bottom: 8px; }
+    .tag { font-size: 11px; padding: 3px 8px; border-radius: 4px; color: #fff; text-transform: uppercase; font-weight: bold; }
+    .tag-urgente { background: #8D0333; }
+    .tag-relevante { background: #C98A1F; }
+    .tag-rotina { background: #5b6472; }
+    .tag-midia { background: #336699; }
+    .enviado-por { float: right; font-size: 12px; color: #999; }
+    .card-sugestao .titulo { font-size: 16px; font-weight: bold; margin-top: 6px; }
+    .card-sugestao .resumo { font-size: 13px; color: #5b6472; margin-top: 4px; }
+    .card-sugestao .meta { font-size: 12px; color: #777; margin-top: 8px; }
+    .card-sugestao .status-linha { font-size: 12px; margin-top: 8px; color: #336699; }
+    .card-sugestao .acoes { display: flex; gap: 8px; margin-top: 12px; }
+    .card-sugestao .acoes button { font-size: 12px; padding: 6px 10px; border-radius: 6px; border: none; cursor: pointer; }
+    .btn-detalhes { background: #eee; color: #333; }
+    .btn-aprovar { background: #2e8b57; color: #fff; }
+    .btn-arquivar { background: #8D0333; color: #fff; }
+    .overlay-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 10; overflow-y: auto; padding: 30px 0; }
+    .overlay-modal.aberto { display: flex; }
+    .modal-sugestao { background: #fff; border-radius: 10px; padding: 24px; width: 480px; max-height: 90vh; overflow-y: auto; }
+    .modal-sugestao h2 { font-size: 18px; margin: 0 0 4px; }
+    .modal-sugestao .secao-titulo { font-size: 12px; text-transform: uppercase; color: #999; margin-top: 20px; margin-bottom: 8px; border-top: 1px solid #eee; padding-top: 16px; }
+    .modal-sugestao label { font-size: 12px; color: #5b6472; display: block; margin: 10px 0 4px; }
+    .modal-sugestao input[type="text"], .modal-sugestao input[type="date"], .modal-sugestao input[type="time"], .modal-sugestao select, .modal-sugestao textarea {
+      width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;
+    }
+    .modal-sugestao textarea { min-height: 70px; resize: vertical; }
+    .modal-sugestao .linha-checkboxes { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; margin-top: 6px; }
+    .modal-sugestao .opcoes-urgencia { display: flex; gap: 12px; font-size: 13px; margin-top: 6px; }
+    .modal-sugestao .botoes-modal { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+    .modal-sugestao .botoes-modal button { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .modal-sugestao .btn-cancelar { background: #eee; color: #333; }
+    .modal-sugestao .btn-confirmar { background: #8D0333; color: #fff; }
+  </style>
+</head>
+<body>
+
+  <div class="topo">
+    <h1>NEWSROOM TV UFMA — Sugestões de Pauta</h1>
+    <button id="btn-nova-sugestao">+ Nova Sugestão</button>
+  </div>
+
+  <div class="abas-topo">
+    <button data-status="nova" id="aba-nova">📥 Banco de Sugestões</button>
+    <button data-status="em_analise" id="aba-em_analise">⏳ Em Análise</button>
+    <button data-status="aprovada" id="aba-aprovada">✅ Aprovadas</button>
+    <button data-status="arquivada" id="aba-arquivada">📁 Arquivo</button>
+  </div>
+
+  <div class="filtros">
+    <select id="filtro-editoria">
+      <option value="">Editoria: Todas</option>
+      <option value="Cidade">Cidade</option>
+      <option value="Acadêmico">Acadêmico</option>
+      <option value="Cultura">Cultura</option>
+      <option value="Esportes">Esportes</option>
+      <option value="Ciência e Tecnologia">Ciência e Tecnologia</option>
+      <option value="Polícia/Comunidade">Polícia/Comunidade</option>
+    </select>
+    <select id="filtro-urgencia">
+      <option value="">Prioridade: Todas</option>
+      <option value="rotina">Rotina</option>
+      <option value="relevante">Relevante</option>
+      <option value="urgente">Fato do Dia / Urgente</option>
+    </select>
+  </div>
+
+  <div class="overlay-modal" id="modal-sugestao">
+    <div class="modal-sugestao">
+      <h2>+ Nova Sugestão de Pauta</h2>
+
+      <div class="secao-titulo">Essencial</div>
+      <label>Título / Chamada da Sugestão</label>
+      <input type="text" id="s-titulo" placeholder='Ex: "Procon faz mutirão na UFMA"'>
+
+      <label>Editoria</label>
+      <select id="s-editoria">
+        <option value="Cidade">Cidade</option>
+        <option value="Acadêmico">Acadêmico</option>
+        <option value="Cultura">Cultura</option>
+        <option value="Esportes">Esportes</option>
+        <option value="Ciência e Tecnologia">Ciência e Tecnologia</option>
+        <option value="Polícia/Comunidade">Polícia/Comunidade</option>
+      </select>
+
+      <label>Resumo / O que é o fato</label>
+      <textarea id="s-resumo" placeholder="Explique a ideia..."></textarea>
+
+      <label>Data e Hora Prevista do Fato</label>
+      <div style="display:flex; gap:8px;">
+        <input type="date" id="s-data" style="flex:1;">
+        <input type="time" id="s-hora" style="flex:1;">
+      </div>
+
+      <div class="secao-titulo">Detalhes (opcional)</div>
+
+      <label>Local</label>
+      <input type="text" id="s-local" placeholder="Onde vai acontecer">
+
+      <label>Sugestão de Fontes e Contatos</label>
+      <textarea id="s-fontes" placeholder="Nome, cargo e telefone/WhatsApp"></textarea>
+
+      <label>Destino Multiplataforma Sugerido</label>
+      <div class="linha-checkboxes">
+        <label><input type="checkbox" id="s-tv"> TV Aberta</label>
+        <label><input type="checkbox" id="s-insta"> Instagram</label>
+        <label><input type="checkbox" id="s-youtube"> YouTube</label>
+        <label><input type="checkbox" id="s-site"> Site TV UFMA</label>
+      </div>
+
+      <label>Nível de Urgência</label>
+      <div class="opcoes-urgencia">
+        <label><input type="radio" name="s-urgencia" value="rotina" checked> Rotina</label>
+        <label><input type="radio" name="s-urgencia" value="relevante"> Relevante</label>
+        <label><input type="radio" name="s-urgencia" value="urgente"> Fato do Dia / Urgente</label>
+      </div>
+
+      <label>Enviado por</label>
+      <input type="text" id="s-enviado-por" placeholder="Seu nome">
+
+      <div class="botoes-modal">
+        <button class="btn-cancelar" id="cancelar-sugestao">Cancelar</button>
+        <button class="btn-confirmar" id="confirmar-sugestao">Enviar Sugestão</button>
+      </div>
+    </div>
+  </div>
+  <div class="conteudo" id="conteudo">
+    <!-- cards entram aqui -->
+  </div>
+
+  <script>
+    let statusAtivo = 'nova';
+    let listaCarregada = [];
+    let idEmEdicaoSugestao = null;
+
+    function trocarAba(status) {
+      statusAtivo = status;
+      document.querySelectorAll('.abas-topo button').forEach(b => b.classList.remove('ativo'));
+      document.getElementById('aba-' + status).classList.add('ativo');
+      carregarSugestoes();
+    }
+
+    document.querySelectorAll('.abas-topo button').forEach(btn => {
+      btn.addEventListener('click', () => trocarAba(btn.dataset.status));
+    });
+
+    document.getElementById('filtro-editoria').addEventListener('change', carregarSugestoes);
+    document.getElementById('filtro-urgencia').addEventListener('change', carregarSugestoes);
+
+    const rotulosUrgencia = { rotina: 'Rotina', relevante: 'Relevante', urgente: 'Urgente' };
+    const rotulosStatus = { nova: 'Nova Sugestão', em_analise: 'Em Análise pelo Editor', aprovada: 'Aprovada', arquivada: 'Arquivada' };
+
+    async function carregarSugestoes() {
+      const conteudo = document.getElementById('conteudo');
+      conteudo.innerHTML = '<p>Carregando...</p>';
+
+      const resposta = await fetch('/sugestoes?status=' + statusAtivo);
+      let lista = await resposta.json();
+      listaCarregada = lista;
+
+      const editoriaFiltro = document.getElementById('filtro-editoria').value;
+      const urgenciaFiltro = document.getElementById('filtro-urgencia').value;
+
+      if (editoriaFiltro) lista = lista.filter(s => s.editoria === editoriaFiltro);
+      if (urgenciaFiltro) lista = lista.filter(s => s.urgencia === urgenciaFiltro);
+
+      if (lista.length === 0) {
+        conteudo.innerHTML = '<p style="text-align:center; color:#999;">Nenhuma sugestão nesta aba.</p>';
+        return;
+      }
+
+      conteudo.innerHTML = lista.map(s => {
+        const destinos = [];
+        if (s.destino_tv) destinos.push('TV');
+        if (s.destino_instagram) destinos.push('Instagram');
+        if (s.destino_youtube) destinos.push('YouTube');
+        if (s.destino_site) destinos.push('Site');
+
+        return `
+          <div class="card-sugestao">
+            <div class="tags">
+              <span class="tag tag-${s.urgencia}">${rotulosUrgencia[s.urgencia] || s.urgencia}</span>
+              ${destinos.length ? `<span class="tag tag-midia">${destinos.join(' + ')}</span>` : ''}
+            </div>
+            <span class="enviado-por">Enviado por: ${s.enviado_por || '—'}</span>
+            <div class="titulo">📌 ${s.titulo}</div>
+            <div class="resumo">📝 ${s.resumo || ''}</div>
+            <div class="meta">📍 ${s.local || '—'} | 📅 ${s.data_prevista || '—'} ${s.hora_prevista ? '· ' + s.hora_prevista.replace(':', 'h') : ''}</div>
+            <div class="status-linha">Status atual: ${rotulosStatus[s.status] || s.status}</div>
+            <div class="acoes">
+              <button class="btn-detalhes" data-id="${s.id}">👁️ Ver Detalhes</button>
+              ${s.status !== 'aprovada' ? `<button class="btn-aprovar" data-id="${s.id}">✅ Aprovar</button>` : ''}
+              ${s.status !== 'arquivada' ? `<button class="btn-arquivar" data-id="${s.id}">❌ Arquivar</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.btn-arquivar').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          await fetch(`/sugestoes/${btn.dataset.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'arquivada' })
+          });
+          carregarSugestoes();
+        });
+      });
+
+      document.querySelectorAll('.btn-aprovar').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          alert('O fluxo completo de "Aprovar e Gerar Pauta" é a próxima etapa que vamos construir. Por enquanto, isso só marca como aprovada.');
+          await fetch(`/sugestoes/${btn.dataset.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'aprovada' })
+          });
+          carregarSugestoes();
+        });
+      });
+
+      document.querySelectorAll('.btn-detalhes').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = Number(btn.dataset.id);
+          const s = listaCarregada.find(item => item.id === id);
+          if (!s) return;
+
+          idEmEdicaoSugestao = id;
+
+          document.getElementById('s-titulo').value = s.titulo || '';
+          document.getElementById('s-editoria').value = s.editoria || 'Cidade';
+          document.getElementById('s-resumo').value = s.resumo || '';
+          document.getElementById('s-data').value = s.data_prevista || '';
+          document.getElementById('s-hora').value = s.hora_prevista || '';
+          document.getElementById('s-local').value = s.local || '';
+          document.getElementById('s-fontes').value = s.fontes || '';
+          document.getElementById('s-tv').checked = !!s.destino_tv;
+          document.getElementById('s-insta').checked = !!s.destino_instagram;
+          document.getElementById('s-youtube').checked = !!s.destino_youtube;
+          document.getElementById('s-site').checked = !!s.destino_site;
+          document.querySelector(`input[name="s-urgencia"][value="${s.urgencia}"]`).checked = true;
+          document.getElementById('s-enviado-por').value = s.enviado_por || '';
+
+          document.getElementById('modal-sugestao').classList.add('aberto');
+        });
+      });
+    }
+
+    document.getElementById('btn-nova-sugestao').addEventListener('click', () => {
+      idEmEdicaoSugestao = null;
+      // limpa o formulário
+      document.getElementById('s-titulo').value = '';
+      document.getElementById('s-editoria').value = 'Cidade';
+      document.getElementById('s-resumo').value = '';
+      document.getElementById('s-data').value = '';
+      document.getElementById('s-hora').value = '';
+      document.getElementById('s-local').value = '';
+      document.getElementById('s-fontes').value = '';
+      document.getElementById('s-tv').checked = false;
+      document.getElementById('s-insta').checked = false;
+      document.getElementById('s-youtube').checked = false;
+      document.getElementById('s-site').checked = false;
+      document.querySelector('input[name="s-urgencia"][value="rotina"]').checked = true;
+      document.getElementById('s-enviado-por').value = '';
+
+      document.getElementById('modal-sugestao').classList.add('aberto');
+    });
+
+    document.getElementById('cancelar-sugestao').addEventListener('click', () => {
+      document.getElementById('modal-sugestao').classList.remove('aberto');
+    });
+
+    document.getElementById('confirmar-sugestao').addEventListener('click', async () => {
+      const titulo = document.getElementById('s-titulo').value.trim();
+      const resumo = document.getElementById('s-resumo').value.trim();
+
+      if (!titulo || !resumo) {
+        alert('Preencha ao menos o título e o resumo.');
+        return;
+      }
+
+      const dados = {
+        titulo,
+        editoria: document.getElementById('s-editoria').value,
+        resumo,
+        data_prevista: document.getElementById('s-data').value,
+        hora_prevista: document.getElementById('s-hora').value,
+        local: document.getElementById('s-local').value.trim(),
+        fontes: document.getElementById('s-fontes').value.trim(),
+        destino_tv: document.getElementById('s-tv').checked,
+        destino_instagram: document.getElementById('s-insta').checked,
+        destino_youtube: document.getElementById('s-youtube').checked,
+        destino_site: document.getElementById('s-site').checked,
+        urgencia: document.querySelector('input[name="s-urgencia"]:checked').value,
+        enviado_por: document.getElementById('s-enviado-por').value.trim()
+      };
+
+      if (idEmEdicaoSugestao !== null) {
+        await fetch(`/sugestoes/${idEmEdicaoSugestao}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dados)
+        });
+      } else {
+        await fetch('/sugestoes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dados)
+        });
+      }
+
+      document.getElementById('modal-sugestao').classList.remove('aberto');
+      carregarSugestoes();
+    });
+
+    trocarAba('nova');
+  </script>
+</body>
+</html>

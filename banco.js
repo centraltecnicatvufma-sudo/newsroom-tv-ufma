@@ -93,4 +93,25 @@ db.exec(`
     FOREIGN KEY (programa_quadro_id) REFERENCES programas_quadros(id)
   )
 `);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS sugestoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    titulo TEXT,
+    editoria TEXT,
+    resumo TEXT,
+    data_prevista TEXT,
+    hora_prevista TEXT,
+    local TEXT,
+    fontes TEXT,
+    destino_tv INTEGER DEFAULT 0,
+    destino_instagram INTEGER DEFAULT 0,
+    destino_youtube INTEGER DEFAULT 0,
+    destino_site INTEGER DEFAULT 0,
+    urgencia TEXT,
+    enviado_por TEXT,
+    status TEXT,
+    pauta_id INTEGER,
+    FOREIGN KEY (pauta_id) REFERENCES pautas(id)
+  )
+`);
 module.exports = db;
