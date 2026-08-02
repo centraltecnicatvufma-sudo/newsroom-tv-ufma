@@ -45,6 +45,23 @@
     .modal .botoes-modal button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
     .modal .btn-cancelar { background: #eee; color: #333; }
     .modal .btn-confirmar { background: #336699; color: #fff; }
+    .dias-semana { display: flex; gap: 8px; margin-bottom: 20px; }
+    .dia-semana { flex: 1; text-align: center; padding: 10px 4px; border-radius: 8px; background: #fff; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .dia-semana .nome-dia { font-size: 11px; color: #999; text-transform: uppercase; }
+    .dia-semana .numero-dia { font-size: 18px; font-weight: bold; margin-top: 2px; }
+    .dia-semana.selecionado { background: #8D0333; }
+    .dia-semana.selecionado .nome-dia, .dia-semana.selecionado .numero-dia { color: #fff; }
+
+    .card-agendamento { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.12); padding: 14px 18px; margin-bottom: 12px; }
+    .card-agendamento .status-badge { font-size: 10px; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; color: #fff; }
+    .status-agendado { background: #336699; }
+    .status-concluido { background: #2e8b57; }
+    .status-cancelado { background: #8D0333; }
+    .card-agendamento .titulo-card { font-size: 16px; font-weight: bold; margin-top: 8px; }
+    .card-agendamento .detalhe-card { font-size: 13px; color: #5b6472; margin-top: 4px; }
+    .card-agendamento .linha-acoes { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+    .card-agendamento select { padding: 4px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
+    .card-agendamento .btn-editar-agendamento { background: transparent; border: none; cursor: pointer; font-size: 13px; color: #336699; }
   </style>
 </head>
 <body>
@@ -324,8 +341,102 @@
       renderEquipe();
     });
 
-    function renderAgendaDia() {
-      document.getElementById('conteudo').innerHTML = '<h1>AGENDA</h1><p style="text-align:center; color:#999;">Em construção — próximo passo.</p>';
+    let diaSelecionado = new Date();
+
+    function formatarDataISO(data) {
+      const ano = data.getFullYear();
+      const mes = String(data.getMonth() + 1).padStart(2, '0');
+      const dia = String(data.getDate()).padStart(2, '0');
+      return `${ano}-${mes}-${dia}`;
+    }
+
+    function gerarDiasDaSemana(dataReferencia) {
+      const diaSemanaAtual = dataReferencia.getDay(); // 0 = domingo
+      const inicioSemana = new Date(dataReferencia);
+      inicioSemana.setDate(dataReferencia.getDate() - diaSemanaAtual); // começa no domingo
+
+      const dias = [];
+      for (let i = 0; i < 7; i++) { // domingo a sábado
+        const d = new Date(inicioSemana);
+        d.setDate(inicioSemana.getDate() + i);
+        dias.push(d);
+      }
+      return dias;
+    }
+
+    async function renderAgendaDia() {
+      const conteudo = document.getElementById('conteudo');
+      conteudo.innerHTML = '<h1>AGENDA</h1><p>Carregando...</p>';
+
+      const dias = gerarDiasDaSemana(diaSelecionado);
+      const nomesDias = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+
+      const dataSelecionadaISO = formatarDataISO(diaSelecionado);
+
+      let diasHtml = dias.map((d, i) => {
+        const iso = formatarDataISO(d);
+        const selecionado = iso === dataSelecionadaISO ? ' selecionado' : '';
+        return `
+          <div class="dia-semana${selecionado}" data-data="${iso}">
+            <div class="nome-dia">${nomesDias[i]}</div>
+            <div class="numero-dia">${d.getDate()}</div>
+          </div>
+        `;
+      }).join('');
+
+      const resposta = await fetch('/agenda?data=' + dataSelecionadaISO);
+      const agendamentos = await resposta.json();
+
+      const rotulosStatus = { agendado: 'Agendado', concluido: 'Concluído', cancelado: 'Cancelado' };
+
+      let cardsHtml = agendamentos.map(a => `
+        <div class="card-agendamento">
+          <span class="status-badge status-${a.status}">${rotulosStatus[a.status] || a.status}</span>
+          <div class="titulo-card">${a.hora} - ${a.programa_nome || ''}</div>
+          <div class="detalhe-card">📍 ${a.local || ''} ${a.equipe ? '· 👤 ' + a.equipe : ''}</div>
+          <div class="linha-acoes">
+            <button class="btn-editar-agendamento" data-id="${a.id}">✏️ Editar</button>
+            <select class="select-status" data-id="${a.id}">
+              <option value="agendado" ${a.status === 'agendado' ? 'selected' : ''}>Agendado</option>
+              <option value="concluido" ${a.status === 'concluido' ? 'selected' : ''}>Concluído</option>
+              <option value="cancelado" ${a.status === 'cancelado' ? 'selected' : ''}>Cancelado</option>
+            </select>
+          </div>
+        </div>
+      `).join('');
+
+      if (agendamentos.length === 0) {
+        cardsHtml = '<p style="text-align:center; color:#999;">Nenhum agendamento para este dia.</p>';
+      }
+
+      conteudo.innerHTML = `
+        <h1>AGENDA</h1>
+        <div class="dias-semana">${diasHtml}</div>
+        <div id="lista-cards-agenda">${cardsHtml}</div>
+        <button class="btn-flutuante" id="btn-add-agendamento">+</button>
+      `;
+
+      document.querySelectorAll('.dia-semana').forEach(div => {
+        div.addEventListener('click', () => {
+          diaSelecionado = new Date(div.dataset.data + 'T12:00:00');
+          renderAgendaDia();
+        });
+      });
+
+      document.querySelectorAll('.select-status').forEach(sel => {
+        sel.addEventListener('change', async () => {
+          await fetch(`/agenda/${sel.dataset.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: sel.value })
+          });
+          renderAgendaDia();
+        });
+      });
+
+      document.getElementById('btn-add-agendamento').addEventListener('click', () => {
+        alert('A tela de Novo Agendamento é o próximo passo que vamos construir juntos!');
+      });
     }
 
     trocarAba('relatorio');
