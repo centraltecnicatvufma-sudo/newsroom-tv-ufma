@@ -6,6 +6,7 @@ const pautasRouter = require('./pautas');
 const espelhosRouter = require('./espelhos');
 const blocosRouter = require('./blocos');
 const materiaRouter = require('./materia');
+const agendaRouter = require('./agenda');
 
 app.use(express.json());
 app.use(express.static('public'));
@@ -13,6 +14,7 @@ app.use('/pautas', pautasRouter);
 app.use('/espelhos', espelhosRouter);
 app.use('/blocos', blocosRouter);
 app.use('/materia', materiaRouter);
+app.use('/agenda', agendaRouter);
 
 app.get('/', (req, res) => {
   res.send('Newsroom TV UFMA está no ar!');

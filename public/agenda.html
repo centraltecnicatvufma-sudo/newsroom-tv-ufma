@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Agenda — Newsroom TV UFMA</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+
+    .conteudo { flex: 1; overflow-y: auto; padding: 24px; }
+    .conteudo h1 { text-align: center; font-size: 22px; margin-bottom: 20px; }
+
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+    th { background: #336699; color: #fff; font-size: 12px; text-transform: uppercase; }
+    tr:last-child td { border-bottom: none; }
+
+    .paginacao { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 16px; }
+    .paginacao button { background: #336699; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-size: 13px; }
+    .paginacao button:disabled { background: #ccc; cursor: default; }
+    .paginacao span { font-size: 13px; color: #5b6472; }
+
+    .abas-inferior { display: flex; border-top: 1px solid #ddd; background: #fff; }
+    .abas-inferior button {
+      flex: 1; background: transparent; border: none; padding: 12px 0; cursor: pointer;
+      font-size: 13px; color: #5b6472; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .abas-inferior button.ativo { color: #336699; font-weight: bold; }
+    .abas-inferior button .icone { font-size: 18px; }
+  </style>
+</head>
+<body>
+
+  <div class="conteudo" id="conteudo">
+    <!-- conteúdo da aba ativa entra aqui -->
+  </div>
+
+  <div class="abas-inferior">
+    <button data-aba="programas" id="aba-programas"><span class="icone">🎬</span>Programa/Quadro</button>
+    <button data-aba="equipe" id="aba-equipe"><span class="icone">👥</span>Equipe</button>
+    <button data-aba="agenda" id="aba-agenda"><span class="icone">📅</span>Agenda</button>
+    <button data-aba="relatorio" id="aba-relatorio"><span class="icone">📋</span>Relatório</button>
+  </div>
+
+  <script>
+    let abaAtiva = 'relatorio';
+    let paginaAtual = 1;
+    const ITENS_POR_PAGINA = 8;
+
+    function trocarAba(aba) {
+      abaAtiva = aba;
+      document.querySelectorAll('.abas-inferior button').forEach(b => b.classList.remove('ativo'));
+      document.getElementById('aba-' + aba).classList.add('ativo');
+
+      if (aba === 'relatorio') renderRelatorio();
+      if (aba === 'programas') renderProgramas();
+      if (aba === 'equipe') renderEquipe();
+      if (aba === 'agenda') renderAgendaDia();
+    }
+
+    document.querySelectorAll('.abas-inferior button').forEach(btn => {
+      btn.addEventListener('click', () => trocarAba(btn.dataset.aba));
+    });
+
+    async function renderRelatorio() {
+      const conteudo = document.getElementById('conteudo');
+      conteudo.innerHTML = '<h1>AGENDA SEMANAL</h1><p>Carregando...</p>';
+
+      const resposta = await fetch('/agenda');
+      const todos = await resposta.json();
+
+      const totalPaginas = Math.max(1, Math.ceil(todos.length / ITENS_POR_PAGINA));
+      if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+
+      const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
+      const pagina = todos.slice(inicio, inicio + ITENS_POR_PAGINA);
+
+      let linhas = pagina.map(item => `
+        <tr>
+          <td>${item.data || ''}</td>
+          <td>${item.hora || ''}</td>
+          <td>${item.programa_nome || ''}</td>
+          <td>${item.local || ''}</td>
+        </tr>
+      `).join('');
+
+      if (pagina.length === 0) {
+        linhas = '<tr><td colspan="4" style="text-align:center; color:#999;">Nenhum agendamento cadastrado ainda.</td></tr>';
+      }
+
+      conteudo.innerHTML = `
+        <h1>AGENDA SEMANAL</h1>
+        <table>
+          <thead>
+            <tr><th>Data</th><th>Hora</th><th>Programa/Quadro</th><th>Local</th></tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+        <div class="paginacao">
+          <button id="btn-anterior" ${paginaAtual <= 1 ? 'disabled' : ''}>&lt; Anterior</button>
+          <span>Página ${paginaAtual} de ${totalPaginas}</span>
+          <button id="btn-proxima" ${paginaAtual >= totalPaginas ? 'disabled' : ''}>Próxima &gt;</button>
+        </div>
+      `;
+
+      document.getElementById('btn-anterior').addEventListener('click', () => {
+        paginaAtual--;
+        renderRelatorio();
+      });
+      document.getElementById('btn-proxima').addEventListener('click', () => {
+        paginaAtual++;
+        renderRelatorio();
+      });
+    }
+
+    function renderProgramas() {
+      document.getElementById('conteudo').innerHTML = '<h1>PROGRAMAS E QUADROS</h1><p style="text-align:center; color:#999;">Em construção — próximo passo.</p>';
+    }
+
+    function renderEquipe() {
+      document.getElementById('conteudo').innerHTML = '<h1>CADASTRO DE EQUIPE</h1><p style="text-align:center; color:#999;">Em construção — próximo passo.</p>';
+    }
+
+    function renderAgendaDia() {
+      document.getElementById('conteudo').innerHTML = '<h1>AGENDA</h1><p style="text-align:center; color:#999;">Em construção — próximo passo.</p>';
+    }
+
+    trocarAba('relatorio');
+  </script>
+</body>
+</html>

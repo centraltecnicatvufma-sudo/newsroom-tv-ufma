@@ -64,4 +64,33 @@ db.exec(`
   )
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS programas_quadros (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tipo TEXT,
+    nome TEXT
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS equipe_agenda (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT,
+    funcao TEXT
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS agendamentos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    programa_quadro_id INTEGER,
+    data TEXT,
+    hora TEXT,
+    local TEXT,
+    equipe TEXT,
+    observacao TEXT,
+    status TEXT,
+    FOREIGN KEY (programa_quadro_id) REFERENCES programas_quadros(id)
+  )
+`);
 module.exports = db;
