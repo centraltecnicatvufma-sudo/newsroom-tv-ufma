@@ -70,6 +70,19 @@
       </div>
     </div>
   </div>
+  <div class="overlay-modal" id="modal-equipe">
+    <div class="modal">
+      <h2>Cadastrar Membro</h2>
+      <label>Nome</label>
+      <input type="text" id="input-nome-membro" placeholder="Nome do membro">
+      <label>Função</label>
+      <input type="text" id="input-funcao-membro" placeholder="Ex: Repórter, Cinegrafista, Diretor...">
+      <div class="botoes-modal">
+        <button class="btn-cancelar" id="cancelar-equipe">Cancelar</button>
+        <button class="btn-confirmar" id="confirmar-equipe">Salvar</button>
+      </div>
+    </div>
+  </div>
   <div class="abas-inferior">
     <button data-aba="programas" id="aba-programas"><span class="icone">🎬</span>Programa/Quadro</button>
     <button data-aba="equipe" id="aba-equipe"><span class="icone">👥</span>Equipe</button>
@@ -228,9 +241,88 @@
       renderProgramas();
     });
 
-    function renderEquipe() {
-      document.getElementById('conteudo').innerHTML = '<h1>CADASTRO DE EQUIPE</h1><p style="text-align:center; color:#999;">Em construção — próximo passo.</p>';
+    let idEmEdicaoEquipe = null;
+
+    async function renderEquipe() {
+      const conteudo = document.getElementById('conteudo');
+      conteudo.innerHTML = '<h1>CADASTRO DE EQUIPE</h1><p>Carregando...</p>';
+
+      const resposta = await fetch('/agenda/equipe');
+      const lista = await resposta.json();
+
+      let itensHtml = lista.map(m => `
+        <li style="display:flex; justify-content:space-between; align-items:center;">
+          <div>${m.nome} <span class="tag-tipo">${m.funcao}</span></div>
+          <div>
+            <button class="btn-editar-membro" data-id="${m.id}" data-nome="${m.nome}" data-funcao="${m.funcao}" style="background:transparent; border:none; cursor:pointer; font-size:14px;">✏️</button>
+            <button class="btn-excluir-membro" data-id="${m.id}" style="background:transparent; border:none; cursor:pointer; font-size:14px;">🗑️</button>
+          </div>
+        </li>
+      `).join('');
+
+      if (lista.length === 0) {
+        itensHtml = '<li style="text-align:center; color:#999; box-shadow:none;">Nenhum membro cadastrado ainda.</li>';
+      }
+
+      conteudo.innerHTML = `
+        <h1>CADASTRO DE EQUIPE</h1>
+        <ul class="lista-simples">${itensHtml}</ul>
+        <button class="btn-flutuante" id="btn-add-membro">+</button>
+      `;
+
+      document.getElementById('btn-add-membro').addEventListener('click', () => {
+        idEmEdicaoEquipe = null;
+        document.getElementById('input-nome-membro').value = '';
+        document.getElementById('input-funcao-membro').value = '';
+        document.getElementById('modal-equipe').classList.add('aberto');
+      });
+
+      document.querySelectorAll('.btn-editar-membro').forEach(btn => {
+        btn.addEventListener('click', () => {
+          idEmEdicaoEquipe = Number(btn.dataset.id);
+          document.getElementById('input-nome-membro').value = btn.dataset.nome;
+          document.getElementById('input-funcao-membro').value = btn.dataset.funcao;
+          document.getElementById('modal-equipe').classList.add('aberto');
+        });
+      });
+
+      document.querySelectorAll('.btn-excluir-membro').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const confirmar = window.confirm('Tem certeza que deseja excluir este membro?');
+          if (!confirmar) return;
+
+          await fetch(`/agenda/equipe/${btn.dataset.id}`, { method: 'DELETE' });
+          renderEquipe();
+        });
+      });
     }
+
+    document.getElementById('cancelar-equipe').addEventListener('click', () => {
+      document.getElementById('modal-equipe').classList.remove('aberto');
+    });
+
+    document.getElementById('confirmar-equipe').addEventListener('click', async () => {
+      const nome = document.getElementById('input-nome-membro').value.trim();
+      const funcao = document.getElementById('input-funcao-membro').value.trim();
+      if (!nome || !funcao) return;
+
+      if (idEmEdicaoEquipe !== null) {
+        await fetch(`/agenda/equipe/${idEmEdicaoEquipe}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nome, funcao })
+        });
+      } else {
+        await fetch('/agenda/equipe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nome, funcao })
+        });
+      }
+
+      document.getElementById('modal-equipe').classList.remove('aberto');
+      renderEquipe();
+    });
 
     function renderAgendaDia() {
       document.getElementById('conteudo').innerHTML = '<h1>AGENDA</h1><p style="text-align:center; color:#999;">Em construção — próximo passo.</p>';

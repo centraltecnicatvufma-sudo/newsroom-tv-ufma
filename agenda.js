@@ -159,5 +159,32 @@ router.post('/equipe', (req, res) => {
   const novo = db.prepare('SELECT * FROM equipe_agenda WHERE id = ?').get(resultado.lastInsertRowid);
   res.status(201).json(novo);
 });
+router.patch('/equipe/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const item = db.prepare('SELECT * FROM equipe_agenda WHERE id = ?').get(id);
+
+  if (!item) {
+    return res.status(404).json({ erro: "Membro não encontrado" });
+  }
+
+  const nome = req.body.nome !== undefined ? req.body.nome : item.nome;
+  const funcao = req.body.funcao !== undefined ? req.body.funcao : item.funcao;
+
+  db.prepare('UPDATE equipe_agenda SET nome = ?, funcao = ? WHERE id = ?').run(nome, funcao, id);
+
+  const atualizado = db.prepare('SELECT * FROM equipe_agenda WHERE id = ?').get(id);
+  res.json(atualizado);
+});
+
+router.delete('/equipe/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const resultado = db.prepare('DELETE FROM equipe_agenda WHERE id = ?').run(id);
+
+  if (resultado.changes === 0) {
+    return res.status(404).json({ erro: "Membro não encontrado" });
+  }
+
+  res.status(204).send();
+});
 
 module.exports = router;
