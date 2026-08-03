@@ -5,15 +5,38 @@ const db = new Database('newsroom.db');
 db.exec(`
   CREATE TABLE IF NOT EXISTS pautas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    retranca TEXT,
-    editoria TEXT,
-    produtor TEXT,
+    sugestao_id INTEGER,
+    titulo TEXT NOT NULL,
+    programa_id INTEGER,
+    destino_tv INTEGER DEFAULT 0,
+    destino_instagram INTEGER DEFAULT 0,
+    destino_youtube INTEGER DEFAULT 0,
+    destino_site INTEGER DEFAULT 0,
+    orientacao TEXT,
+    roteiro TEXT,
+    local TEXT,
+    anexos TEXT,
     reporter TEXT,
-    editor TEXT,
-    status TEXT,
-    data TEXT,
-    prazo TEXT,
-    texto_pauta TEXT
+    cinegrafista TEXT,
+    motorista TEXT,
+    equip_lapela INTEGER DEFAULT 0,
+    equip_iluminacao INTEGER DEFAULT 0,
+    equip_mochilink INTEGER DEFAULT 0,
+    data_fato TEXT,
+    hora_fato TEXT,
+    status TEXT DEFAULT 'em_producao'
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS pauta_fontes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pauta_id INTEGER NOT NULL,
+    nome TEXT,
+    cargo TEXT,
+    contato TEXT,
+    horario_confirmado TEXT,
+    FOREIGN KEY (pauta_id) REFERENCES pautas(id)
   )
 `);
 

@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <title>Sugestões de Pauta — Newsroom TV UFMA</title>
   <style>
+    .modal-aprovar { background: #fff; border-radius: 10px; padding: 24px; width: 420px; max-height: 90vh; overflow-y: auto; }
+    .modal-aprovar h2 { font-size: 18px; margin: 0 0 4px; }
+    .modal-aprovar label { font-size: 12px; color: #5b6472; display: block; margin: 12px 0 4px; }
+    .modal-aprovar select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
 
@@ -146,6 +150,29 @@
       </div>
     </div>
   </div>
+  <div class="overlay-modal" id="modal-aprovar">
+    <div class="modal-aprovar">
+      <h2>✅ Aprovar e Gerar Pauta</h2>
+      <p style="font-size:13px; color:#5b6472;">Isso vai criar automaticamente uma Pauta e um Agendamento.</p>
+
+      <label>Programa / Espelho</label>
+      <select id="ap-programa"></select>
+
+      <label>Produtor responsável</label>
+      <select id="ap-produtor"></select>
+
+      <label>Repórter responsável</label>
+      <select id="ap-reporter"></select>
+
+      <label>Equipe adicional (segure Cmd/Ctrl para mais de um)</label>
+      <select id="ap-equipe" multiple size="4"></select>
+
+      <div class="botoes-modal">
+        <button class="btn-cancelar" id="cancelar-aprovar">Cancelar</button>
+        <button class="btn-confirmar" id="confirmar-aprovar">Confirmar e Gerar Pauta</button>
+      </div>
+    </div>
+  </div>
   <div class="conteudo" id="conteudo">
     <!-- cards entram aqui -->
   </div>
@@ -231,13 +258,10 @@
 
       document.querySelectorAll('.btn-aprovar').forEach(btn => {
         btn.addEventListener('click', async () => {
-          alert('O fluxo completo de "Aprovar e Gerar Pauta" é a próxima etapa que vamos construir. Por enquanto, isso só marca como aprovada.');
-          await fetch(`/sugestoes/${btn.dataset.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'aprovada' })
-          });
-          carregarSugestoes();
+          const id = Number(btn.dataset.id);
+          const s = listaCarregada.find(item => item.id === id);
+          if (!s) return;
+          await abrirModalAprovar(s);
         });
       });
 
@@ -336,6 +360,97 @@
     });
 
     trocarAba('nova');
+    let sugestaoAprovando = null;
+
+    async function abrirModalAprovar(sugestao) {
+      sugestaoAprovando = sugestao;
+
+      const [respProgramas, respEquipe] = await Promise.all([
+        fetch('/agenda/programas'),
+        fetch('/agenda/equipe')
+      ]);
+      const programas = await respProgramas.json();
+      const equipeLista = await respEquipe.json();
+
+      document.getElementById('ap-programa').innerHTML = programas.map(p =>
+        `<option value="${p.id}">${p.nome}</option>`
+      ).join('');
+
+      const opcoesPessoas = equipeLista.map(m =>
+        `<option value="${m.nome}">${m.nome} (${m.funcao})</option>`
+      ).join('');
+
+      document.getElementById('ap-produtor').innerHTML = opcoesPessoas;
+      document.getElementById('ap-reporter').innerHTML = opcoesPessoas;
+      document.getElementById('ap-equipe').innerHTML = opcoesPessoas;
+
+      document.getElementById('modal-aprovar').classList.add('aberto');
+    }
+
+    document.getElementById('cancelar-aprovar').addEventListener('click', () => {
+      document.getElementById('modal-aprovar').classList.remove('aberto');
+    });
+
+    function gerarRetrancaDoTitulo(titulo) {
+      return titulo
+        .toUpperCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+        .replace(/[^A-Z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 30);
+    }
+
+    document.getElementById('confirmar-aprovar').addEventListener('click', async () => {
+      const s = sugestaoAprovando;
+      if (!s) return;
+
+      const programaId = Number(document.getElementById('ap-programa').value);
+      const produtor = document.getElementById('ap-produtor').value;
+      const reporter = document.getElementById('ap-reporter').value;
+      const equipeAdicional = Array.from(document.getElementById('ap-equipe').selectedOptions).map(o => o.value);
+
+      // 1. Cria a Pauta
+      const respostaPauta = await fetch('/pautas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          retranca: gerarRetrancaDoTitulo(s.titulo),
+          editoria: s.editoria,
+          produtor: produtor,
+          reporter: reporter,
+          editor: '',
+          data: s.data_prevista,
+          prazo: s.hora_prevista
+        })
+      });
+      const novaPauta = await respostaPauta.json();
+
+      // 2. Cria o Agendamento
+      const todaEquipe = [reporter, ...equipeAdicional].filter(Boolean).join(', ');
+      await fetch('/agenda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          programa_quadro_id: programaId,
+          data: s.data_prevista,
+          hora: s.hora_prevista,
+          local: s.local,
+          equipe: todaEquipe,
+          observacao: 'Gerado a partir da sugestão: ' + s.titulo
+        })
+      });
+
+      // 3. Atualiza a sugestão
+      await fetch(`/sugestoes/${s.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'aprovada', pauta_id: novaPauta.id })
+      });
+
+      document.getElementById('modal-aprovar').classList.remove('aberto');
+      alert('Pauta e Agendamento criados com sucesso!');
+      carregarSugestoes();
+    });
   </script>
 </body>
 </html>
