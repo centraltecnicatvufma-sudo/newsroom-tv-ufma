@@ -164,6 +164,9 @@
       <label>Repórter responsável</label>
       <select id="ap-reporter"></select>
 
+      <label>Cinegrafista responsável</label>
+      <select id="ap-cinegrafista"></select>
+
       <label>Equipe adicional (segure Cmd/Ctrl para mais de um)</label>
       <select id="ap-equipe" multiple size="4"></select>
 
@@ -382,6 +385,7 @@
 
       document.getElementById('ap-produtor').innerHTML = opcoesPessoas;
       document.getElementById('ap-reporter').innerHTML = opcoesPessoas;
+      document.getElementById('ap-cinegrafista').innerHTML = opcoesPessoas;
       document.getElementById('ap-equipe').innerHTML = opcoesPessoas;
 
       document.getElementById('modal-aprovar').classList.add('aberto');
@@ -391,15 +395,6 @@
       document.getElementById('modal-aprovar').classList.remove('aberto');
     });
 
-    function gerarRetrancaDoTitulo(titulo) {
-      return titulo
-        .toUpperCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
-        .replace(/[^A-Z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .slice(0, 30);
-    }
-
     document.getElementById('confirmar-aprovar').addEventListener('click', async () => {
       const s = sugestaoAprovando;
       if (!s) return;
@@ -407,27 +402,41 @@
       const programaId = Number(document.getElementById('ap-programa').value);
       const produtor = document.getElementById('ap-produtor').value;
       const reporter = document.getElementById('ap-reporter').value;
+      const cinegrafista = document.getElementById('ap-cinegrafista').value;
       const equipeAdicional = Array.from(document.getElementById('ap-equipe').selectedOptions).map(o => o.value);
 
-      // 1. Cria a Pauta
+      // 1. Cria a Pauta (já no formato novo, compatível com o pautas.js atual)
       const respostaPauta = await fetch('/pautas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          retranca: gerarRetrancaDoTitulo(s.titulo),
-          editoria: s.editoria,
-          produtor: produtor,
-          reporter: reporter,
-          editor: '',
-          data: s.data_prevista,
-          prazo: s.hora_prevista
+          sugestao_id: s.id,
+          titulo: s.titulo,
+          programa_id: programaId,
+          destino_tv: !!s.destino_tv,
+          destino_instagram: !!s.destino_instagram,
+          destino_youtube: !!s.destino_youtube,
+          destino_site: !!s.destino_site,
+          orientacao: s.resumo || '',
+          local: s.local || '',
+          produtor,
+          reporter,
+          cinegrafista,
+          data_fato: s.data_prevista,
+          hora_fato: s.hora_prevista,
+          status: 'em_producao'
         })
       });
       const novaPauta = await respostaPauta.json();
 
+      if (!novaPauta.id) {
+        alert('Não foi possível criar a pauta. Verifique se o título da sugestão está preenchido.');
+        return;
+      }
+
       // 2. Cria o Agendamento
-      const todaEquipe = [reporter, ...equipeAdicional].filter(Boolean).join(', ');
-      await fetch('/agenda', {
+      const todaEquipe = [produtor, reporter, cinegrafista, ...equipeAdicional].filter(Boolean).join(', ');
+      const respostaAgenda = await fetch('/agenda', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -439,8 +448,16 @@
           observacao: 'Gerado a partir da sugestão: ' + s.titulo
         })
       });
+      const novoAgendamento = await respostaAgenda.json();
 
-      // 3. Atualiza a sugestão
+      // 3. Vincula o agendamento à pauta
+      await fetch(`/pautas/${novaPauta.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agenda_id: novoAgendamento.id })
+      });
+
+      // 4. Atualiza a sugestão
       await fetch(`/sugestoes/${s.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

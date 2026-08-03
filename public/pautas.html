@@ -5,343 +5,505 @@
   <title>Pautas — Newsroom TV UFMA</title>
   <style>
     * { box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #0f1216; color: #eee; margin: 0; padding: 20px; }
-    .topo { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .topo h1 { font-size: 18px; margin: 0; }
-    .topo button { background: #2563eb; color: white; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-size: 13px; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
 
-    .board { display: flex; gap: 12px; overflow-x: auto; }
-    .coluna { width: 240px; flex-shrink: 0; }
-    .coluna-titulo { font-size: 12px; color: #999; text-transform: uppercase; margin-bottom: 8px; }
+    .topo { background: #336699; color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .topo h1 { font-size: 18px; margin: 0; white-space: nowrap; }
+    .topo input { flex: 1; max-width: 320px; padding: 8px 10px; border-radius: 6px; border: none; font-size: 13px; }
+    .topo button { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-size: 13px; white-space: nowrap; }
 
-    .card { background: #1a1f26; border: 1px solid #2a2f36; border-radius: 8px; padding: 10px; margin-bottom: 8px; cursor: pointer; }
-    .card .retranca { font-size: 11px; padding: 2px 8px; border-radius: 6px; background: #2a2f36; color: #aaa; }
-    .card .titulo { font-size: 14px; margin-top: 8px; }
-    .card .meta { font-size: 12px; color: #999; margin-top: 6px; display: flex; justify-content: space-between; }
+    .filtros { display: flex; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; }
+    .filtros select, .filtros input { padding: 6px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
 
-    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
-    .overlay.aberto { display: flex; }
-    .painel { background: #171b21; border: 1px solid #2a2f36; border-radius: 12px; padding: 20px; width: 460px; max-height: 85vh; overflow-y: auto; }
-    .painel-header { display: flex; justify-content: space-between; align-items: flex-start; }
-    .painel-header button { background: transparent; border: none; color: #eee; font-size: 18px; cursor: pointer; }
-    label { font-size: 12px; color: #999; display: block; margin: 12px 0 4px; }
-    input, select { width: 100%; background: #0f1216; color: #eee; border: 1px solid #2a2f36; border-radius: 6px; padding: 6px 8px; font-size: 13px; }
-    .btn-salvar { width: 100%; margin-top: 16px; background: #2563eb; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-size: 13px; }
-    textarea { width: 100%; background: #0f1216; color: #eee; border: 1px solid #2a2f36; border-radius: 6px; padding: 8px; font-size: 13px; resize: vertical; min-height: 220px; }
-.materia-item { background: #0f1216; border: 1px solid #2a2f36; border-radius: 6px; padding: 8px; margin-bottom: 8px; }
-.materia-item .rotulo { font-size: 11px; color: #7fb8ff; font-weight: bold; margin-bottom: 4px; }
-.materia-item .remover { float: right; background: transparent; border: none; color: #999; cursor: pointer; font-size: 12px; }
-.btn-expandir { background: transparent; border: 1px solid #2a2f36; color: #eee; border-radius: 6px; padding: 2px 8px; cursor: pointer; font-size: 12px; margin-left: 6px; }
-.botoes-materia { display: flex; gap: 6px; margin-top: 8px; }
-.botoes-materia button { flex: 1; background: #2a2f36; color: #eee; border: none; border-radius: 6px; padding: 6px; cursor: pointer; font-size: 12px; }
+    .conteudo { flex: 1; overflow-y: auto; padding: 20px; }
+
+    table.lista-pautas { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    table.lista-pautas th { background: #eef1f5; text-align: left; padding: 10px 12px; font-size: 12px; color: #5b6472; text-transform: uppercase; }
+    table.lista-pautas td { padding: 10px 12px; font-size: 13px; border-top: 1px solid #f0f0f0; vertical-align: top; }
+    .tag-equipe { display: inline-block; background: #eef1f5; border-radius: 4px; padding: 2px 8px; font-size: 11px; margin-right: 4px; }
+
+    .status-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; color: #fff; font-weight: bold; white-space: nowrap; }
+    .status-em_producao { background: #C98A1F; }
+    .status-em_gravacao { background: #336699; }
+    .status-em_edicao { background: #6b3fa0; }
+    .status-concluida { background: #2e8b57; }
+
+    .acoes-lista button { font-size: 12px; padding: 5px 9px; border-radius: 6px; border: none; cursor: pointer; margin-right: 4px; }
+    .btn-ver { background: #eee; color: #333; }
+    .btn-lauda { background: #336699; color: #fff; }
+
+    .overlay-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 10; overflow-y: auto; padding: 30px 0; }
+    .overlay-modal.aberto { display: flex; }
+    .modal-pauta { background: #fff; border-radius: 10px; padding: 24px; width: 560px; max-height: 90vh; overflow-y: auto; }
+    .modal-pauta h2 { font-size: 18px; margin: 0 0 4px; }
+    .bloco-titulo { font-size: 12px; text-transform: uppercase; color: #999; margin-top: 20px; margin-bottom: 8px; border-top: 1px solid #eee; padding-top: 16px; }
+    .modal-pauta label { font-size: 12px; color: #5b6472; display: block; margin: 10px 0 4px; }
+    .modal-pauta input[type="text"], .modal-pauta input[type="date"], .modal-pauta input[type="time"], .modal-pauta select, .modal-pauta textarea {
+      width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;
+    }
+    .modal-pauta textarea { min-height: 60px; resize: vertical; }
+    .linha-checkboxes { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; margin-top: 6px; }
+    .linha-dupla { display: flex; gap: 8px; }
+    .linha-dupla > * { flex: 1; }
+
+    .fonte-item { border: 1px solid #eee; border-radius: 6px; padding: 10px; margin-top: 8px; position: relative; }
+    .fonte-item .remover-fonte { position: absolute; top: 6px; right: 8px; background: none; border: none; color: #8D0333; cursor: pointer; font-size: 13px; }
+    .btn-add-fonte { background: #eef1f5; color: #336699; border: none; border-radius: 6px; padding: 8px 12px; font-size: 12px; cursor: pointer; margin-top: 10px; }
+
+    .botoes-modal { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; flex-wrap: wrap; }
+    .botoes-modal button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .btn-cancelar { background: #eee; color: #333; }
+    .btn-agenda { background: #336699; color: #fff; }
+    .btn-lauda-modal { background: #C98A1F; color: #fff; }
+    .btn-confirmar { background: #8D0333; color: #fff; }
   </style>
 </head>
 <body>
+
   <div class="topo">
-    <h1>Pautas — redação</h1>
-    <button id="nova-pauta">+ Nova pauta</button>
+    <h1>NEWSROOM TV UFMA — Pautas</h1>
+    <input type="text" id="busca-pauta" placeholder="🔍 Buscar pauta...">
+    <button id="btn-nova-pauta">+ Nova Pauta</button>
   </div>
 
-  <div class="board" id="board"></div>
-
-  <div class="overlay" id="overlay">
-    <div class="painel" id="painel"></div>
+  <div class="filtros">
+    <select id="filtro-programa"><option value="">Programa: Todos</option></select>
+    <select id="filtro-status">
+      <option value="">Status: Todos</option>
+      <option value="em_producao">🟡 Em Produção</option>
+      <option value="em_gravacao">🔵 Em Gravação</option>
+      <option value="em_edicao">🟣 Gravado / Em Edição</option>
+      <option value="concluida">🟢 Concluída / Pronta</option>
+    </select>
+    <input type="date" id="filtro-data">
   </div>
 
-  <div class="overlay" id="overlay-fullscreen">
-    <div class="painel" id="painel-fullscreen" style="width: 90vw; max-width: 900px; height: 85vh; display: flex; flex-direction: column;">
-      <div class="painel-header">
-        <div id="fullscreen-titulo">Editando texto</div>
-        <button id="fechar-fullscreen">✕</button>
+  <div class="conteudo" id="conteudo">
+    <!-- tabela entra aqui -->
+  </div>
+
+  <div class="overlay-modal" id="modal-pauta">
+    <div class="modal-pauta">
+      <h2 id="modal-titulo-topo">+ Nova Pauta</h2>
+
+      <div class="bloco-titulo">Bloco A — Identificação & Veiculação</div>
+      <label>Título da Pauta</label>
+      <input type="text" id="p-titulo" placeholder='Ex: "Aula Inaugural UFMA"'>
+
+      <label>Programa</label>
+      <select id="p-programa"></select>
+
+      <label>Formatos / Destinos</label>
+      <div class="linha-checkboxes">
+        <label><input type="checkbox" id="p-tv"> VT TV Aberta</label>
+        <label><input type="checkbox" id="p-insta"> Reels/Instagram</label>
+        <label><input type="checkbox" id="p-site"> Matéria Site</label>
+        <label><input type="checkbox" id="p-youtube"> YouTube</label>
       </div>
-      <textarea id="fullscreen-textarea" style="flex: 1; min-height: 0; font-size: 15px;"></textarea>
-      <button class="btn-salvar" id="btn-salvar-fullscreen">Salvar e fechar</button>
+
+      <div class="bloco-titulo">Bloco B — Orientação Jornalística</div>
+      <label>Enquadramento / Ângulo da Notícia</label>
+      <textarea id="p-orientacao" placeholder="Orientação da chefia de redação..."></textarea>
+
+      <label>Perguntas Principais / Roteiro Sugerido</label>
+      <textarea id="p-roteiro" placeholder="Tópicos essenciais a abordar..."></textarea>
+
+      <div class="bloco-titulo">Bloco C — Fontes e Logística</div>
+      <label>Local / Endereço</label>
+      <input type="text" id="p-local" placeholder="Endereço ou local no campus">
+
+      <label>Fontes e Entrevistados</label>
+      <div id="lista-fontes"></div>
+      <button type="button" class="btn-add-fonte" id="btn-add-fonte">+ Adicionar Fonte</button>
+
+      <label style="margin-top:16px;">Arquivos e Anexos de Apoio (um por linha)</label>
+      <textarea id="p-anexos" placeholder="Releases, links de fotos, briefings..."></textarea>
+
+      <div class="bloco-titulo">Bloco D — Equipe & Recursos Técnicos</div>
+      <label>Data e Hora do Fato</label>
+      <div class="linha-dupla">
+        <input type="date" id="p-data-fato">
+        <input type="time" id="p-hora-fato">
+      </div>
+
+      <label>Produtor</label>
+      <select id="p-produtor"></select>
+
+      <label>Repórter</label>
+      <select id="p-reporter"></select>
+
+      <label>Cinegrafista</label>
+      <select id="p-cinegrafista"></select>
+
+      <label>Motorista / Transporte</label>
+      <input type="text" id="p-motorista" placeholder="Opcional">
+
+      <label>Equipamentos Especiais</label>
+      <div class="linha-checkboxes">
+        <label><input type="checkbox" id="p-lapela"> Microfone Lapela</label>
+        <label><input type="checkbox" id="p-iluminacao"> Iluminação Externa</label>
+        <label><input type="checkbox" id="p-mochilink"> Mochilink / Transmissão ao Vivo</label>
+      </div>
+
+      <label>Status da Produção</label>
+      <select id="p-status">
+        <option value="em_producao">🟡 Em Produção</option>
+        <option value="em_gravacao">🔵 Em Gravação</option>
+        <option value="em_edicao">🟣 Gravado / Em Edição</option>
+        <option value="concluida">🟢 Concluída / Pronta</option>
+      </select>
+
+      <div class="botoes-modal">
+        <button class="btn-cancelar" id="cancelar-pauta">Cancelar</button>
+        <button class="btn-agenda" id="btn-ver-agenda">📅 Ver na Agenda</button>
+        <button class="btn-lauda-modal" id="btn-criar-lauda">📝 Criar Texto / Lauda</button>
+        <button class="btn-confirmar" id="confirmar-pauta">💾 Salvar Pauta</button>
+      </div>
     </div>
   </div>
 
   <script>
-    const colunas = [
-      { chave: 'sugerida', label: 'sugerida' },
-      { chave: 'em_producao', label: 'em produção' },
-      { chave: 'aprovada', label: 'aprovada' },
-    ];
+    let programasCache = [];
+    let equipeCache = [];
+    let pautasCache = [];
+    let idEmEdicaoPauta = null;
+    let fontesAtual = [];
 
-    let pautas = [];
+    const rotulosStatus = {
+      em_producao: '🟡 Em Produção',
+      em_gravacao: '🔵 Em Gravação',
+      em_edicao: '🟣 Gravado / Em Edição',
+      concluida: '🟢 Concluída / Pronta'
+    };
+
+    async function carregarProgramas() {
+      const resp = await fetch('/agenda/programas');
+      programasCache = await resp.json();
+
+      const opcoes = '<option value="">Selecione...</option>' + programasCache.map(p =>
+        `<option value="${p.id}">${p.nome}</option>`
+      ).join('');
+
+      document.getElementById('p-programa').innerHTML = opcoes;
+      document.getElementById('filtro-programa').innerHTML =
+        '<option value="">Programa: Todos</option>' + programasCache.map(p =>
+          `<option value="${p.id}">${p.nome}</option>`
+        ).join('');
+    }
+
+    async function carregarEquipe() {
+      const resp = await fetch('/agenda/equipe');
+      equipeCache = await resp.json();
+
+      const opcoes = '<option value="">Selecione...</option>' + equipeCache.map(m =>
+        `<option value="${m.nome}">${m.nome} (${m.funcao})</option>`
+      ).join('');
+
+      document.getElementById('p-produtor').innerHTML = opcoes;
+      document.getElementById('p-reporter').innerHTML = opcoes;
+      document.getElementById('p-cinegrafista').innerHTML = opcoes;
+    }
+
+    function nomePrograma(id) {
+      const p = programasCache.find(pr => pr.id === id);
+      return p ? p.nome : '—';
+    }
 
     async function carregarPautas() {
-      const resposta = await fetch('/pautas');
-      pautas = await resposta.json();
-      renderBoard();
-    }
+      const conteudo = document.getElementById('conteudo');
+      conteudo.innerHTML = '<p>Carregando...</p>';
 
-    function renderBoard() {
-      const board = document.getElementById('board');
-      board.innerHTML = '';
+      const params = new URLSearchParams();
+      const programaFiltro = document.getElementById('filtro-programa').value;
+      const statusFiltro = document.getElementById('filtro-status').value;
+      const dataFiltro = document.getElementById('filtro-data').value;
+      const buscaFiltro = document.getElementById('busca-pauta').value.trim();
 
-      colunas.forEach(col => {
-        const itens = pautas.filter(p => p.status === col.chave);
-        const divCol = document.createElement('div');
-        divCol.className = 'coluna';
-        divCol.innerHTML = `<div class="coluna-titulo">${col.label} · ${itens.length}</div>`;
+      if (programaFiltro) params.set('programa_id', programaFiltro);
+      if (statusFiltro) params.set('status', statusFiltro);
+      if (dataFiltro) params.set('data_fato', dataFiltro);
+      if (buscaFiltro) params.set('busca', buscaFiltro);
 
-        itens.forEach(p => {
-          const card = document.createElement('div');
-          card.className = 'card';
-          card.innerHTML = `
-            <span class="retranca">${p.retranca || ''}</span>
-            <div class="titulo">${p.editoria || ''}</div>
-            <div class="meta"><span>${p.reporter || ''}</span><span>${p.data || ''}</span></div>
-          `;
-          card.addEventListener('click', () => abrirPainel(p.id));
-          divCol.appendChild(card);
-        });
+      const resposta = await fetch('/pautas?' + params.toString());
+      pautasCache = await resposta.json();
 
-        board.appendChild(divCol);
-      });
-    }
+      if (pautasCache.length === 0) {
+        conteudo.innerHTML = '<p style="text-align:center; color:#999;">Nenhuma pauta encontrada.</p>';
+        return;
+      }
 
-    function abrirPainel(id) {
-      const p = pautas.find(x => x.id === id);
-      const painel = document.getElementById('painel');
-      const overlay = document.getElementById('overlay');
-
-      painel.innerHTML = `
-        <div class="painel-header">
-          <div>Editar pauta</div>
-          <button id="fechar-painel">✕</button>
-        </div>
-
-        <label>Retranca</label>
-        <input id="f-retranca" value="${p.retranca || ''}">
-
-        <label>Editoria</label>
-        <input id="f-editoria" value="${p.editoria || ''}">
-
-        <label>Produtor</label>
-        <input id="f-produtor" value="${p.produtor || ''}">
-
-        <label>Repórter</label>
-        <input id="f-reporter" value="${p.reporter || ''}">
-
-        <label>Editor</label>
-        <input id="f-editor" value="${p.editor || ''}">
-
-        <label>Data</label>
-        <input id="f-data" value="${p.data || ''}">
-
-        <label>Prazo</label>
-        <input id="f-prazo" value="${p.prazo || ''}">
-
-       <label>Status</label>
-        <select id="f-status">
-          ${colunas.map(c => `<option value="${c.chave}" ${c.chave === p.status ? 'selected' : ''}>${c.label}</option>`).join('')}
-        </select>
-
-        <label>Texto da pauta (briefing para repórter/cinegrafista) <button class="btn-expandir" id="expandir-pauta">⤢ tela cheia</button></label>
-        <textarea id="f-texto-pauta" style="min-height:300px;">${p.texto_pauta || ''}</textarea>
-
-        <button class="btn-salvar" id="btn-salvar">Salvar</button>
-
-        <label style="margin-top:20px; border-top:1px solid #2a2f36; padding-top:14px;">Matéria (texto do repórter)</label>
-        <div id="lista-materia"></div>
-        <div class="botoes-materia">
-          <button id="add-off">+ OFF</button>
-          <button id="add-sonora">+ SONORA</button>
-          <button id="add-passagem">+ PASSAGEM</button>
-        </div>
+      conteudo.innerHTML = `
+        <table class="lista-pautas">
+          <thead>
+            <tr>
+              <th>ID</th><th>Título</th><th>Programa</th><th>Data / Hora</th>
+              <th>Equipe</th><th>Status</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pautasCache.map(p => `
+              <tr>
+                <td>#P-${p.id}</td>
+                <td>${p.titulo}</td>
+                <td>${nomePrograma(p.programa_id)}</td>
+                <td>${p.data_fato ? p.data_fato.split('-').reverse().join('/') : '—'} ${p.hora_fato ? '· ' + p.hora_fato : ''}</td>
+                <td>
+                  ${p.produtor ? `<span class="tag-equipe">🗂️ ${p.produtor}</span>` : ''}
+                  ${p.reporter ? `<span class="tag-equipe">🎤 ${p.reporter}</span>` : ''}
+                  ${p.cinegrafista ? `<span class="tag-equipe">🎥 ${p.cinegrafista}</span>` : ''}
+                </td>
+                <td><span class="status-badge status-${p.status}">${rotulosStatus[p.status] || p.status}</span></td>
+                <td class="acoes-lista">
+                  <button class="btn-ver" data-id="${p.id}">👁️ Ver/Editar</button>
+                  <button class="btn-lauda" data-id="${p.id}">📝 Lauda</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
       `;
 
-      overlay.classList.add('aberto');
-      document.getElementById('expandir-pauta').addEventListener('click', () => {
-        abrirFullscreen('Texto da pauta', document.getElementById('f-texto-pauta').value, { tipo: 'pauta' });
+      document.querySelectorAll('.btn-ver').forEach(btn => {
+        btn.addEventListener('click', () => abrirModalPauta(Number(btn.dataset.id)));
       });
-      carregarMateria(p.id);
-
-      document.getElementById('add-off').addEventListener('click', () => adicionarItemMateria(p.id, 'off'));
-      document.getElementById('add-sonora').addEventListener('click', () => adicionarItemMateria(p.id, 'sonora'));
-      document.getElementById('add-passagem').addEventListener('click', () => adicionarItemMateria(p.id, 'passagem'));
-
-      document.getElementById('fechar-painel').addEventListener('click', () => {
-        overlay.classList.remove('aberto');
+      document.querySelectorAll('.btn-lauda').forEach(btn => {
+        btn.addEventListener('click', () => abrirLauda(Number(btn.dataset.id)));
       });
+    }
 
-      document.getElementById('btn-salvar').addEventListener('click', async () => {
-        const dados = {
-          retranca: document.getElementById('f-retranca').value,
-          editoria: document.getElementById('f-editoria').value,
-          produtor: document.getElementById('f-produtor').value,
-          reporter: document.getElementById('f-reporter').value,
-          editor: document.getElementById('f-editor').value,
-          data: document.getElementById('f-data').value,
-          prazo: document.getElementById('f-prazo').value,
-          status: document.getElementById('f-status').value,
-          texto_pauta: document.getElementById('f-texto-pauta').value,
-        };
+    document.getElementById('filtro-programa').addEventListener('change', carregarPautas);
+    document.getElementById('filtro-status').addEventListener('change', carregarPautas);
+    document.getElementById('filtro-data').addEventListener('change', carregarPautas);
+    document.getElementById('busca-pauta').addEventListener('input', () => {
+      clearTimeout(window._buscaTimeout);
+      window._buscaTimeout = setTimeout(carregarPautas, 300);
+    });
 
-        await fetch(`/pautas/${p.id}`, {
+    function renderFontes() {
+      document.getElementById('lista-fontes').innerHTML = fontesAtual.map((f, i) => `
+        <div class="fonte-item">
+          <button type="button" class="remover-fonte" data-i="${i}">✕</button>
+          <label>Nome</label>
+          <input type="text" class="fonte-nome" data-i="${i}" value="${f.nome || ''}">
+          <label>Cargo/Função</label>
+          <input type="text" class="fonte-cargo" data-i="${i}" value="${f.cargo || ''}">
+          <div class="linha-dupla">
+            <div>
+              <label>Contato/WhatsApp</label>
+              <input type="text" class="fonte-contato" data-i="${i}" value="${f.contato || ''}">
+            </div>
+            <div>
+              <label>Horário Confirmado</label>
+              <input type="text" class="fonte-horario" data-i="${i}" value="${f.horario_confirmado || ''}">
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      document.querySelectorAll('.remover-fonte').forEach(btn => {
+        btn.addEventListener('click', () => {
+          fontesAtual.splice(Number(btn.dataset.i), 1);
+          renderFontes();
+        });
+      });
+      document.querySelectorAll('.fonte-nome').forEach(el => el.addEventListener('input', () => fontesAtual[el.dataset.i].nome = el.value));
+      document.querySelectorAll('.fonte-cargo').forEach(el => el.addEventListener('input', () => fontesAtual[el.dataset.i].cargo = el.value));
+      document.querySelectorAll('.fonte-contato').forEach(el => el.addEventListener('input', () => fontesAtual[el.dataset.i].contato = el.value));
+      document.querySelectorAll('.fonte-horario').forEach(el => el.addEventListener('input', () => fontesAtual[el.dataset.i].horario_confirmado = el.value));
+    }
+
+    document.getElementById('btn-add-fonte').addEventListener('click', () => {
+      fontesAtual.push({ nome: '', cargo: '', contato: '', horario_confirmado: '' });
+      renderFontes();
+    });
+
+    function limparFormulario() {
+      idEmEdicaoPauta = null;
+      fontesAtual = [];
+      document.getElementById('modal-titulo-topo').textContent = '+ Nova Pauta';
+      document.getElementById('p-titulo').value = '';
+      document.getElementById('p-programa').value = '';
+      document.getElementById('p-tv').checked = false;
+      document.getElementById('p-insta').checked = false;
+      document.getElementById('p-site').checked = false;
+      document.getElementById('p-youtube').checked = false;
+      document.getElementById('p-orientacao').value = '';
+      document.getElementById('p-roteiro').value = '';
+      document.getElementById('p-local').value = '';
+      document.getElementById('p-anexos').value = '';
+      document.getElementById('p-data-fato').value = '';
+      document.getElementById('p-hora-fato').value = '';
+      document.getElementById('p-produtor').value = '';
+      document.getElementById('p-reporter').value = '';
+      document.getElementById('p-cinegrafista').value = '';
+      document.getElementById('p-motorista').value = '';
+      document.getElementById('p-lapela').checked = false;
+      document.getElementById('p-iluminacao').checked = false;
+      document.getElementById('p-mochilink').checked = false;
+      document.getElementById('p-status').value = 'em_producao';
+      renderFontes();
+    }
+
+    async function abrirModalPauta(id) {
+      if (id === null) {
+        limparFormulario();
+      } else {
+        const resp = await fetch('/pautas/' + id);
+        const p = await resp.json();
+
+        idEmEdicaoPauta = id;
+        fontesAtual = (p.fontes || []).map(f => ({ ...f }));
+
+        document.getElementById('modal-titulo-topo').textContent = 'Editar Pauta #P-' + p.id;
+        document.getElementById('p-titulo').value = p.titulo || '';
+        document.getElementById('p-programa').value = p.programa_id || '';
+        document.getElementById('p-tv').checked = !!p.destino_tv;
+        document.getElementById('p-insta').checked = !!p.destino_instagram;
+        document.getElementById('p-site').checked = !!p.destino_site;
+        document.getElementById('p-youtube').checked = !!p.destino_youtube;
+        document.getElementById('p-orientacao').value = p.orientacao || '';
+        document.getElementById('p-roteiro').value = p.roteiro || '';
+        document.getElementById('p-local').value = p.local || '';
+        document.getElementById('p-anexos').value = p.anexos || '';
+        document.getElementById('p-data-fato').value = p.data_fato || '';
+        document.getElementById('p-hora-fato').value = p.hora_fato || '';
+        document.getElementById('p-produtor').value = p.produtor || '';
+        document.getElementById('p-reporter').value = p.reporter || '';
+        document.getElementById('p-cinegrafista').value = p.cinegrafista || '';
+        document.getElementById('p-motorista').value = p.motorista || '';
+        document.getElementById('p-lapela').checked = !!p.equip_lapela;
+        document.getElementById('p-iluminacao').checked = !!p.equip_iluminacao;
+        document.getElementById('p-mochilink').checked = !!p.equip_mochilink;
+        document.getElementById('p-status').value = p.status || 'em_producao';
+
+        renderFontes();
+      }
+
+      document.getElementById('modal-pauta').classList.add('aberto');
+    }
+
+    document.getElementById('btn-nova-pauta').addEventListener('click', () => abrirModalPauta(null));
+    document.getElementById('cancelar-pauta').addEventListener('click', () => {
+      document.getElementById('modal-pauta').classList.remove('aberto');
+    });
+
+    function coletarDadosFormulario() {
+      return {
+        titulo: document.getElementById('p-titulo').value.trim(),
+        programa_id: document.getElementById('p-programa').value ? Number(document.getElementById('p-programa').value) : null,
+        destino_tv: document.getElementById('p-tv').checked,
+        destino_instagram: document.getElementById('p-insta').checked,
+        destino_site: document.getElementById('p-site').checked,
+        destino_youtube: document.getElementById('p-youtube').checked,
+        orientacao: document.getElementById('p-orientacao').value.trim(),
+        roteiro: document.getElementById('p-roteiro').value.trim(),
+        local: document.getElementById('p-local').value.trim(),
+        anexos: document.getElementById('p-anexos').value.trim(),
+        data_fato: document.getElementById('p-data-fato').value,
+        hora_fato: document.getElementById('p-hora-fato').value,
+        produtor: document.getElementById('p-produtor').value,
+        reporter: document.getElementById('p-reporter').value,
+        cinegrafista: document.getElementById('p-cinegrafista').value,
+        motorista: document.getElementById('p-motorista').value.trim(),
+        equip_lapela: document.getElementById('p-lapela').checked,
+        equip_iluminacao: document.getElementById('p-iluminacao').checked,
+        equip_mochilink: document.getElementById('p-mochilink').checked,
+        status: document.getElementById('p-status').value,
+        fontes: fontesAtual
+      };
+    }
+
+    // Sincroniza a Agenda quando há data, hora e programa definidos
+    async function sincronizarAgenda(pauta) {
+      if (!pauta.data_fato || !pauta.hora_fato || !pauta.programa_id) return pauta.agenda_id || null;
+
+      const equipeTexto = [pauta.produtor, pauta.reporter, pauta.cinegrafista, pauta.motorista].filter(Boolean).join(', ');
+      const corpoAgenda = {
+        programa_quadro_id: pauta.programa_id,
+        data: pauta.data_fato,
+        hora: pauta.hora_fato,
+        local: pauta.local,
+        equipe: equipeTexto,
+        observacao: 'Gerado a partir da pauta: ' + pauta.titulo
+      };
+
+      if (pauta.agenda_id) {
+        await fetch('/agenda/' + pauta.agenda_id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(corpoAgenda)
+        });
+        return pauta.agenda_id;
+      } else {
+        const resp = await fetch('/agenda', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(corpoAgenda)
+        });
+        const novoAgendamento = await resp.json();
+        return novoAgendamento.id;
+      }
+    }
+
+    document.getElementById('confirmar-pauta').addEventListener('click', async () => {
+      const dados = coletarDadosFormulario();
+      if (!dados.titulo) { alert('Preencha ao menos o título da pauta.'); return; }
+
+      let pautaSalva;
+      if (idEmEdicaoPauta !== null) {
+        const resp = await fetch('/pautas/' + idEmEdicaoPauta, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(dados)
         });
-
-        overlay.classList.remove('aberto');
-        carregarPautas();
-      });
-    }
-
-    async function carregarMateria(pautaId) {
-      pautaAtualId = pautaId;
-      const resposta = await fetch(`/materia?pauta_id=${pautaId}`);
-      const itens = await resposta.json();
-      renderMateria(itens);
-    }
-
-    let pautaAtualId = null;
-    let alvoFullscreen = null; // guarda o que estamos editando: {tipo: 'pauta'} ou {tipo: 'materia', id: X}
-
-    function abrirFullscreen(titulo, textoAtual, alvo) {
-      alvoFullscreen = alvo;
-      document.getElementById('fullscreen-titulo').textContent = titulo;
-      document.getElementById('fullscreen-textarea').value = textoAtual;
-      document.getElementById('overlay-fullscreen').classList.add('aberto');
-    }
-
-    document.getElementById('fechar-fullscreen').addEventListener('click', () => {
-      document.getElementById('overlay-fullscreen').classList.remove('aberto');
-    });
-
-    document.getElementById('btn-salvar-fullscreen').addEventListener('click', async () => {
-      const novoTexto = document.getElementById('fullscreen-textarea').value;
-
-      if (alvoFullscreen.tipo === 'pauta') {
-        document.getElementById('f-texto-pauta').value = novoTexto;
-        await fetch(`/pautas/${pautaAtualId}`, {
-          method: 'PATCH',
+        pautaSalva = await resp.json();
+      } else {
+        const resp = await fetch('/pautas', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ texto_pauta: novoTexto })
+          body: JSON.stringify(dados)
         });
-      } else if (alvoFullscreen.tipo === 'materia') {
-        await fetch(`/materia/${alvoFullscreen.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ texto: novoTexto })
-        });
-        carregarMateria(pautaAtualId);
+        pautaSalva = await resp.json();
       }
 
-      document.getElementById('overlay-fullscreen').classList.remove('aberto');
+      const agendaId = await sincronizarAgenda(pautaSalva);
+      if (agendaId && agendaId !== pautaSalva.agenda_id) {
+        await fetch('/pautas/' + pautaSalva.id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agenda_id: agendaId })
+        });
+      }
+
+      document.getElementById('modal-pauta').classList.remove('aberto');
+      carregarPautas();
     });
 
-    function renderMateria(itens) {
-      const container = document.getElementById('lista-materia');
-      if (!container) return;
-      container.innerHTML = '';
+    document.getElementById('btn-ver-agenda').addEventListener('click', () => {
+      window.location.href = 'agenda.html';
+    });
 
-      const contadores = { off: 0, sonora: 0, passagem: 0 };
-
-      itens.forEach(item => {
-        contadores[item.tipo] = (contadores[item.tipo] || 0) + 1;
-        const numero = contadores[item.tipo];
-        const rotulo = item.tipo.toUpperCase() + ' ' + numero;
-
-        const div = document.createElement('div');
-        div.className = 'materia-item';
-        div.draggable = true;
-        div.dataset.id = item.id;
-        div.innerHTML = `
-          <div class="rotulo">⠿ ${rotulo}
-            <button class="btn-expandir expandir-item" data-id="${item.id}" data-texto="${(item.texto || '').replace(/"/g, '&quot;')}">⤢</button>
-            <button class="remover" data-id="${item.id}">remover</button>
-          </div>
-          <textarea data-id="${item.id}">${item.texto || ''}</textarea>
-        `;
-        container.appendChild(div);
+    function abrirLauda(id) {
+      const p = pautasCache.find(item => item.id === id) || { id, titulo: document.getElementById('p-titulo').value };
+      const params = new URLSearchParams({
+        pauta_id: p.id,
+        titulo: p.titulo || '',
+        programa: nomePrograma(p.programa_id),
+        reporter: p.reporter || ''
       });
-
-      container.querySelectorAll('textarea').forEach(area => {
-        area.addEventListener('blur', async () => {
-          await fetch(`/materia/${area.dataset.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ texto: area.value })
-          });
-        });
-      });
-
-      container.querySelectorAll('.remover').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          await fetch(`/materia/${btn.dataset.id}`, { method: 'DELETE' });
-          carregarMateria(pautaAtualId);
-        });
-      });
-      container.querySelectorAll('.expandir-item').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const textareaAtual = container.querySelector(`textarea[data-id="${btn.dataset.id}"]`);
-          abrirFullscreen('Editando item da matéria', textareaAtual.value, { tipo: 'materia', id: btn.dataset.id });
-        });
-      });    
-      let itemArrastado = null;
-
-      container.querySelectorAll('.materia-item').forEach(div => {
-        div.addEventListener('dragstart', () => {
-          itemArrastado = div;
-          div.style.opacity = '0.4';
-        });
-
-        div.addEventListener('dragend', () => {
-          div.style.opacity = '1';
-        });
-
-        div.addEventListener('dragover', (e) => {
-          e.preventDefault();
-        });
-
-        div.addEventListener('drop', async (e) => {
-          e.preventDefault();
-          if (!itemArrastado || itemArrastado === div) return;
-
-          const todos = [...container.querySelectorAll('.materia-item')];
-          const posicaoNova = todos.indexOf(div) + 1;
-
-          await fetch(`/materia/${itemArrastado.dataset.id}/ordem`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nova_ordem: posicaoNova })
-          });
-
-          carregarMateria(pautaAtualId);
-        });
-      });
+      window.location.href = 'materia.html?' + params.toString();
     }
 
-    async function adicionarItemMateria(pautaId, tipo) {
-      await fetch('/materia', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pauta_id: pautaId, tipo: tipo, texto: '' })
-      });
-      carregarMateria(pautaId);
-    }
-    document.getElementById('nova-pauta').addEventListener('click', async () => {
-      const resposta = await fetch('/pautas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          retranca: 'NOVA-PAUTA',
-          editoria: 'Geral',
-          produtor: '',
-          reporter: '',
-          editor: '',
-          data: '',
-          prazo: ''
-        })
-      });
-      const nova = await resposta.json();
+    document.getElementById('btn-criar-lauda').addEventListener('click', () => {
+      if (idEmEdicaoPauta === null) { alert('Salve a pauta antes de criar o texto.'); return; }
+      abrirLauda(idEmEdicaoPauta);
+    });
+
+    (async function init() {
+      await carregarProgramas();
+      await carregarEquipe();
       await carregarPautas();
-      abrirPainel(nova.id);
-    });
-
-    carregarPautas();
+    })();
   </script>
 </body>
 </html>

@@ -36,10 +36,10 @@ router.get('/:id', (req, res) => {
 // POST /pautas -> cria pauta (+ fontes, se enviadas)
 router.post('/', (req, res) => {
   const {
-    sugestao_id, titulo, programa_id,
+    sugestao_id, agenda_id, titulo, programa_id,
     destino_tv, destino_instagram, destino_youtube, destino_site,
     orientacao, roteiro, local, anexos,
-    reporter, cinegrafista, motorista,
+    produtor, reporter, cinegrafista, motorista,
     equip_lapela, equip_iluminacao, equip_mochilink,
     data_fato, hora_fato, status, fontes
   } = req.body;
@@ -48,19 +48,19 @@ router.post('/', (req, res) => {
 
   const resultado = db.prepare(`
     INSERT INTO pautas (
-      sugestao_id, titulo, programa_id,
+      sugestao_id, agenda_id, titulo, programa_id,
       destino_tv, destino_instagram, destino_youtube, destino_site,
       orientacao, roteiro, local, anexos,
-      reporter, cinegrafista, motorista,
+      produtor, reporter, cinegrafista, motorista,
       equip_lapela, equip_iluminacao, equip_mochilink,
       data_fato, hora_fato, status
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
-    sugestao_id || null, titulo, programa_id || null,
+    sugestao_id || null, agenda_id || null, titulo, programa_id || null,
     destino_tv ? 1 : 0, destino_instagram ? 1 : 0, destino_youtube ? 1 : 0, destino_site ? 1 : 0,
     orientacao || '', roteiro || '', local || '', anexos || '',
-    reporter || '', cinegrafista || '', motorista || '',
+    produtor || '', reporter || '', cinegrafista || '', motorista || '',
     equip_lapela ? 1 : 0, equip_iluminacao ? 1 : 0, equip_mochilink ? 1 : 0,
     data_fato || '', hora_fato || '', status || 'em_producao'
   );
@@ -89,10 +89,10 @@ router.patch('/:id', (req, res) => {
   if (!item) return res.status(404).json({ erro: 'Pauta não encontrada' });
 
   const campos = [
-    'sugestao_id', 'titulo', 'programa_id',
+    'sugestao_id', 'agenda_id', 'titulo', 'programa_id',
     'destino_tv', 'destino_instagram', 'destino_youtube', 'destino_site',
     'orientacao', 'roteiro', 'local', 'anexos',
-    'reporter', 'cinegrafista', 'motorista',
+    'produtor', 'reporter', 'cinegrafista', 'motorista',
     'equip_lapela', 'equip_iluminacao', 'equip_mochilink',
     'data_fato', 'hora_fato', 'status'
   ];
@@ -104,19 +104,19 @@ router.patch('/:id', (req, res) => {
 
   db.prepare(`
     UPDATE pautas SET
-      sugestao_id=?, titulo=?, programa_id=?,
+      sugestao_id=?, agenda_id=?, titulo=?, programa_id=?,
       destino_tv=?, destino_instagram=?, destino_youtube=?, destino_site=?,
       orientacao=?, roteiro=?, local=?, anexos=?,
-      reporter=?, cinegrafista=?, motorista=?,
+      produtor=?, reporter=?, cinegrafista=?, motorista=?,
       equip_lapela=?, equip_iluminacao=?, equip_mochilink=?,
       data_fato=?, hora_fato=?, status=?
     WHERE id = ?
   `).run(
-    atualizado.sugestao_id, atualizado.titulo, atualizado.programa_id,
+    atualizado.sugestao_id, atualizado.agenda_id, atualizado.titulo, atualizado.programa_id,
     atualizado.destino_tv ? 1 : 0, atualizado.destino_instagram ? 1 : 0,
     atualizado.destino_youtube ? 1 : 0, atualizado.destino_site ? 1 : 0,
     atualizado.orientacao, atualizado.roteiro, atualizado.local, atualizado.anexos,
-    atualizado.reporter, atualizado.cinegrafista, atualizado.motorista,
+    atualizado.produtor, atualizado.reporter, atualizado.cinegrafista, atualizado.motorista,
     atualizado.equip_lapela ? 1 : 0, atualizado.equip_iluminacao ? 1 : 0, atualizado.equip_mochilink ? 1 : 0,
     atualizado.data_fato, atualizado.hora_fato, atualizado.status,
     id

@@ -1,11 +1,11 @@
 const Database = require('better-sqlite3');
 const db = new Database('newsroom.db');
 
-// Cria a tabela de pautas, caso ainda não exista
 db.exec(`
   CREATE TABLE IF NOT EXISTS pautas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     sugestao_id INTEGER,
+    agenda_id INTEGER,
     titulo TEXT NOT NULL,
     programa_id INTEGER,
     destino_tv INTEGER DEFAULT 0,
@@ -16,6 +16,7 @@ db.exec(`
     roteiro TEXT,
     local TEXT,
     anexos TEXT,
+    produtor TEXT,
     reporter TEXT,
     cinegrafista TEXT,
     motorista TEXT,
@@ -27,6 +28,9 @@ db.exec(`
     status TEXT DEFAULT 'em_producao'
   )
 `);
+
+try { db.exec(`ALTER TABLE pautas ADD COLUMN agenda_id INTEGER`); } catch (e) {}
+try { db.exec(`ALTER TABLE pautas ADD COLUMN produtor TEXT`); } catch (e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS pauta_fontes (
@@ -69,7 +73,6 @@ db.exec(`
   )
 `);
 
-// Adiciona a coluna duracao_alvo_travada, caso ainda não exista (evita erro se já rodou antes)
 try {
   db.exec(`ALTER TABLE blocos ADD COLUMN duracao_alvo_travada INTEGER DEFAULT 0`);
 } catch (e) {
@@ -116,6 +119,7 @@ db.exec(`
     FOREIGN KEY (programa_quadro_id) REFERENCES programas_quadros(id)
   )
 `);
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS sugestoes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -137,4 +141,5 @@ db.exec(`
     FOREIGN KEY (pauta_id) REFERENCES pautas(id)
   )
 `);
+
 module.exports = db;
