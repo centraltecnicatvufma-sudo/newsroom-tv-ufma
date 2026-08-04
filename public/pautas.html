@@ -31,6 +31,7 @@
     .acoes-lista button { font-size: 12px; padding: 5px 9px; border-radius: 6px; border: none; cursor: pointer; margin-right: 4px; }
     .btn-ver { background: #eee; color: #333; }
     .btn-lauda { background: #336699; color: #fff; }
+    .btn-excluir { background: #8D0333; color: #fff; }
 
     .overlay-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 10; overflow-y: auto; padding: 30px 0; }
     .overlay-modal.aberto { display: flex; }
@@ -256,6 +257,7 @@
                 <td class="acoes-lista">
                   <button class="btn-ver" data-id="${p.id}">👁️ Ver/Editar</button>
                   <button class="btn-lauda" data-id="${p.id}">📝 Lauda</button>
+                  <button class="btn-excluir" data-id="${p.id}">🗑️ Excluir</button>
                 </td>
               </tr>
             `).join('')}
@@ -269,8 +271,24 @@
       document.querySelectorAll('.btn-lauda').forEach(btn => {
         btn.addEventListener('click', () => abrirLauda(Number(btn.dataset.id)));
       });
+      document.querySelectorAll('.btn-excluir').forEach(btn => {
+        btn.addEventListener('click', () => excluirPauta(Number(btn.dataset.id)));
+      });
     }
 
+    async function excluirPauta(id) {
+      const confirmar = confirm('Tem certeza que deseja excluir esta pauta? Essa ação não pode ser desfeita.');
+      if (!confirmar) return;
+
+      const resposta = await fetch('/pautas/' + id, { method: 'DELETE' });
+
+      if (resposta.ok) {
+        carregarPautas();
+      } else {
+        const erro = await resposta.json().catch(() => ({}));
+        alert('Não foi possível excluir a pauta: ' + (erro.erro || 'erro desconhecido'));
+      }
+    }
     document.getElementById('filtro-programa').addEventListener('change', carregarPautas);
     document.getElementById('filtro-status').addEventListener('change', carregarPautas);
     document.getElementById('filtro-data').addEventListener('change', carregarPautas);

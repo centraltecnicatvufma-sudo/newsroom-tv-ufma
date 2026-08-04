@@ -32,6 +32,9 @@ db.exec(`
 try { db.exec(`ALTER TABLE pautas ADD COLUMN agenda_id INTEGER`); } catch (e) {}
 try { db.exec(`ALTER TABLE pautas ADD COLUMN produtor TEXT`); } catch (e) {}
 
+try { db.exec(`ALTER TABLE pautas ADD COLUMN cabeca_texto TEXT`); } catch (e) {}
+try { db.exec(`ALTER TABLE pautas ADD COLUMN texto_web TEXT`); } catch (e) {}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS pauta_fontes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,6 +43,17 @@ db.exec(`
     cargo TEXT,
     contato TEXT,
     horario_confirmado TEXT,
+    FOREIGN KEY (pauta_id) REFERENCES pautas(id)
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS materia_gcs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pauta_id INTEGER NOT NULL,
+    nome TEXT,
+    cargo TEXT,
+    tempo_entrada TEXT,
     FOREIGN KEY (pauta_id) REFERENCES pautas(id)
   )
 `);

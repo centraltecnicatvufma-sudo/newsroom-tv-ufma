@@ -94,7 +94,8 @@ router.patch('/:id', (req, res) => {
     'orientacao', 'roteiro', 'local', 'anexos',
     'produtor', 'reporter', 'cinegrafista', 'motorista',
     'equip_lapela', 'equip_iluminacao', 'equip_mochilink',
-    'data_fato', 'hora_fato', 'status'
+    'data_fato', 'hora_fato', 'status',
+    'cabeca_texto', 'texto_web'
   ];
 
   const atualizado = {};
@@ -109,7 +110,8 @@ router.patch('/:id', (req, res) => {
       orientacao=?, roteiro=?, local=?, anexos=?,
       produtor=?, reporter=?, cinegrafista=?, motorista=?,
       equip_lapela=?, equip_iluminacao=?, equip_mochilink=?,
-      data_fato=?, hora_fato=?, status=?
+      data_fato=?, hora_fato=?, status=?,
+      cabeca_texto=?, texto_web=?
     WHERE id = ?
   `).run(
     atualizado.sugestao_id, atualizado.agenda_id, atualizado.titulo, atualizado.programa_id,
@@ -119,6 +121,7 @@ router.patch('/:id', (req, res) => {
     atualizado.produtor, atualizado.reporter, atualizado.cinegrafista, atualizado.motorista,
     atualizado.equip_lapela ? 1 : 0, atualizado.equip_iluminacao ? 1 : 0, atualizado.equip_mochilink ? 1 : 0,
     atualizado.data_fato, atualizado.hora_fato, atualizado.status,
+    atualizado.cabeca_texto, atualizado.texto_web,
     id
   );
 
@@ -139,16 +142,34 @@ router.patch('/:id', (req, res) => {
 });
 
 // DELETE /pautas/:id
+// DELETE /pautas/:id
 router.delete('/:id', (req, res) => {
   const id = Number(req.params.id);
-  db.prepare('DELETE FROM pauta_fontes WHERE pauta_id = ?').run(id);
-  const resultado = db.prepare('DELETE FROM pautas WHERE id = ?').run(id);
+  const pauta = db.prepare('SELECT agenda_id FROM pautas WHERE id = ?').get(id);
 
-  if (resultado.changes === 0) {
-    return res.status(404).json({ erro: 'Pauta não encontrada' });
+  const apagar = db.transaction((id) => {
+    db.prepare('DELETE FROM blocos WHERE pauta_id = ?').run(id);
+    db.prepare('DELETE FROM materia_itens WHERE pauta_id = ?').run(id);
+    db.prepare('DELETE FROM pauta_fontes WHERE pauta_id = ?').run(id);
+    db.prepare('UPDATE sugestoes SET pauta_id = NULL WHERE pauta_id = ?').run(id);
+
+    if (pauta && pauta.agenda_id) {
+      db.prepare('UPDATE agendamentos SET status = ? WHERE id = ?').run('cancelado', pauta.agenda_id);
+    }
+
+    return db.prepare('DELETE FROM pautas WHERE id = ?').run(id);
+  });
+
+  try {
+    const resultado = apagar(id);
+    if (resultado.changes === 0) {
+      return res.status(404).json({ erro: 'Pauta não encontrada' });
+    }
+    res.status(204).send();
+  } catch (erro) {
+    console.error('Erro ao excluir pauta:', erro);
+    res.status(500).json({ erro: 'Não foi possível excluir a pauta', detalhe: erro.message });
   }
-
-  res.status(204).send();
 });
 
 module.exports = router;

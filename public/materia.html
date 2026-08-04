@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Lauda — Newsroom TV UFMA</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.css" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; }
+
+    .topo { background: #336699; color: #fff; padding: 14px 20px; }
+    .topo h1 { font-size: 16px; margin: 0 0 4px; }
+    .topo .sub { font-size: 12px; opacity: 0.9; }
+
+    .info-pauta { background: #fff; padding: 14px 20px; border-bottom: 1px solid #eee; display: flex; flex-wrap: wrap; gap: 24px; font-size: 13px; }
+    .info-pauta strong { color: #5b6472; font-weight: normal; margin-right: 4px; }
+
+    .conteudo { max-width: 900px; margin: 0 auto; padding: 20px; }
+
+    .bloco { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; padding: 16px; }
+    .bloco h2 { font-size: 14px; margin: 0 0 12px; color: #336699; }
+
+    .editor-caixa { border: 1px solid #ddd; border-radius: 6px; min-height: 100px; background: #fff; }
+
+    .item-vt { border: 1px solid #eee; border-radius: 8px; margin-bottom: 14px; overflow: hidden; }
+    .item-vt-cabecalho { display: flex; justify-content: space-between; align-items: center; background: #eef1f5; padding: 6px 10px; }
+    .tipo-badge { font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; color: #fff; }
+    .tipo-OFF { background: #6b3fa0; }
+    .tipo-SONORA { background: #C98A1F; }
+    .tipo-PASSAGEM { background: #2e8b57; }
+    .btn-remover-item { background: none; border: none; color: #8D0333; cursor: pointer; font-size: 13px; }
+
+    .add-itens { display: flex; gap: 8px; margin-top: 10px; }
+    .add-itens button { flex: 1; padding: 10px; border: 1px dashed #ccc; background: #fafafa; border-radius: 6px; cursor: pointer; font-size: 12px; }
+    .add-itens button:hover { background: #eef1f5; }
+
+    .barra-acoes { position: sticky; bottom: 0; background: #fff; border-top: 1px solid #eee; padding: 14px 20px; display: flex; justify-content: flex-end; gap: 8px; }
+    .btn-salvar { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 10px 20px; font-size: 14px; cursor: pointer; }
+    .status-salvo { font-size: 13px; color: #2e8b57; align-self: center; margin-right: auto; }
+  </style>
+</head>
+<body>
+
+  <div class="topo">
+    <h1>NEWSROOM TV UFMA — Lauda de Reportagem</h1>
+    <div class="sub" id="sub-pauta">Carregando...</div>
+  </div>
+
+  <div class="info-pauta" id="info-pauta"></div>
+
+  <div class="conteudo">
+    <div class="bloco">
+      <h2>🎤 Cabeça do Apresentador (vai para o Teleprompter)</h2>
+      <div id="editor-cabeca" class="editor-caixa"></div>
+    </div>
+
+    <div class="bloco">
+      <h2>📹 Corpo do VT (Offs, Sonoras e Passagens)</h2>
+      <div id="lista-itens"></div>
+      <div class="add-itens">
+        <button data-tipo="OFF">+ OFF</button>
+        <button data-tipo="SONORA">+ SONORA</button>
+        <button data-tipo="PASSAGEM">+ PASSAGEM</button>
+      </div>
+    </div>
+
+    <div class="bloco">
+      <h2>🏷️ Geradores de Caracteres (GCs)</h2>
+      <table id="tabela-gcs" style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+          <tr style="text-align:left; color:#5b6472; font-size:12px;">
+            <th style="padding:6px;">Nome</th>
+            <th style="padding:6px;">Cargo / Subtítulo</th>
+            <th style="padding:6px; width:120px;">Tempo de Entrada</th>
+            <th style="width:40px;"></th>
+          </tr>
+        </thead>
+        <tbody id="corpo-tabela-gcs"></tbody>
+      </table>
+      <button id="btn-add-gc" style="margin-top:10px; padding:8px 12px; border:1px dashed #ccc; background:#fafafa; border-radius:6px; cursor:pointer; font-size:12px;">+ Adicionar GC</button>
+    </div>
+
+    <div class="bloco">
+      <h2>🌐 Texto Adaptado — Site / Instagram / YouTube</h2>
+      <div id="editor-web" class="editor-caixa"></div>
+    </div>
+  </div>
+
+  <div class="barra-acoes">
+    <span class="status-salvo" id="status-salvo"></span>
+    <button class="btn-salvar" id="btn-salvar">💾 Salvar Lauda</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const pautaId = params.get('pauta_id');
+    let quillCabeca, quillWeb;
+    const quillItens = {}; // id do item -> instância Quill
+
+    let gcsCache = [];
+    if (!pautaId) {
+      document.body.innerHTML = '<p style="padding:20px;">Nenhuma pauta informada. Volte para a tela de Pautas e clique em "Criar Texto / Lauda".</p>';
+      throw new Error('sem pauta_id');
+    }
+
+    async function carregarPauta() {
+      const resp = await fetch('/pautas/' + pautaId);
+      const p = await resp.json();
+
+      document.getElementById('sub-pauta').textContent = 'Pauta #P-' + p.id;
+      document.getElementById('info-pauta').innerHTML = `
+        <div><strong>Título:</strong>${p.titulo || '—'}</div>
+        <div><strong>Repórter:</strong>${p.reporter || '—'}</div>
+        <div><strong>Cinegrafista:</strong>${p.cinegrafista || '—'}</div>
+        <div><strong>Status:</strong>${p.status || '—'}</div>
+      `;
+
+      quillCabeca = new Quill('#editor-cabeca', { theme: 'snow' });
+      if (p.cabeca_texto) quillCabeca.root.innerHTML = p.cabeca_texto;
+      quillWeb = new Quill('#editor-web', { theme: 'snow' });
+      if (p.texto_web) quillWeb.root.innerHTML = p.texto_web;
+    }
+
+    function badgeTipo(tipo) {
+      return `<span class="tipo-badge tipo-${tipo}">${tipo}</span>`;
+    }
+
+    async function carregarGcs() {
+      const resp = await fetch('/materia/gcs?pauta_id=' + pautaId);
+      gcsCache = await resp.json();
+      renderGcs();
+    }
+
+    function renderGcs() {
+      const corpo = document.getElementById('corpo-tabela-gcs');
+      corpo.innerHTML = gcsCache.map(gc => `
+        <tr data-id="${gc.id}">
+          <td style="padding:4px;"><input type="text" class="gc-nome" value="${gc.nome || ''}" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:4px;"></td>
+          <td style="padding:4px;"><input type="text" class="gc-cargo" value="${gc.cargo || ''}" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:4px;"></td>
+          <td style="padding:4px;"><input type="text" class="gc-tempo" value="${gc.tempo_entrada || ''}" placeholder="00'15&quot;" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:4px;"></td>
+          <td style="text-align:center;"><button class="btn-remover-gc" style="background:none; border:none; color:#8D0333; cursor:pointer;">✕</button></td>
+        </tr>
+      `).join('');
+
+      corpo.querySelectorAll('tr').forEach(linha => {
+        const id = linha.dataset.id;
+
+        linha.querySelector('.gc-nome').addEventListener('change', e => salvarGc(id, { nome: e.target.value }));
+        linha.querySelector('.gc-cargo').addEventListener('change', e => salvarGc(id, { cargo: e.target.value }));
+        linha.querySelector('.gc-tempo').addEventListener('change', e => salvarGc(id, { tempo_entrada: e.target.value }));
+
+        linha.querySelector('.btn-remover-gc').addEventListener('click', async () => {
+          await fetch('/materia/gcs/' + id, { method: 'DELETE' });
+          carregarGcs();
+        });
+      });
+    }
+
+    async function salvarGc(id, campos) {
+      await fetch('/materia/gcs/' + id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(campos)
+      });
+    }
+
+    document.getElementById('btn-add-gc').addEventListener('click', async () => {
+      await fetch('/materia/gcs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pauta_id: Number(pautaId), nome: '', cargo: '', tempo_entrada: '' })
+      });
+      carregarGcs();
+    });
+    async function carregarItens() {
+      const resp = await fetch('/materia?pauta_id=' + pautaId);
+      const itens = await resp.json();
+      const lista = document.getElementById('lista-itens');
+      lista.innerHTML = '';
+
+      itens.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'item-vt';
+        div.innerHTML = `
+          <div class="item-vt-cabecalho">
+            ${badgeTipo(item.tipo)}
+            <button class="btn-remover-item" data-id="${item.id}">✕ remover</button>
+          </div>
+          <div class="editor-caixa" id="editor-item-${item.id}"></div>
+        `;
+        lista.appendChild(div);
+
+        const quillItem = new Quill('#editor-item-' + item.id, { theme: 'snow' });
+        if (item.texto) quillItem.root.innerHTML = item.texto;
+        quillItens[item.id] = quillItem;
+      });
+
+      document.querySelectorAll('.btn-remover-item').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          if (!confirm('Remover este bloco?')) return;
+          await fetch('/materia/' + id, { method: 'DELETE' });
+          delete quillItens[id];
+          carregarItens();
+        });
+      });
+    }
+
+    document.querySelectorAll('.add-itens button').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await fetch('/materia', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pauta_id: Number(pautaId), tipo: btn.dataset.tipo, texto: '' })
+        });
+        carregarItens();
+      });
+    });
+
+    document.getElementById('btn-salvar').addEventListener('click', async () => {
+      await fetch('/pautas/' + pautaId, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cabeca_texto: quillCabeca.root.innerHTML,
+          texto_web: quillWeb.root.innerHTML
+        })
+      });
+
+      for (const id in quillItens) {
+        await fetch('/materia/' + id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texto: quillItens[id].root.innerHTML })
+        });
+      }
+
+      const status = document.getElementById('status-salvo');
+      status.textContent = '✔️ Salvo!';
+      setTimeout(() => status.textContent = '', 2000);
+    });
+
+    (async function init() {
+      await carregarPauta();
+      await carregarItens();
+      await carregarGcs();
+    })();
+  </script>
+</body>
+</html>

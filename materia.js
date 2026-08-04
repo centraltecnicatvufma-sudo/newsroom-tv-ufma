@@ -102,4 +102,57 @@ router.patch('/:id/ordem', (req, res) => {
   res.json(itensAtualizados);
 });
 
+// GET /materia/gcs?pauta_id=1 -> lista os GCs de uma pauta
+router.get('/gcs', (req, res) => {
+  const pautaId = req.query.pauta_id;
+  if (!pautaId) return res.status(400).json({ erro: "Informe o pauta_id" });
+
+  const gcs = db.prepare(
+    'SELECT * FROM materia_gcs WHERE pauta_id = ? ORDER BY id ASC'
+  ).all(pautaId);
+
+  res.json(gcs);
+});
+
+// POST /materia/gcs -> adiciona um GC novo
+router.post('/gcs', (req, res) => {
+  const { pauta_id, nome, cargo, tempo_entrada } = req.body;
+
+  const resultado = db.prepare(`
+    INSERT INTO materia_gcs (pauta_id, nome, cargo, tempo_entrada)
+    VALUES (?, ?, ?, ?)
+  `).run(pauta_id, nome || '', cargo || '', tempo_entrada || '');
+
+  const novoGc = db.prepare('SELECT * FROM materia_gcs WHERE id = ?').get(resultado.lastInsertRowid);
+  res.status(201).json(novoGc);
+});
+
+// PATCH /materia/gcs/:id -> edita um GC
+router.patch('/gcs/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const item = db.prepare('SELECT * FROM materia_gcs WHERE id = ?').get(id);
+  if (!item) return res.status(404).json({ erro: "GC não encontrado" });
+
+  const nome = req.body.nome !== undefined ? req.body.nome : item.nome;
+  const cargo = req.body.cargo !== undefined ? req.body.cargo : item.cargo;
+  const tempo_entrada = req.body.tempo_entrada !== undefined ? req.body.tempo_entrada : item.tempo_entrada;
+
+  db.prepare('UPDATE materia_gcs SET nome = ?, cargo = ?, tempo_entrada = ? WHERE id = ?')
+    .run(nome, cargo, tempo_entrada, id);
+
+  res.json(db.prepare('SELECT * FROM materia_gcs WHERE id = ?').get(id));
+});
+
+// DELETE /materia/gcs/:id -> remove um GC
+router.delete('/gcs/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const resultado = db.prepare('DELETE FROM materia_gcs WHERE id = ?').run(id);
+
+  if (resultado.changes === 0) {
+    return res.status(404).json({ erro: "GC não encontrado" });
+  }
+
+  res.status(204).send();
+});
+
 module.exports = router;
