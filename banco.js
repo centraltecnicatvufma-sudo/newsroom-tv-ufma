@@ -87,6 +87,9 @@ db.exec(`
   )
 `);
 
+try { db.exec(`ALTER TABLE blocos ADD COLUMN bloco INTEGER DEFAULT 1`); } catch (e) {}
+try { db.exec(`ALTER TABLE blocos ADD COLUMN reporter TEXT`); } catch (e) {}
+
 try {
   db.exec(`ALTER TABLE blocos ADD COLUMN duracao_alvo_travada INTEGER DEFAULT 0`);
 } catch (e) {

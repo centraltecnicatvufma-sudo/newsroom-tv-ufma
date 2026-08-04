@@ -1,47 +1,58 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>Teleprompter — Newsroom TV UFMA</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #0f1216; color: #eee; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; }
+<meta charset="UTF-8">
+<title>Teleprompter — Newsroom TV UFMA</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; }
 
-    .toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #171b21; border-bottom: 1px solid #2a2f36; }
-    .toolbar button { background: #2a2f36; color: #eee; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 13px; }
-    .toolbar button:hover { background: #343b45; }
-    .toolbar .separador { width: 1px; height: 24px; background: #2a2f36; margin: 0 4px; }
-    .toolbar .velocidade { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: #336699; color: #fff; flex-wrap: wrap; }
+  .toolbar button { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
+  .toolbar button:hover { background: rgba(255,255,255,0.28); }
+  .toolbar .separador { width: 1px; height: 24px; background: rgba(255,255,255,0.3); margin: 0 4px; }
+  .toolbar .velocidade, .toolbar .fonte { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .toolbar input#campo-buscar { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; padding: 6px 8px; font-size: 13px; width: 200px; }
+  .toolbar input#campo-buscar::placeholder { color: rgba(255,255,255,0.7); }
 
-    .corpo { flex: 1; display: flex; min-height: 0; }
+  .corpo { flex: 1; display: flex; min-height: 0; }
 
-    .coluna-textos { width: 260px; flex-shrink: 0; background: #171b21; border-right: 1px solid #2a2f36; overflow-y: auto; }
-    .coluna-textos .item { padding: 10px 12px; border-bottom: 1px solid #2a2f36; cursor: pointer; font-size: 13px; }
-    .coluna-textos .item:hover { background: #1e242c; }
-    .coluna-textos .item.ativo { background: #1e3a5f; color: #7fb8ff; }
-    .coluna-textos .item .tipo { font-size: 11px; color: #999; }
+  .coluna-textos { width: 260px; flex-shrink: 0; background: #fff; border-right: 1px solid #eee; overflow-y: auto; }
+  .coluna-textos .item { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; cursor: pointer; font-size: 13px; }
+  .coluna-textos .item:hover { background: #f4f5f7; }
+  .coluna-textos .item.ativo { background: #e7eef6; color: #336699; font-weight: bold; }
+  .coluna-textos .item .tipo { font-size: 11px; color: #999; }
 
-    .area-edicao { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-    .painel-editar { flex: 1; border-bottom: 1px solid #2a2f36; padding: 10px; display: flex; flex-direction: column; }
-    .painel-editar label { font-size: 11px; color: #999; margin-bottom: 4px; }
-    .painel-editar textarea { flex: 1; background: #0f1216; color: #eee; border: 1px solid #2a2f36; border-radius: 6px; padding: 10px; font-size: 14px; resize: none; }
+  .area-edicao { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .painel-editar { height: 35%; border-bottom: 1px solid #eee; padding: 10px; display: flex; flex-direction: column; background: #fff; }
+  .painel-editar label { font-size: 11px; color: #5b6472; margin-bottom: 4px; }
+  .painel-editar textarea { flex: 1; background: #fafbfc; color: #1b2430; border: 1px solid #ddd; border-radius: 6px; padding: 10px; font-size: 14px; resize: none; }
 
-    .painel-rolagem { flex: 1; overflow: hidden; position: relative; background: #000; }
-    .texto-rolagem { position: absolute; width: 100%; padding: 20px; font-size: 32px; line-height: 1.6; text-align: center; color: #fff; white-space: pre-wrap; }
+  .painel-rolagem { flex: 1; overflow: hidden; position: relative; background: #000; }
+  .texto-rolagem { position: absolute; width: 100%; padding: 0 40px; font-weight: bold; line-height: 1.5; text-align: center; color: #FFD400; white-space: pre-wrap; }
 
-    .toolbar-inferior { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #171b21; border-top: 1px solid #2a2f36; }
-  </style>
+  .toolbar-inferior { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #eef1f5; border-top: 1px solid #ddd; }
+  .toolbar-inferior button { background: #fff; color: #336699; border: 1px solid #ddd; border-radius: 6px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
+  .toolbar-inferior button:hover { background: #e7eef6; }
+  .toolbar-inferior .destaque { background: #8D0333; color: #fff; border-color: #8D0333; }
+  .toolbar-inferior .destaque:hover { background: #a10440; }
+</style>
 </head>
 <body>
 
- <div class="toolbar">
+  <div class="toolbar">
     <button id="btn-abrir">📂 Abrir</button>
     <button id="btn-salvar">💾 Salvar</button>
+    <button id="btn-2monitor">📺 Exibir no 2º Monitor</button>
     <div class="separador"></div>
-   <input id="campo-buscar" type="text" placeholder="Localizar item na lista..." style="background:#0f1216; color:#eee; border:1px solid #2a2f36; border-radius:6px; padding:6px 8px; font-size:13px; width:200px;">
+    <input id="campo-buscar" type="text" placeholder="Localizar item na lista...">
     <div class="separador"></div>
-    <div class="velocidade">
-      Velocidade: <span id="valor-velocidade">3</span>
+    <div class="velocidade">Velocidade: <span id="valor-velocidade">3</span></div>
+    <div class="separador"></div>
+    <div class="fonte">
+      <button id="btn-fonte-menos">A-</button>
+      <span id="valor-fonte">40px</span>
+      <button id="btn-fonte-mais">A+</button>
     </div>
   </div>
 
@@ -60,20 +71,29 @@
   </div>
 
   <div class="toolbar-inferior">
-    <button id="btn-stop">⏹ Stop</button>
+    <button class="destaque" id="btn-stop">⏹ Stop</button>
     <button id="btn-pause">⏸ Pause</button>
     <button id="btn-play">▶ Play</button>
     <button id="btn-reverso">◀ Reverso</button>
-    <button id="btn-menos">➖</button>
-    <button id="btn-mais">➕</button>
+    <button id="btn-menos">➖ Velocidade</button>
+    <button id="btn-mais">➕ Velocidade</button>
   </div>
 
   <input type="file" id="input-arquivo" accept=".txt" style="display:none">
 
   <script>
-    let itens = []; // lista de textos: {origem: 'bloco'|'manual', titulo, texto, id}
+    let itens = [];
     let itemAtivoIndex = null;
-    let historicoRemovidos = []; // pilha de {item, posicao} para desfazer remoções
+    let historicoRemovidos = [];
+    let velocidade = 3;
+    let fontSize = 40;
+    let rodando = false;
+    let direcao = 1;
+    let posicaoY = 0;
+    let animacaoId = null;
+    let janelaApresentador = null;
+
+    const canal = new BroadcastChannel('teleprompter-tv-ufma');
 
     async function carregarBlocosDoEspelho() {
       const resposta = await fetch('/blocos?espelho_id=1');
@@ -88,22 +108,17 @@
       }));
 
       renderListaTextos();
-
-      if (itens.length > 0) {
-        selecionarItem(0);
-      }
+      if (itens.length > 0) selecionarItem(0);
     }
 
- function renderListaTextos() {
+    function renderListaTextos() {
       const container = document.getElementById('coluna-textos');
       container.innerHTML = '';
-
       const termoBusca = (document.getElementById('campo-buscar').value || '').toLowerCase();
 
       itens.forEach((item, index) => {
-        if (termoBusca && !item.titulo.toLowerCase().includes(termoBusca)) {
-          return; // pula esse item, não bate com a busca
-        }
+        if (termoBusca && !item.titulo.toLowerCase().includes(termoBusca)) return;
+
         const div = document.createElement('div');
         div.className = 'item' + (index === itemAtivoIndex ? ' ativo' : '');
         div.innerHTML = `
@@ -111,14 +126,14 @@
             <div>${item.titulo}</div>
             <div>
               <button class="btn-renomear" data-index="${index}" style="background:transparent; border:none; color:#999; cursor:pointer; font-size:12px;">✏️</button>
-              <button class="btn-loop" data-index="${index}" style="background:${item.loop ? '#2563eb' : '#2a2f36'}; border:none; color:#eee; border-radius:4px; padding:2px 6px; font-size:11px; cursor:pointer;">🔁</button>
+              <button class="btn-loop" data-index="${index}" style="background:${item.loop ? '#336699' : '#eee'}; color:${item.loop ? '#fff' : '#333'}; border:none; border-radius:4px; padding:2px 6px; font-size:11px; cursor:pointer;">🔁</button>
               <button class="btn-remover-item" data-index="${index}" style="background:transparent; border:none; color:#999; cursor:pointer; font-size:12px;">✕</button>
             </div>
           </div>
           <div class="tipo">${item.tipo || 'manual'}</div>
         `;
         div.addEventListener('click', (e) => {
-          if (e.target.classList.contains('btn-loop') || e.target.classList.contains('btn-remover-item')) return;
+          if (e.target.classList.contains('btn-loop') || e.target.classList.contains('btn-remover-item') || e.target.classList.contains('btn-renomear')) return;
           selecionarItem(index);
         });
         container.appendChild(div);
@@ -140,9 +155,7 @@
           const item = itens[index];
           const novoTitulo = window.prompt('Novo título:', item.titulo);
           if (!novoTitulo || novoTitulo.trim() === '') return;
-
           item.titulo = novoTitulo.trim();
-
           if (item.origem === 'bloco') {
             await fetch(`/blocos/${item.id}`, {
               method: 'PATCH',
@@ -150,10 +163,10 @@
               body: JSON.stringify({ titulo: item.titulo })
             });
           }
-
           renderListaTextos();
         });
       });
+
       container.querySelectorAll('.btn-remover-item').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -168,10 +181,14 @@
       const btnNovo = document.createElement('div');
       btnNovo.className = 'item';
       btnNovo.style.textAlign = 'center';
-      btnNovo.style.color = '#7fb8ff';
+      btnNovo.style.color = '#336699';
       btnNovo.textContent = '+ item manual';
       btnNovo.addEventListener('click', adicionarItemManual);
       container.appendChild(btnNovo);
+    }
+
+    function itemAtivo() {
+      return itemAtivoIndex !== null ? itens[itemAtivoIndex] : null;
     }
 
     function selecionarItem(index) {
@@ -183,12 +200,12 @@
       posicaoY = 0;
       textoEl.style.transform = 'translateY(0px)';
       renderListaTextos();
+      enviarParaApresentador();
     }
 
     function adicionarItemManual() {
       const titulo = window.prompt('Título do novo item:', '');
-      if (!titulo) return; // se cancelar ou deixar vazio, não cria nada
-
+      if (!titulo) return;
       itens.push({ origem: 'manual', id: null, titulo: titulo, tipo: 'manual', texto: '' });
       renderListaTextos();
       selecionarItem(itens.length - 1);
@@ -196,23 +213,20 @@
 
     function desfazerRemocao() {
       if (historicoRemovidos.length === 0) return;
-
       const ultimo = historicoRemovidos.pop();
       const posicaoRestaurar = Math.min(ultimo.posicao, itens.length);
       itens.splice(posicaoRestaurar, 0, ultimo.item);
       renderListaTextos();
       selecionarItem(posicaoRestaurar);
     }
-    // Ao editar o texto, atualiza a rolagem e guarda na lista
+
     document.getElementById('texto-editar').addEventListener('input', (e) => {
       const texto = e.target.value;
       document.getElementById('texto-rolagem').textContent = texto;
-      if (itemAtivoIndex !== null) {
-        itens[itemAtivoIndex].texto = texto;
-      }
+      if (itemAtivoIndex !== null) itens[itemAtivoIndex].texto = texto;
+      enviarParaApresentador();
     });
 
-    // Salvar texto de volta no bloco (se for de origem 'bloco')
     document.getElementById('btn-salvar').addEventListener('click', async () => {
       const item = itens[itemAtivoIndex];
       if (!item) return;
@@ -225,7 +239,6 @@
         });
         alert('Texto salvo no bloco do espelho!');
       } else {
-        // Salva como arquivo .txt
         const blob = new Blob([item.texto], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -235,7 +248,6 @@
       }
     });
 
-    // Abrir arquivo .txt
     document.getElementById('btn-abrir').addEventListener('click', () => {
       document.getElementById('input-arquivo').click();
     });
@@ -243,7 +255,6 @@
     document.getElementById('input-arquivo').addEventListener('change', (e) => {
       const arquivo = e.target.files[0];
       if (!arquivo) return;
-
       const leitor = new FileReader();
       leitor.onload = (evento) => {
         const texto = evento.target.result;
@@ -254,55 +265,56 @@
       leitor.readAsText(arquivo);
     });
 
-  let velocidade = 3;
-    let rodando = false;
-    let direcao = 1; // 1 = para frente (para cima), -1 = para trás (para baixo)
-    let posicaoY = 0;
-    let animacaoId = null;
+    // ---- Fonte ----
+    function atualizarFonteNaTela() {
+      document.getElementById('valor-fonte').textContent = fontSize + 'px';
+      document.getElementById('texto-rolagem').style.fontSize = fontSize + 'px';
+      enviarParaApresentador();
+    }
+    document.getElementById('btn-fonte-mais').addEventListener('click', () => {
+      fontSize = Math.min(fontSize + 4, 120);
+      atualizarFonteNaTela();
+    });
+    document.getElementById('btn-fonte-menos').addEventListener('click', () => {
+      fontSize = Math.max(fontSize - 4, 20);
+      atualizarFonteNaTela();
+    });
+    atualizarFonteNaTela();
 
+    // ---- Rolagem ----
     function atualizarVelocidadeNaTela() {
       document.getElementById('valor-velocidade').textContent = velocidade;
     }
 
-    function itemAtivo() {
-      return itemAtivoIndex !== null ? itens[itemAtivoIndex] : null;
+    function posicaoInicial() {
+      return document.getElementById('painel-rolagem').clientHeight;
     }
 
     function passoAnimacao() {
       if (!rodando) return;
-
-     const textoEl = document.getElementById('texto-rolagem');
+      const textoEl = document.getElementById('texto-rolagem');
       const alturaTexto = textoEl.scrollHeight;
-      const limiteFinal = -alturaTexto; // texto some completamente no topo (relativo à posição inicial)
+      const limiteFinal = -alturaTexto;
 
       posicaoY -= direcao * velocidade * 0.5;
 
       const item = itemAtivo();
       const loopAtivo = item && item.loop;
 
-     if (direcao === 1 && posicaoY <= limiteFinal) {
-        if (loopAtivo) {
-          posicaoY = posicaoInicial(); // reinicia entrando de baixo pra cima, igual ao início
-        } else {
-          posicaoY = limiteFinal;
-          rodando = false;
-        }
+      if (direcao === 1 && posicaoY <= limiteFinal) {
+        if (loopAtivo) posicaoY = posicaoInicial();
+        else { posicaoY = limiteFinal; rodando = false; }
       }
 
-  if (direcao === -1 && posicaoY >= 0) {
-        if (loopAtivo) {
-          posicaoY = limiteFinal;
-        } else {
-          posicaoY = 0;
-          rodando = false;
-        }
+      if (direcao === -1 && posicaoY >= posicaoInicial()) {
+        if (loopAtivo) posicaoY = limiteFinal;
+        else { posicaoY = posicaoInicial(); rodando = false; }
       }
 
       textoEl.style.transform = 'translateY(' + posicaoY + 'px)';
+      enviarParaApresentador();
 
-      if (rodando) {
-        animacaoId = requestAnimationFrame(passoAnimacao);
-      }
+      if (rodando) animacaoId = requestAnimationFrame(passoAnimacao);
     }
 
     function play() {
@@ -316,31 +328,23 @@
       if (animacaoId) cancelAnimationFrame(animacaoId);
     }
 
-   function posicaoInicial() {
-      const containerEl = document.getElementById('painel-rolagem');
-      return containerEl.clientHeight; // começa uma tela inteira abaixo, fora da vista
-    }
-
-   function stop() {
+    function stop() {
       pause();
       direcao = 1;
       posicaoY = 0;
-      const textoEl = document.getElementById('texto-rolagem');
-      textoEl.style.transform = 'translateY(0px)';
+      document.getElementById('texto-rolagem').style.transform = 'translateY(0px)';
+      enviarParaApresentador();
     }
 
     function reverso() {
       direcao = direcao * -1;
-      if (!rodando) {
-        play();
-      }
+      if (!rodando) play();
     }
 
     document.getElementById('btn-play').addEventListener('click', function() {
       if (!rodando && posicaoY === 0) {
         posicaoY = posicaoInicial();
-        const textoEl = document.getElementById('texto-rolagem');
-        textoEl.style.transform = 'translateY(' + posicaoY + 'px)';
+        document.getElementById('texto-rolagem').style.transform = 'translateY(' + posicaoY + 'px)';
       }
       play();
     });
@@ -352,44 +356,119 @@
       velocidade = Math.min(velocidade + 1, 20);
       atualizarVelocidadeNaTela();
     });
-
     document.getElementById('btn-menos').addEventListener('click', function() {
       velocidade = Math.max(velocidade - 1, 1);
       atualizarVelocidadeNaTela();
     });
 
     document.addEventListener('keydown', function(e) {
-  const digitando = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
-
-  if (e.key === 'ArrowUp' && !digitando) {
-    velocidade = Math.min(velocidade + 1, 20);
-    atualizarVelocidadeNaTela();
-  } else if (e.key === 'ArrowDown' && !digitando) {
-    velocidade = Math.max(velocidade - 1, 1);
-    atualizarVelocidadeNaTela();
-  } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !digitando) {
-    reverso();
-  } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey) && !digitando) {
-    e.preventDefault();
-    desfazerRemocao();
-  } else if (e.key === ' ' && !digitando) {
-    e.preventDefault();
-    if (rodando) {
-      pause();
-    } else {
-      if (posicaoY === 0) {
-        posicaoY = posicaoInicial();
-        const textoEl = document.getElementById('texto-rolagem');
-        textoEl.style.transform = 'translateY(' + posicaoY + 'px)';
+      const digitando = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+      if (e.key === 'ArrowUp' && !digitando) {
+        velocidade = Math.min(velocidade + 1, 20);
+        atualizarVelocidadeNaTela();
+      } else if (e.key === 'ArrowDown' && !digitando) {
+        velocidade = Math.max(velocidade - 1, 1);
+        atualizarVelocidadeNaTela();
+      } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !digitando) {
+        reverso();
+      } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey) && !digitando) {
+        e.preventDefault();
+        desfazerRemocao();
+      } else if (e.key === ' ' && !digitando) {
+        e.preventDefault();
+        if (rodando) {
+          pause();
+        } else {
+          if (posicaoY === 0) {
+            posicaoY = posicaoInicial();
+            document.getElementById('texto-rolagem').style.transform = 'translateY(' + posicaoY + 'px)';
+          }
+          play();
+        }
       }
-      play();
-    }
-  }
-});
+    });
 
-  document.getElementById('campo-buscar').addEventListener('input', function(e) {
+    document.getElementById('campo-buscar').addEventListener('input', function() {
       renderListaTextos();
     });
+
+    // ---- 2º Monitor (automático, via Chrome) ----
+    function enviarParaApresentador() {
+      canal.postMessage({
+        texto: document.getElementById('texto-rolagem').textContent,
+        posicaoY: posicaoY,
+        fontSize: fontSize
+      });
+    }
+
+    document.getElementById('btn-2monitor').addEventListener('click', abrirSegundoMonitor);
+
+    async function abrirSegundoMonitor() {
+      if (!('getScreenDetails' in window)) {
+        alert('Esse recurso só funciona no Google Chrome (ou Edge), com o site aberto em http://localhost.');
+        return;
+      }
+      try {
+        const detalhes = await window.getScreenDetails();
+        const telaAtual = detalhes.currentScreen;
+        const outraTela = detalhes.screens.find(t => t !== telaAtual);
+
+        if (!outraTela) {
+          alert('Não encontrei um segundo monitor conectado. Conecte o monitor do apresentador e tente de novo.');
+          return;
+        }
+
+        const features = `left=${outraTela.availLeft},top=${outraTela.availTop},width=${outraTela.availWidth},height=${outraTela.availHeight}`;
+        janelaApresentador = window.open('', 'janela-apresentador-tvufma', features);
+        montarJanelaApresentador(janelaApresentador);
+
+        setTimeout(() => {
+          try { janelaApresentador.document.documentElement.requestFullscreen(); } catch (e) {}
+          enviarParaApresentador();
+        }, 400);
+
+      } catch (erro) {
+        alert('Não foi possível acessar o segundo monitor. Confirme que está no Chrome e aceitou a permissão de "janelas em várias telas".\n\nDetalhe: ' + erro.message);
+      }
+    }
+
+    function montarJanelaApresentador(win) {
+      win.document.open();
+      win.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>TV UFMA — Apresentador</title>
+          <style>
+            html, body { margin:0; padding:0; background:#000; height:100%; overflow:hidden; }
+            #palco { position:relative; width:100%; height:100%; overflow:hidden; }
+            #texto {
+              position:absolute; width:100%; padding:0 40px; box-sizing:border-box;
+              text-align:center; color:#FFD400; font-family:Arial, sans-serif;
+              font-weight:bold; text-transform:uppercase; white-space:pre-wrap;
+              line-height:1.5;
+            }
+          </style>
+        </head>
+        <body>
+          <div id="palco"><div id="texto"></div></div>
+          <script>
+            const canal = new BroadcastChannel('teleprompter-tv-ufma');
+            const textoEl = document.getElementById('texto');
+            canal.onmessage = (ev) => {
+              const d = ev.data;
+              textoEl.textContent = d.texto || '';
+              textoEl.style.fontSize = d.fontSize + 'px';
+              textoEl.style.transform = 'scaleX(-1) translateY(' + d.posicaoY + 'px)';
+            };
+          <\/script>
+        </body>
+        </html>
+      `);
+      win.document.close();
+    }
+
     carregarBlocosDoEspelho();
   </script>
 </body>

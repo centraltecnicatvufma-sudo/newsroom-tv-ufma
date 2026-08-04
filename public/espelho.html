@@ -5,114 +5,182 @@
   <title>Espelho — Newsroom TV UFMA</title>
   <style>
     * { box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #0f1216; color: #eee; margin: 0; padding: 20px; }
-    .layout { display: flex; gap: 0; border: 1px solid #2a2f36; border-radius: 12px; overflow: hidden; min-height: 560px; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; }
 
-    .col-edicoes { width: 180px; flex-shrink: 0; background: #171b21; border-right: 1px solid #2a2f36; padding: 16px 12px; }
-    .col-edicoes .item { padding: 8px 10px; border-radius: 6px; font-size: 13px; margin-bottom: 4px; color: #aaa; }
-    .col-edicoes .item.ativo { background: #1e3a5f; color: #7fb8ff; }
+    .topo { background: #336699; color: #fff; padding: 14px 20px; }
+    .topo h1 { font-size: 18px; margin: 0 0 4px; }
+    .topo .sub { font-size: 12px; opacity: 0.9; }
+    .stats-tempo { margin-top: 8px; font-size: 13px; display: flex; align-items: center; gap: 14px; }
+    .status-tempo-badge { font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 6px; }
+    .status-tempo-ok { background: #2e8b57; color: #fff; }
+    .status-tempo-estourado { background: #5A021F; color: #fff; }
+    .status-tempo-buraco { background: #C98A1F; color: #1b2430; }
+    .bloco-grupo-titulo { display: flex; justify-content: space-between; align-items: center; }
+    .bloco-grupo-titulo .tempo-bloco { font-weight: normal; font-size: 12px; color: #5b6472; }
 
-    .col-rundown { flex: 1; min-width: 0; padding: 16px 20px; display: flex; flex-direction: column; }
-    .col-rundown h1 { font-size: 18px; margin: 0 0 2px 0; }
-    .col-rundown .subtitulo { font-size: 12px; color: #999; margin-bottom: 14px; }
+    .conteudo { max-width: 1600px; margin: 0 auto; padding: 20px; }
 
-    .bloco { display: flex; align-items: center; gap: 10px; background: #1a1f26; border-radius: 8px; padding: 10px; margin-bottom: 8px; cursor: pointer; }
-    .bloco.selecionado { background: #232a33; }
-    .cor { width: 4px; align-self: stretch; border-radius: 3px; }
-    .info { flex: 1; min-width: 0; }
-    .titulo { font-size: 14px; }
-    .meta { font-size: 12px; color: #999; margin-top: 2px; }
-    .status { font-size: 12px; padding: 2px 8px; border-radius: 6px; background: #3a3f46; margin-top: 6px; display: inline-block; cursor: pointer; border: none; color: #eee; }
-    .dur { font-family: monospace; font-size: 13px; color: #ccc; }
+    .bloco-grupo { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; overflow: hidden; }
+    .bloco-grupo-titulo { background: #eef1f5; padding: 10px 16px; font-size: 13px; font-weight: bold; color: #336699; }
 
-    .col-painel { width: 420px; flex-shrink: 0; background: #171b21; border-left: 1px solid #2a2f36; padding: 16px; display: flex; flex-direction: column; }
-    .col-painel.fullscreen { width: 100%; border-left: none; }
-    .painel-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-    .painel-header .tipo { font-size: 12px; color: #999; }
-    .painel-header .titulo { font-size: 15px; margin-top: 2px; }
-    .btn-toggle { background: transparent; border: 1px solid #2a2f36; color: #eee; border-radius: 6px; padding: 4px 8px; cursor: pointer; }
-    label { font-size: 12px; color: #999; display: block; margin: 10px 0 4px; }
-    textarea { width: 100%; background: #0f1216; color: #eee; border: 1px solid #2a2f36; border-radius: 6px; padding: 8px; font-size: 13px; resize: none; flex: 1; min-height: 400px; }
-    button.salvar { margin-top: 10px; background: #2563eb; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-size: 13px; }
+    table.rundown { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    table.rundown th { text-align: left; padding: 8px 12px; font-size: 11px; color: #5b6472; text-transform: uppercase; border-bottom: 1px solid #eee; }
+    table.rundown td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #f4f5f7; vertical-align: middle; }
+
+    .tipo-badge { font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; color: #fff; text-transform: uppercase; }
+    .tipo-reportagem { background: #336699; }
+    .tipo-standup { background: #075B91; }
+    .tipo-nota_coberta { background: #6b3fa0; }
+    .tipo-vt { background: #2e8b57; }
+    .tipo-nota_seca { background: #4a5568; }
+    .tipo-vivo { background: #8D0333; }
+    .tipo-escalada { background: #C98A1F; }
+    .tipo-teaser { background: #b8860b; }
+    .tipo-nota_pe { background: #718096; }
+    .tipo-link { background: #2563eb; }
+    .tipo-net { background: #0e7490; }
+    .tipo-vinheta { background: #7c3aed; }
+    .tipo-passagem_bloco { background: #059669; }
+    .tipo-vht_abertura { background: #5A021F; }
+    .tipo-encerramento { background: #1e293b; }
+
+    .status-badge { font-size: 11px; padding: 3px 10px; border-radius: 4px; color: #fff; cursor: pointer; border: none; white-space: nowrap; }
+    .status-producao { background: #999; }
+    .status-chefia { background: #C98A1F; }
+    .status-externa { background: #336699; }
+    .status-produzindo_vt { background: #6b3fa0; }
+    .status-edicao { background: #075B91; }
+    .status-revisao { background: #C98A1F; }
+    .status-pronto { background: #2e8b57; }
+
+    table.rundown tbody tr { cursor: grab; }
+    table.rundown tbody tr.arrastando { opacity: 0.4; }
+    table.rundown tbody tr.linha-alvo { border-top: 2px solid #336699; }
+    .dur { font-family: monospace; font-size: 13px; color: #5b6472; }
   </style>
 </head>
 <body>
-  <div class="layout">
-    <div class="col-edicoes" id="col-edicoes">
-      <div class="item ativo">Jornal UFMA 1ª edição</div>
-    </div>
 
-    <div class="col-rundown" id="col-rundown">
-      <h1>Jornal UFMA 1ª edição</h1>
-      <div class="subtitulo">Espelho — 17/07/2026</div>
-      <div id="lista-blocos">Carregando...</div>
-    </div>
-
-    <div class="col-painel" id="col-painel">
-      <div id="painel-conteudo"></div>
-    </div>
+  <div class="topo">
+    <h1>NEWSROOM TV UFMA — Espelho do Telejornal</h1>
+    <div class="sub" id="sub-espelho">Carregando...</div>
+    <div class="stats-tempo" id="stats-tempo"></div>
   </div>
 
-  <script>
-    const cores = { vt: '#3b82f6', sonora: '#22c55e', vivo: '#ef4444', escalada: '#eab308', cabeca: '#888' };
-    const ordemStatus = ['producao', 'chefia', 'externa', 'produzindo_vt', 'edicao', 'revisao', 'pronto'];
-    const labelStatus = {
-      producao: 'em produção', chefia: 'aguardo chefia', externa: 'liberada externa',
-      produzindo_vt: 'produzindo VT', edicao: 'em edição', revisao: 'aguardo revisão', pronto: 'pronto'
-    };
+  <div class="conteudo" id="conteudo">Carregando...</div>
 
-    let blocos = [];
-    let selecionadoId = null;
-    let telaCheia = false;
+  <script>
+    const espelhoId = 1; // por enquanto fixo — seleção de espelho vem em etapa futura
+
+    const labelStatus = {
+      producao: 'Em Produção', chefia: 'Aguardo Chefia', externa: 'Liberada Externa',
+      produzindo_vt: 'Produzindo VT', edicao: 'Em Edição', revisao: 'Aguardo Revisão', pronto: 'Pronto'
+    };
+    const labelTipo = {
+      reportagem: 'Reportagem', standup: 'Standup', nota_coberta: 'Nota Coberta', vt: 'VT',
+      nota_seca: 'Nota Seca', vivo: 'Vivo', escalada: 'Escalada', teaser: 'Teaser',
+      nota_pe: 'Nota-pé', link: 'Link', net: 'NET', vinheta: 'Vinheta',
+      passagem_bloco: 'Passagem de Bloco', vht_abertura: 'VHT Abertura', encerramento: 'Encerramento'
+    };
+    const ordemStatus = ['producao', 'chefia', 'externa', 'produzindo_vt', 'edicao', 'revisao', 'pronto'];
 
     function formatarTempo(segundosTotais) {
+      if (!segundosTotais) return '00\'00"';
       const minutos = Math.floor(segundosTotais / 60);
       const segundos = segundosTotais % 60;
-      return `${minutos}'${String(segundos).padStart(2, '0')}''`;
+      return `${String(minutos).padStart(2, '0')}'${String(segundos).padStart(2, '0')}"`;
     }
 
-    async function carregarBlocos() {
-      const resposta = await fetch('/blocos?espelho_id=1');
-      blocos = await resposta.json();
+    async function carregarEspelho() {
+      const respEspelho = await fetch('/espelhos/' + espelhoId);
+      const espelho = await respEspelho.json();
+      document.getElementById('sub-espelho').textContent =
+        (espelho.programa || 'Sem programa') + ' — ' + (espelho.data || 'sem data');
 
-      if (!selecionadoId && blocos.length > 0) {
-        selecionadoId = blocos[0].id;
+      const respBlocos = await fetch('/blocos?espelho_id=' + espelhoId);
+      const blocos = await respBlocos.json();
+
+      renderStatsTempo(espelho, blocos);
+      renderRundown(blocos);
+    }
+
+    function renderStatsTempo(espelho, blocos) {
+      const alvo = espelho.duracao_total_prevista || 0;
+      const atual = blocos.reduce((soma, b) => soma + (b.duracao_estimada || 0), 0);
+      const diferenca = alvo - atual; // positivo = sobra tempo, negativo = passou do tempo
+
+      const TOLERANCIA = 30; // 30 segundos de folga antes de considerar Estourado/Buraco
+      let statusHtml;
+      if (Math.abs(diferenca) <= TOLERANCIA) {
+        statusHtml = `<span class="status-tempo-badge status-tempo-ok">🟢 OK</span>`;
+      } else if (diferenca < 0) {
+        statusHtml = `<span class="status-tempo-badge status-tempo-estourado">🔴 ESTOURADO (+${formatarTempo(Math.abs(diferenca))})</span>`;
+      } else {
+        statusHtml = `<span class="status-tempo-badge status-tempo-buraco">🟡 BURACO (-${formatarTempo(diferenca)})</span>`;
       }
 
-      renderRundown();
-      renderPainel();
+      document.getElementById('stats-tempo').innerHTML = `
+        <span>Tempo Alvo: <strong>${formatarTempo(alvo)}</strong></span>
+        <span>Tempo Atual: <strong>${formatarTempo(atual)}</strong></span>
+        ${statusHtml}
+      `;
     }
 
-    function renderRundown() {
-      const container = document.getElementById('lista-blocos');
-      container.innerHTML = '';
+    function renderRundown(blocos) {
+      const container = document.getElementById('conteudo');
 
-      blocos.forEach(bloco => {
-        const div = document.createElement('div');
-        div.className = 'bloco' + (bloco.id === selecionadoId ? ' selecionado' : '');
-        div.innerHTML = `
-          <div class="cor" style="background:${cores[bloco.tipo] || '#888'}"></div>
-          <div class="info">
-            <div class="titulo">${bloco.titulo}</div>
-            <div class="meta">${bloco.tipo} · ${bloco.responsavel}</div>
-            <button class="status" data-id="${bloco.id}" data-status="${bloco.status}">
-              ${labelStatus[bloco.status] || bloco.status}
-            </button>
-          </div>
-          <div class="dur">${formatarTempo(bloco.duracao_estimada)}</div>
-        `;
-        div.addEventListener('click', (e) => {
-          if (e.target.classList.contains('status')) return; // não seleciona ao clicar no status
-          selecionadoId = bloco.id;
-          renderRundown();
-          renderPainel();
-        });
-        container.appendChild(div);
+      if (blocos.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#999;">Nenhum item neste espelho ainda.</p>';
+        return;
+      }
+
+      // Agrupa por número de bloco
+      const grupos = {};
+      blocos.forEach(b => {
+        const numBloco = b.bloco || 1;
+        if (!grupos[numBloco]) grupos[numBloco] = [];
+        grupos[numBloco].push(b);
       });
 
-      document.querySelectorAll('.status').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          e.stopPropagation();
+      const numerosBlocos = Object.keys(grupos).sort((a, b) => Number(a) - Number(b));
+
+      container.innerHTML = numerosBlocos.map(num => `
+        <div class="bloco-grupo">
+          <div class="bloco-grupo-titulo"><span>📌 BLOCO ${num}</span><span class="tempo-bloco">Tempo Bloco: ${formatarTempo(grupos[num].reduce((s, b) => s + (b.duracao_estimada || 0), 0))}</span></div>
+          <table class="rundown">
+            <thead>
+              <tr>
+                <th style="width:40px;">Ord</th>
+                <th style="width:130px;">Tipo</th>
+                <th>Título</th>
+                <th style="width:420px;">Repórter</th>
+                <th style="width:140px;">Status</th>
+                <th style="width:80px;">Tempo</th>
+                <th style="width:80px;">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${grupos[num].map(b => `
+                <tr data-id="${b.id}" draggable="true">
+                  <td>${b.ordem}</td>
+                  <td><span class="tipo-badge tipo-${b.tipo}">${labelTipo[b.tipo] || b.tipo}</span></td>
+                  <td>${b.titulo}</td>
+                  <td>${b.reporter || b.responsavel || '—'}</td>
+                  <td><button class="status-badge status-${b.status}" data-id="${b.id}" data-status="${b.status}">${labelStatus[b.status] || b.status}</button></td>
+                  <td class="dur">${formatarTempo(b.duracao_estimada)}</td>
+                  <td class="acoes-rundown">
+                    ${b.pauta_id ? `<button class="btn-abrir-lauda" data-pauta="${b.pauta_id}" title="Abrir Lauda">📝</button>` : ''}
+                    <button class="btn-remover-bloco" data-id="${b.id}" title="Remover">🗑️</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `).join('');
+
+      document.querySelectorAll('.status-badge').forEach(btn => {
+        btn.addEventListener('click', async () => {
           const id = btn.dataset.id;
           const atual = btn.dataset.status;
           const proximoIndex = (ordemStatus.indexOf(atual) + 1) % ordemStatus.length;
@@ -123,64 +191,64 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ novo_status: novoStatus, perfil: 'chefe_redacao' })
           });
+          carregarEspelho();
+        });
+      });
 
-          carregarBlocos();
+      document.querySelectorAll('.btn-abrir-lauda').forEach(btn => {
+        btn.addEventListener('click', () => {
+          window.location.href = 'materia.html?pauta_id=' + btn.dataset.pauta;
+        });
+      });
+
+      let linhaArrastada = null;
+
+      document.querySelectorAll('table.rundown tbody tr').forEach(linha => {
+        linha.addEventListener('dragstart', () => {
+          linhaArrastada = linha;
+          linha.classList.add('arrastando');
+        });
+
+        linha.addEventListener('dragend', () => {
+          linha.classList.remove('arrastando');
+          document.querySelectorAll('.linha-alvo').forEach(el => el.classList.remove('linha-alvo'));
+        });
+
+        linha.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          const tabelaAtual = linha.closest('table');
+          const tabelaOrigem = linhaArrastada ? linhaArrastada.closest('table') : null;
+          if (tabelaAtual !== tabelaOrigem) return; // só permite soltar dentro do mesmo Bloco
+          document.querySelectorAll('.linha-alvo').forEach(el => el.classList.remove('linha-alvo'));
+          if (linha !== linhaArrastada) linha.classList.add('linha-alvo');
+        });
+
+        linha.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          linha.classList.remove('linha-alvo');
+          if (!linhaArrastada || linha === linhaArrastada) return;
+
+          const tabelaAtual = linha.closest('table');
+          const tabelaOrigem = linhaArrastada.closest('table');
+          if (tabelaAtual !== tabelaOrigem) return; // ignora soltar em outro Bloco por enquanto
+
+          const idArrastado = linhaArrastada.dataset.id;
+          const bloco = blocos.find(b => String(b.id) === idArrastado);
+          const blocoAlvo = blocos.find(b => String(b.id) === linha.dataset.id);
+          if (!bloco || !blocoAlvo) return;
+
+          await fetch(`/blocos/${idArrastado}/ordem`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nova_ordem: blocoAlvo.ordem })
+          });
+
+          carregarEspelho();
         });
       });
     }
 
-    function renderPainel() {
-      const bloco = blocos.find(b => b.id === selecionadoId);
-      const painel = document.getElementById('painel-conteudo');
-      const colPainel = document.getElementById('col-painel');
-      const colEdicoes = document.getElementById('col-edicoes');
-      const colRundown = document.getElementById('col-rundown');
-
-      if (telaCheia) {
-        colEdicoes.style.display = 'none';
-        colRundown.style.display = 'none';
-        colPainel.classList.add('fullscreen');
-      } else {
-        colEdicoes.style.display = '';
-        colRundown.style.display = 'flex';
-        colPainel.classList.remove('fullscreen');
-      }
-
-      if (!bloco) {
-        painel.innerHTML = '<div class="meta">Selecione um bloco</div>';
-        return;
-      }
-
-      painel.innerHTML = `
-        <div class="painel-header">
-          <div>
-            <div class="tipo">${bloco.tipo} · bloco ${bloco.id}</div>
-            <div class="titulo">${bloco.titulo}</div>
-          </div>
-          <button class="btn-toggle" id="btn-toggle">${telaCheia ? '⤡' : '⤢'}</button>
-        </div>
-        <label>texto (teleprompter)</label>
-        <textarea id="texto-script" style="font-size:${telaCheia ? '17px' : '13px'}">${bloco.texto_script || ''}</textarea>
-        <button class="salvar" id="btn-salvar">Salvar texto</button>
-      `;
-
-      document.getElementById('btn-toggle').addEventListener('click', () => {
-        telaCheia = !telaCheia;
-        renderPainel();
-      });
-
-      document.getElementById('btn-salvar').addEventListener('click', async () => {
-        const novoTexto = document.getElementById('texto-script').value;
-        await fetch(`/blocos/${bloco.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ texto_script: novoTexto })
-        });
-        carregarBlocos();
-      });
-    }
-
-    carregarBlocos();
+    carregarEspelho();
   </script>
 </body>
 </html>

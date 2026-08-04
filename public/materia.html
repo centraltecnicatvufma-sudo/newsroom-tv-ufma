@@ -50,7 +50,7 @@
 
   <div class="conteudo">
     <div class="bloco">
-      <h2>🎤 Cabeça do Apresentador (vai para o Teleprompter)</h2>
+      <h2>🎤 Cabeça do Apresentador (vai para o Teleprompter) <button id="btn-ouvir-cabeca" style="font-size:12px; padding:4px 10px; border-radius:6px; border:1px solid #ddd; background:#fafafa; cursor:pointer; margin-left:8px;">🗣️ Ouvir</button></h2>
       <div id="editor-cabeca" class="editor-caixa"></div>
     </div>
 
@@ -99,6 +99,16 @@
     const quillItens = {}; // id do item -> instância Quill
 
     let gcsCache = [];
+
+    function falarTexto(quillInstance) {
+      window.speechSynthesis.cancel(); // para qualquer leitura em andamento antes de começar outra
+      const texto = quillInstance.getText().trim();
+      if (!texto) { alert('Não há texto para ler.'); return; }
+      const fala = new SpeechSynthesisUtterance(texto);
+      fala.lang = 'pt-BR';
+      window.speechSynthesis.speak(fala);
+    }
+
     if (!pautaId) {
       document.body.innerHTML = '<p style="padding:20px;">Nenhuma pauta informada. Volte para a tela de Pautas e clique em "Criar Texto / Lauda".</p>';
       throw new Error('sem pauta_id');
@@ -117,8 +127,12 @@
       `;
 
       quillCabeca = new Quill('#editor-cabeca', { theme: 'snow' });
+      quillCabeca.root.setAttribute('spellcheck', 'true');
       if (p.cabeca_texto) quillCabeca.root.innerHTML = p.cabeca_texto;
+      document.getElementById('btn-ouvir-cabeca').addEventListener('click', () => falarTexto(quillCabeca));
+
       quillWeb = new Quill('#editor-web', { theme: 'snow' });
+      quillWeb.root.setAttribute('spellcheck', 'true');
       if (p.texto_web) quillWeb.root.innerHTML = p.texto_web;
     }
 
@@ -173,6 +187,7 @@
       });
       carregarGcs();
     });
+
     async function carregarItens() {
       const resp = await fetch('/materia?pauta_id=' + pautaId);
       const itens = await resp.json();
@@ -185,15 +200,23 @@
         div.innerHTML = `
           <div class="item-vt-cabecalho">
             ${badgeTipo(item.tipo)}
-            <button class="btn-remover-item" data-id="${item.id}">✕ remover</button>
+            <div>
+              <button class="btn-ouvir-item" data-id="${item.id}" style="font-size:11px; padding:3px 8px; border-radius:6px; border:1px solid #ddd; background:#fff; cursor:pointer; margin-right:6px;">🗣️ Ouvir</button>
+              <button class="btn-remover-item" data-id="${item.id}">✕ remover</button>
+            </div>
           </div>
           <div class="editor-caixa" id="editor-item-${item.id}"></div>
         `;
         lista.appendChild(div);
 
         const quillItem = new Quill('#editor-item-' + item.id, { theme: 'snow' });
+        quillItem.root.setAttribute('spellcheck', 'true');
         if (item.texto) quillItem.root.innerHTML = item.texto;
         quillItens[item.id] = quillItem;
+      });
+
+      document.querySelectorAll('.btn-ouvir-item').forEach(btn => {
+        btn.addEventListener('click', () => falarTexto(quillItens[btn.dataset.id]));
       });
 
       document.querySelectorAll('.btn-remover-item').forEach(btn => {
