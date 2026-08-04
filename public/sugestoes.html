@@ -240,13 +240,25 @@
             <div class="meta">📍 ${s.local || '—'} | 📅 ${s.data_prevista || '—'} ${s.hora_prevista ? '· ' + s.hora_prevista.replace(':', 'h') : ''}</div>
             <div class="status-linha">Status atual: ${rotulosStatus[s.status] || s.status}</div>
             <div class="acoes">
-              <button class="btn-detalhes" data-id="${s.id}">👁️ Ver Detalhes</button>
+              <button class="btn-detalhes" data-id="${s.id}">👁 Ver Detalhes</button>
+              ${s.status !== 'em_analise' ? `<button class="btn-em-analise" data-id="${s.id}">🔎 Em Análise</button>` : ''}
               ${s.status !== 'aprovada' ? `<button class="btn-aprovar" data-id="${s.id}">✅ Aprovar</button>` : ''}
               ${s.status !== 'arquivada' ? `<button class="btn-arquivar" data-id="${s.id}">❌ Arquivar</button>` : ''}
             </div>
           </div>
         `;
       }).join('');
+
+      document.querySelectorAll('.btn-em-analise').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          await fetch(`/sugestoes/${btn.dataset.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'em_analise' })
+        });
+        carregarSugestoes();
+      });
+    });
 
       document.querySelectorAll('.btn-arquivar').forEach(btn => {
         btn.addEventListener('click', async () => {
