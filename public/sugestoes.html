@@ -76,18 +76,21 @@
   <div class="filtros">
     <select id="filtro-editoria">
       <option value="">Editoria: Todas</option>
+      <option value="Arte e Cultura">Arte e Cultura</option>
       <option value="Cidade">Cidade</option>
-      <option value="Acadêmico">Acadêmico</option>
-      <option value="Cultura">Cultura</option>
-      <option value="Esportes">Esportes</option>
       <option value="Ciência e Tecnologia">Ciência e Tecnologia</option>
-      <option value="Polícia/Comunidade">Polícia/Comunidade</option>
-    </select>
-    <select id="filtro-urgencia">
-      <option value="">Prioridade: Todas</option>
-      <option value="rotina">Rotina</option>
-      <option value="relevante">Relevante</option>
-      <option value="urgente">Fato do Dia / Urgente</option>
+      <option value="Comportamento e Sociedade">Comportamento e Sociedade</option>
+      <option value="Direitos Humanos e Inclusão">Direitos Humanos e Inclusão</option>
+      <option value="Economia e Trabalho">Economia e Trabalho</option>
+      <option value="Esporte e Lazer">Esporte e Lazer</option>
+      <option value="Educação">Educação</option>
+      <option value="Meio Ambiente">Meio Ambiente</option>
+      <option value="Política">Política</option>
+      <option value="Saúde">Saúde</option>
+      <option value="Segurança e Justiça">Segurança e Justiça</option>
+      <option value="Especial">Especial</option>
+      <option value="UFMA">UFMA</option>
+      <option value="Outra">Outra</option>
     </select>
   </div>
 
@@ -101,12 +104,21 @@
 
       <label>Editoria</label>
       <select id="s-editoria">
+        <option value="Arte e Cultura">Arte e Cultura</option>
         <option value="Cidade">Cidade</option>
-        <option value="Acadêmico">Acadêmico</option>
-        <option value="Cultura">Cultura</option>
-        <option value="Esportes">Esportes</option>
         <option value="Ciência e Tecnologia">Ciência e Tecnologia</option>
-        <option value="Polícia/Comunidade">Polícia/Comunidade</option>
+        <option value="Comportamento e Sociedade">Comportamento e Sociedade</option>
+        <option value="Direitos Humanos e Inclusão">Direitos Humanos e Inclusão</option>
+        <option value="Economia e Trabalho">Economia e Trabalho</option>
+        <option value="Esporte e Lazer">Esporte e Lazer</option>
+        <option value="Educação">Educação</option>
+        <option value="Meio Ambiente">Meio Ambiente</option>
+        <option value="Política">Política</option>
+        <option value="Saúde">Saúde</option>
+        <option value="Segurança e Justiça">Segurança e Justiça</option>
+        <option value="Especial">Especial</option>
+        <option value="UFMA">UFMA</option>
+        <option value="Outra">Outra</option>
       </select>
 
       <label>Resumo / O que é o fato</label>
@@ -150,6 +162,7 @@
       </div>
     </div>
   </div>
+
   <div class="overlay-modal" id="modal-aprovar">
     <div class="modal-aprovar">
       <h2>✅ Aprovar e Gerar Pauta</h2>
@@ -176,6 +189,7 @@
       </div>
     </div>
   </div>
+
   <div class="conteudo" id="conteudo">
     <!-- cards entram aqui -->
   </div>
@@ -196,8 +210,12 @@
       btn.addEventListener('click', () => trocarAba(btn.dataset.status));
     });
 
-    document.getElementById('filtro-editoria').addEventListener('change', carregarSugestoes);
-    document.getElementById('filtro-urgencia').addEventListener('change', carregarSugestoes);
+    // Filtros com checagem segura de existência
+    const filtroEditoriaEl = document.getElementById('filtro-editoria');
+    if (filtroEditoriaEl) filtroEditoriaEl.addEventListener('change', carregarSugestoes);
+
+    const filtroUrgenciaEl = document.getElementById('filtro-urgencia');
+    if (filtroUrgenciaEl) filtroUrgenciaEl.addEventListener('change', carregarSugestoes);
 
     const rotulosUrgencia = { rotina: 'Rotina', relevante: 'Relevante', urgente: 'Urgente' };
     const rotulosStatus = { nova: 'Nova Sugestão', em_analise: 'Em Análise pelo Editor', aprovada: 'Aprovada', arquivada: 'Arquivada' };
@@ -210,8 +228,8 @@
       let lista = await resposta.json();
       listaCarregada = lista;
 
-      const editoriaFiltro = document.getElementById('filtro-editoria').value;
-      const urgenciaFiltro = document.getElementById('filtro-urgencia').value;
+      const editoriaFiltro = filtroEditoriaEl ? filtroEditoriaEl.value : '';
+      const urgenciaFiltro = filtroUrgenciaEl ? filtroUrgenciaEl.value : '';
 
       if (editoriaFiltro) lista = lista.filter(s => s.editoria === editoriaFiltro);
       if (urgenciaFiltro) lista = lista.filter(s => s.urgencia === urgenciaFiltro);
@@ -255,10 +273,10 @@
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: 'em_analise' })
+          });
+          carregarSugestoes();
         });
-        carregarSugestoes();
       });
-    });
 
       document.querySelectorAll('.btn-arquivar').forEach(btn => {
         btn.addEventListener('click', async () => {
@@ -309,7 +327,6 @@
 
     document.getElementById('btn-nova-sugestao').addEventListener('click', () => {
       idEmEdicaoSugestao = null;
-      // limpa o formulário
       document.getElementById('s-titulo').value = '';
       document.getElementById('s-editoria').value = 'Cidade';
       document.getElementById('s-resumo').value = '';
@@ -417,7 +434,6 @@
       const cinegrafista = document.getElementById('ap-cinegrafista').value;
       const equipeAdicional = Array.from(document.getElementById('ap-equipe').selectedOptions).map(o => o.value);
 
-      // 1. Cria a Pauta (já no formato novo, compatível com o pautas.js atual)
       const respostaPauta = await fetch('/pautas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -446,7 +462,6 @@
         return;
       }
 
-      // 2. Cria o Agendamento
       const todaEquipe = [produtor, reporter, cinegrafista, ...equipeAdicional].filter(Boolean).join(', ');
       const respostaAgenda = await fetch('/agenda', {
         method: 'POST',
@@ -462,14 +477,12 @@
       });
       const novoAgendamento = await respostaAgenda.json();
 
-      // 3. Vincula o agendamento à pauta
       await fetch(`/pautas/${novaPauta.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agenda_id: novoAgendamento.id })
       });
 
-      // 4. Atualiza a sugestão
       await fetch(`/sugestoes/${s.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
