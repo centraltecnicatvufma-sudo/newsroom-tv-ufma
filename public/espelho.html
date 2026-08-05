@@ -57,6 +57,36 @@
     table.rundown tbody tr.arrastando { opacity: 0.4; }
     table.rundown tbody tr.linha-alvo { border-top: 2px solid #336699; }
     .dur { font-family: monospace; font-size: 13px; color: #5b6472; }
+
+    .barra-acoes-espelho { max-width: 1600px; margin: 12px auto 0; padding: 0 20px; display: flex; gap: 8px; }
+    .barra-acoes-espelho button { background: #336699; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
+    .barra-acoes-espelho button:hover { background: #2a5580; }
+    .barra-acoes-espelho .separador-acoes { flex: 1; }
+    .barra-acoes-espelho .btn-secundario { background: #eee; color: #333; }
+    .barra-acoes-espelho .btn-secundario:hover { background: #ddd; }
+
+    .overlay-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 10; }
+    .overlay-modal.aberto { display: flex; }
+    .modal-item { background: #fff; border-radius: 10px; padding: 24px; width: 420px; max-height: 90vh; overflow-y: auto; }
+    .modal-item h2 { font-size: 16px; margin: 0 0 4px; }
+    .modal-item label { font-size: 12px; color: #5b6472; display: block; margin: 12px 0 4px; }
+    .modal-item input, .modal-item select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+    .botoes-modal-item { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+    .botoes-modal-item button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .botoes-modal-item button:first-child { background: #eee; color: #333; }
+    .botoes-modal-item button:last-child { background: #8D0333; color: #fff; }
+    .lauda-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+    .lauda-pronta { background: #e3f5ea; color: #2e8b57; }
+    .lauda-redacao { background: #fdf3e3; color: #C98A1F; }
+    .lauda-pendente { background: #fbe4ea; color: #5A021F; }
+
+    @media print {
+      .barra-acoes-espelho, .acoes-rundown, .overlay-modal { display: none !important; }
+      body { background: #fff; }
+      .bloco-grupo { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+      .topo { background: #fff !important; color: #000 !important; }
+      .status-tempo-badge { border: 1px solid #999; }
+    }
   </style>
 </head>
 <body>
@@ -67,10 +97,132 @@
     <div class="stats-tempo" id="stats-tempo"></div>
   </div>
 
+  <div class="barra-acoes-espelho">
+    <button id="btn-novo-item">➕ Novo Item</button>
+    <button id="btn-novo-bloco">📌 Novo Bloco</button>
+    <div class="separador-acoes"></div>
+    <button class="btn-secundario" id="btn-teleprompter">📺 Abrir no Teleprompter</button>
+    <button class="btn-secundario" id="btn-imprimir">🖨️ Imprimir Espelho</button>
+  </div>
+
   <div class="conteudo" id="conteudo">Carregando...</div>
+
+  <div class="overlay-modal" id="modal-item">
+    <div class="modal-item">
+      <h2>Novo Item do Espelho</h2>
+
+      <label>Vincular a uma Pauta (opcional)</label>
+      <select id="mi-pauta"><option value="">Nenhuma — item manual</option></select>
+
+      <label>Bloco</label>
+      <input type="number" id="mi-bloco" min="1" value="1">
+
+      <label>Tipo</label>
+      <select id="mi-tipo"></select>
+
+      <label>Título</label>
+      <input type="text" id="mi-titulo" placeholder="Título da matéria">
+
+      <label>Repórter</label>
+      <input type="text" id="mi-reporter" placeholder="Nome do repórter">
+
+      <label>Duração Estimada (mm:ss)</label>
+      <input type="text" id="mi-duracao" placeholder="02:30">
+
+      <div class="botoes-modal-item">
+        <button id="mi-cancelar">Cancelar</button>
+        <button id="mi-confirmar">Salvar</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const espelhoId = 1; // por enquanto fixo — seleção de espelho vem em etapa futura
+
+    let pautasCache = [];
+
+    async function carregarPautasParaModal() {
+      const resp = await fetch('/pautas');
+      pautasCache = await resp.json();
+      const select = document.getElementById('mi-pauta');
+      select.innerHTML = '<option value="">Nenhuma — item manual</option>' +
+        pautasCache.map(p => `<option value="${p.id}">#P-${p.id} — ${p.titulo}</option>`).join('');
+    }
+
+    function preencherSelectTipo() {
+      const select = document.getElementById('mi-tipo');
+      select.innerHTML = Object.keys(labelTipo).map(t => `<option value="${t}">${labelTipo[t]}</option>`).join('');
+    }
+
+    function paraSegundos(mmss) {
+      if (!mmss) return 0;
+      const partes = mmss.split(':');
+      if (partes.length !== 2) return 0;
+      return (Number(partes[0]) || 0) * 60 + (Number(partes[1]) || 0);
+    }
+
+    function abrirModalItem() {
+      document.getElementById('mi-pauta').value = '';
+      document.getElementById('mi-bloco').value = 1;
+      document.getElementById('mi-tipo').value = 'reportagem';
+      document.getElementById('mi-titulo').value = '';
+      document.getElementById('mi-reporter').value = '';
+      document.getElementById('mi-duracao').value = '';
+      document.getElementById('modal-item').classList.add('aberto');
+    }
+
+    document.getElementById('btn-novo-item').addEventListener('click', abrirModalItem);
+
+    document.getElementById('btn-novo-bloco').addEventListener('click', async () => {
+      const respBlocos = await fetch('/blocos?espelho_id=' + espelhoId);
+      const blocosAtuais = await respBlocos.json();
+      const maiorBloco = blocosAtuais.reduce((max, b) => Math.max(max, b.bloco || 1), 0);
+      abrirModalItem();
+      document.getElementById('mi-bloco').value = maiorBloco + 1;
+    });
+
+    document.getElementById('mi-cancelar').addEventListener('click', () => {
+      document.getElementById('modal-item').classList.remove('aberto');
+    });
+
+    document.getElementById('mi-pauta').addEventListener('change', (e) => {
+      const pauta = pautasCache.find(p => String(p.id) === e.target.value);
+      if (pauta) {
+        document.getElementById('mi-titulo').value = pauta.titulo || '';
+        document.getElementById('mi-reporter').value = pauta.reporter || '';
+      }
+    });
+
+    document.getElementById('mi-confirmar').addEventListener('click', async () => {
+      const titulo = document.getElementById('mi-titulo').value.trim();
+      if (!titulo) { alert('Preencha o título.'); return; }
+
+      await fetch('/blocos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          espelho_id: espelhoId,
+          pauta_id: document.getElementById('mi-pauta').value || null,
+          bloco: Number(document.getElementById('mi-bloco').value) || 1,
+          tipo: document.getElementById('mi-tipo').value,
+          titulo: titulo,
+          responsavel: document.getElementById('mi-reporter').value.trim(),
+          reporter: document.getElementById('mi-reporter').value.trim(),
+          duracao_estimada: paraSegundos(document.getElementById('mi-duracao').value)
+        })
+      });
+
+      document.getElementById('modal-item').classList.remove('aberto');
+      carregarEspelho();
+    });
+
+    document.getElementById('btn-teleprompter').addEventListener('click', () => {
+      window.open('teleprompter.html?espelho_id=' + espelhoId, '_blank');
+    });
+
+    document.getElementById('btn-imprimir').addEventListener('click', () => {
+      window.print();
+    });
 
     const labelStatus = {
       producao: 'Em Produção', chefia: 'Aguardo Chefia', externa: 'Liberada Externa',
@@ -107,9 +259,9 @@
     function renderStatsTempo(espelho, blocos) {
       const alvo = espelho.duracao_total_prevista || 0;
       const atual = blocos.reduce((soma, b) => soma + (b.duracao_estimada || 0), 0);
-      const diferenca = alvo - atual; // positivo = sobra tempo, negativo = passou do tempo
+      const diferenca = alvo - atual;
 
-      const TOLERANCIA = 30; // 30 segundos de folga antes de considerar Estourado/Buraco
+      const TOLERANCIA = 30;
       let statusHtml;
       if (Math.abs(diferenca) <= TOLERANCIA) {
         statusHtml = `<span class="status-tempo-badge status-tempo-ok">🟢 OK</span>`;
@@ -134,7 +286,6 @@
         return;
       }
 
-      // Agrupa por número de bloco
       const grupos = {};
       blocos.forEach(b => {
         const numBloco = b.bloco || 1;
@@ -153,7 +304,8 @@
                 <th style="width:40px;">Ord</th>
                 <th style="width:130px;">Tipo</th>
                 <th>Título</th>
-                <th style="width:420px;">Repórter</th>
+                <th style="width:240px;">Repórter</th>
+                <th style="width:110px;">Lauda</th>
                 <th style="width:140px;">Status</th>
                 <th style="width:80px;">Tempo</th>
                 <th style="width:80px;">Ações</th>
@@ -166,9 +318,10 @@
                   <td><span class="tipo-badge tipo-${b.tipo}">${labelTipo[b.tipo] || b.tipo}</span></td>
                   <td>${b.titulo}</td>
                   <td>${b.reporter || b.responsavel || '—'}</td>
-                  <td><button class="status-badge status-${b.status}" data-id="${b.id}" data-status="${b.status}">${labelStatus[b.status] || b.status}</button></td>
+                  <td>${b.lauda_status ? `<span class="lauda-badge lauda-${b.lauda_status}">${b.lauda_status === 'pronta' ? '🟢 Pronta' : b.lauda_status === 'redacao' ? '🟡 Redação' : '🔴 Pendente'}</span>` : '—'}</td>
+                  <td draggable="false"><button class="status-badge status-${b.status}" data-id="${b.id}" data-status="${b.status}">${labelStatus[b.status] || b.status}</button></td>
                   <td class="dur">${formatarTempo(b.duracao_estimada)}</td>
-                  <td class="acoes-rundown">
+                  <td class="acoes-rundown" draggable="false">
                     ${b.pauta_id ? `<button class="btn-abrir-lauda" data-pauta="${b.pauta_id}" title="Abrir Lauda">📝</button>` : ''}
                     <button class="btn-remover-bloco" data-id="${b.id}" title="Remover">🗑️</button>
                   </td>
@@ -201,6 +354,14 @@
         });
       });
 
+      document.querySelectorAll('.btn-remover-bloco').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Remover este item do espelho?')) return;
+          await fetch('/blocos/' + btn.dataset.id, { method: 'DELETE' });
+          carregarEspelho();
+        });
+      });
+
       let linhaArrastada = null;
 
       document.querySelectorAll('table.rundown tbody tr').forEach(linha => {
@@ -218,7 +379,7 @@
           e.preventDefault();
           const tabelaAtual = linha.closest('table');
           const tabelaOrigem = linhaArrastada ? linhaArrastada.closest('table') : null;
-          if (tabelaAtual !== tabelaOrigem) return; // só permite soltar dentro do mesmo Bloco
+          if (tabelaAtual !== tabelaOrigem) return;
           document.querySelectorAll('.linha-alvo').forEach(el => el.classList.remove('linha-alvo'));
           if (linha !== linhaArrastada) linha.classList.add('linha-alvo');
         });
@@ -230,7 +391,7 @@
 
           const tabelaAtual = linha.closest('table');
           const tabelaOrigem = linhaArrastada.closest('table');
-          if (tabelaAtual !== tabelaOrigem) return; // ignora soltar em outro Bloco por enquanto
+          if (tabelaAtual !== tabelaOrigem) return;
 
           const idArrastado = linhaArrastada.dataset.id;
           const bloco = blocos.find(b => String(b.id) === idArrastado);
@@ -248,6 +409,8 @@
       });
     }
 
+    preencherSelectTipo();
+    carregarPautasParaModal();
     carregarEspelho();
   </script>
 </body>
