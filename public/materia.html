@@ -78,12 +78,16 @@
     .status-salvo { font-size: 13px; color: #2e8b57; align-self: center; margin-right: auto; }
 
     /* Corpo do VT impresso: tabela simples (sem as caixas da tela), gerada à
-       parte a partir dos mesmos itens — "Padrão" flui Indicações e Texto em
-       duas colunas independentes (25%/75%, sem alinhar linha a linha, igual
-       à referência); "Uma coluna" empilha, por item, o texto primeiro e as
+       parte a partir dos mesmos itens — "Padrão" é uma tabela de verdade
+       (Indicações 25% | Texto 75%, cada item numa linha), porque só tabela
+       HTML se divide certo entre páginas no Chrome — grid/colunas/float
+       testados antes ou não quebravam página, ou paravam de funcionar
+       depois da 1ª. "Uma coluna" empilha, por item, o texto primeiro e as
        indicações logo abaixo. Só aparece no papel, nunca na tela. */
-    .impressao-vt .entrada-impressao { margin-bottom: 12px; font-size: 12px; }
-    .impressao-vt .entrada-impressao strong { display: block; font-size: 11px; margin-bottom: 3px; }
+    .impressao-vt .entrada-impressao { margin-bottom: 6px; font-size: 12px; }
+    .impressao-vt .entrada-impressao strong { display: block; font-size: 11px; margin-bottom: 2px; }
+    .impressao-vt p { margin: 0 0 4px; }
+    .impressao-vt p:last-child { margin-bottom: 0; }
 
     /* GCs e Texto Adaptado ficam recolhidos por padrão — só uma barra com
        seta; clicar revela o conteúdo */
@@ -147,14 +151,15 @@
       body:not(.impressao-uma-coluna) #impressao-vt-padrao { display: block; }
       body.impressao-uma-coluna #impressao-vt-uma-coluna { display: block; }
 
-      /* Padrão: Indicações (25%) e Texto (75%) fluem cada um na sua coluna,
-         independentes — não são pares alinhados linha a linha, é o mesmo
-         comportamento da referência (colunas com float, não grid/tabela,
-         porque isso é o que se divide corretamente entre páginas) */
-      #impressao-vt-padrao::after { content: ''; display: table; clear: both; }
-      .col-impressao-esquerda { float: left; width: 25%; padding-right: 10px; box-sizing: border-box; }
-      .col-impressao-direita { float: left; width: 75%; padding-left: 10px; border-left: 1px solid #999; box-sizing: border-box; }
-      .impressao-vt .entrada-impressao { break-inside: avoid; }
+      /* Padrão: Indicações (25%) e Texto (75%) do MESMO item, lado a lado,
+         na mesma linha — uma tabela HTML de verdade, que é o único jeito
+         testado que continua em duas colunas em todas as páginas (grid e
+         float funcionavam só na 1ª página e depois viravam 1 coluna) */
+      #tabela-impressao-vt { width: 100%; border-collapse: collapse; table-layout: fixed; }
+      #tabela-impressao-vt td { vertical-align: top; padding: 5px 8px; border-bottom: 1px solid #eee; }
+      #tabela-impressao-vt td.col-impressao-esquerda { width: 25%; border-right: 1px solid #999; }
+      #tabela-impressao-vt td.col-impressao-direita { width: 75%; }
+      #tabela-impressao-vt tr { break-inside: avoid; }
 
       #corpo-gcs { display: block !important; }
 
@@ -230,8 +235,9 @@
       <div id="lista-itens"></div>
 
       <div id="impressao-vt-padrao" class="somente-impressao impressao-vt">
-        <div class="col-impressao-esquerda" id="impressao-col-esquerda"></div>
-        <div class="col-impressao-direita" id="impressao-col-direita"></div>
+        <table id="tabela-impressao-vt">
+          <tbody id="impressao-corpo-tabela"></tbody>
+        </table>
       </div>
       <div id="impressao-vt-uma-coluna" class="somente-impressao impressao-vt"></div>
     </div>
@@ -677,31 +683,42 @@
       return `${base} - ${sublabelIndicacoesImpressao[item.tipo] || 'Indicações'}`;
     }
 
-    // Monta as duas versões de impressão (padrão em colunas e uma coluna) a
+    // Monta as duas versões de impressão (padrão em tabela e uma coluna) a
     // partir do que está na tela AGORA (mesmo texto ainda não salvo), pra
     // imprimir sempre bater com o que o repórter está vendo
     function montarImpressaoCorpoVt() {
       const itensNumerados = contarPorTipo(itensCache);
 
+      const conteudoTexto = item => quillItens[item.id] ? quillItens[item.id].root.innerHTML : '';
+      const conteudoIndicacoes = item => {
+        const campo = document.querySelector(`.campo-indicacoes-texto[data-id="${item.id}"]`);
+        const texto = campo ? campo.value : (item.indicacoes || '');
+        return escaparHtml(texto).replace(/\n/g, '<br>');
+      };
+
       const entradaTexto = item => `
         <div class="entrada-impressao">
           <strong>[${rotuloTextoImpressao(item)}]</strong>
-          <div>${quillItens[item.id] ? quillItens[item.id].root.innerHTML : ''}</div>
+          <div>${conteudoTexto(item)}</div>
         </div>
       `;
-      const entradaIndicacoes = item => {
-        const campo = document.querySelector(`.campo-indicacoes-texto[data-id="${item.id}"]`);
-        const texto = campo ? campo.value : (item.indicacoes || '');
-        return `
-          <div class="entrada-impressao">
-            <strong>[${rotuloIndicacoesImpressao(item)}]</strong>
-            <div>${escaparHtml(texto).replace(/\n/g, '<br>')}</div>
-          </div>
-        `;
-      };
+      const entradaIndicacoes = item => `
+        <div class="entrada-impressao">
+          <strong>[${rotuloIndicacoesImpressao(item)}]</strong>
+          <div>${conteudoIndicacoes(item)}</div>
+        </div>
+      `;
 
-      document.getElementById('impressao-col-esquerda').innerHTML = itensNumerados.map(entradaIndicacoes).join('');
-      document.getElementById('impressao-col-direita').innerHTML = itensNumerados.map(entradaTexto).join('');
+      // Padrão: tabela de verdade, Indicações e Texto do MESMO item lado a
+      // lado na mesma linha — é a única forma testada que continua em duas
+      // colunas em todas as páginas impressas, não só na primeira
+      document.getElementById('impressao-corpo-tabela').innerHTML = itensNumerados.map(item => `
+        <tr>
+          <td class="col-impressao-esquerda">${entradaIndicacoes(item)}</td>
+          <td class="col-impressao-direita">${entradaTexto(item)}</td>
+        </tr>
+      `).join('');
+
       document.getElementById('impressao-vt-uma-coluna').innerHTML =
         itensNumerados.map(item => entradaTexto(item) + entradaIndicacoes(item)).join('');
     }
