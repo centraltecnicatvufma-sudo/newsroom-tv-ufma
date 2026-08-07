@@ -15,30 +15,71 @@
     .info-pauta { background: #fff; padding: 14px 20px; border-bottom: 1px solid #eee; display: flex; flex-wrap: wrap; gap: 24px; font-size: 13px; }
     .info-pauta strong { color: #5b6472; font-weight: normal; margin-right: 4px; }
 
-    .conteudo { max-width: 900px; margin: 0 auto; padding: 20px; }
+    .conteudo { max-width: 1200px; margin: 0 auto; padding: 20px; }
 
     .bloco { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; padding: 16px; }
     .bloco h2 { font-size: 14px; margin: 0 0 12px; color: #336699; }
 
     .editor-caixa { border: 1px solid #ddd; border-radius: 6px; min-height: 100px; background: #fff; }
 
-    .item-vt { border: 1px solid #eee; border-radius: 8px; margin-bottom: 14px; overflow: hidden; }
-    .item-vt-cabecalho { display: flex; justify-content: space-between; align-items: center; background: #eef1f5; padding: 6px 10px; }
-    .tipo-badge { font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; color: #fff; }
+    /* Corpo do VT: cada item ganha reordenar/ouvir/maiúsculas/excluir e um
+       controle de duração (automática pelo texto, ou manual quando o
+       repórter desliga o interruptor). Dentro de cada item, a coluna da
+       esquerda (mais estreita) é reservada pra indicação do repórter ao
+       editor (GC, timecode, entrevistado...) e a da direita (mais larga)
+       é o texto da matéria em si — são DOIS campos de UM item, não a
+       lista de itens dividida em colunas. */
+    .item-vt { border: 1px solid #eee; border-radius: 8px; overflow: hidden; margin-bottom: 14px; }
+    .item-vt-cabecalho { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; background: #eef1f5; padding: 6px 10px; }
+    .item-vt-corpo { display: flex; gap: 10px; padding: 10px; }
+    .campo-indicacoes { flex: 0 0 25%; min-width: 130px; }
+    .campo-indicacoes label { display: block; font-size: 10px; text-transform: uppercase; color: #5b6472; margin-bottom: 4px; }
+    .campo-indicacoes textarea { width: 100%; min-height: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; font-family: inherit; resize: vertical; }
+    /* Quill insere a barra de ferramentas (.ql-toolbar) como IRMÃ do editor,
+       não dentro dele — por isso o flex:1 vai no wrapper dos dois juntos,
+       não direto no .editor-caixa (senão só o corpo do editor encolhia e
+       a barra de ferramentas, sem flex, ficava com a largura sobrando) */
+    .item-vt-corpo .editor-caixa-wrapper { flex: 1; min-width: 0; }
+    .tipo-badge { font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; color: #fff; white-space: nowrap; }
     .tipo-OFF { background: #6b3fa0; }
     .tipo-SONORA { background: #C98A1F; }
     .tipo-PASSAGEM { background: #2e8b57; }
-    .btn-remover-item { background: none; border: none; color: #8D0333; cursor: pointer; font-size: 13px; }
+    .tipo-ARTE { background: #075B91; }
+    .tipo-SOBE_SOM { background: #8D0333; }
 
-    .add-itens { display: flex; gap: 8px; margin-top: 10px; }
-    .add-itens button { flex: 1; padding: 10px; border: 1px dashed #ccc; background: #fafafa; border-radius: 6px; cursor: pointer; font-size: 12px; }
+    .controles-item { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+    .controles-item button { font-size: 11px; padding: 3px 7px; line-height: 1; border-radius: 6px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
+    .controles-item button:hover { background: #f4f5f7; }
+    .controles-item button:disabled { opacity: 0.3; cursor: default; }
+    .btn-remover-item { color: #8D0333; }
+
+    .campo-duracao { width: 50px; padding: 3px 5px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; text-align: center; }
+    .campo-duracao[readonly] { background: #f4f5f7; color: #5b6472; }
+
+    .toggle-auto { position: relative; display: inline-block; width: 30px; height: 16px; flex-shrink: 0; }
+    .toggle-auto input { opacity: 0; width: 0; height: 0; }
+    .toggle-trilho { position: absolute; inset: 0; background: #ccc; border-radius: 16px; cursor: pointer; transition: background .15s; }
+    .toggle-trilho::before { content: ''; position: absolute; width: 12px; height: 12px; left: 2px; top: 2px; background: #fff; border-radius: 50%; transition: transform .15s; }
+    .toggle-auto input:checked + .toggle-trilho { background: #336699; }
+    .toggle-auto input:checked + .toggle-trilho::before { transform: translateX(14px); }
+
+    .linha-ferramentas-vt { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+    .add-itens { display: flex; gap: 8px; flex-wrap: wrap; }
+    .add-itens button { padding: 10px 12px; border: 1px dashed #ccc; background: #fafafa; border-radius: 6px; cursor: pointer; font-size: 12px; white-space: nowrap; }
     .add-itens button:hover { background: #eef1f5; }
+    .total-vt { font-size: 13px; color: #5b6472; white-space: nowrap; }
+    .total-vt strong { color: #1b2430; font-size: 15px; }
 
     .barra-acoes { position: sticky; bottom: 0; background: #fff; border-top: 1px solid #eee; padding: 14px 20px; display: flex; justify-content: flex-end; gap: 8px; }
     .btn-salvar { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 10px 20px; font-size: 14px; cursor: pointer; }
     .btn-imprimir { background: #eee; color: #333; border: none; border-radius: 6px; padding: 10px 20px; font-size: 14px; cursor: pointer; }
     .btn-imprimir:hover { background: #ddd; }
     .status-salvo { font-size: 13px; color: #2e8b57; align-self: center; margin-right: auto; }
+
+    /* GCs e Texto Adaptado ficam recolhidos por padrão — só uma barra com
+       seta; clicar revela o conteúdo */
+    .cabecalho-recolhivel { cursor: pointer; user-select: none; }
+    .seta-recolher { display: inline-block; font-size: 11px; color: #5b6472; margin-right: 4px; }
 
     /* Cabeçalho de impressão: mesma pauta, mas com todo o contexto que a
        tela compacta não mostra (local, data do fato, produtor, destinos,
@@ -67,7 +108,9 @@
       @page { size: A4; margin: 15mm 16mm; }
 
       .nr-sidebar, .barra-acoes, #btn-ouvir-cabeca, .btn-ouvir-item,
-      .btn-remover-item, .add-itens, #btn-add-gc, .btn-remover-gc { display: none !important; }
+      .btn-remover-item, .btn-mover, .btn-maiusculas, .toggle-auto,
+      .add-itens, #btn-add-gc, .btn-remover-gc, #bloco-cabeca,
+      .seta-recolher, #bloco-texto-web { display: none !important; }
 
       body { background: #fff; }
       .nr-app { height: auto !important; overflow: visible !important; }
@@ -88,10 +131,21 @@
       /* "Corpo do VT" pode ter muitos itens — o bloco em si não trava numa
          página só (senão sobraria página em branco), mas cada item
          individual sim, pra não cortar um OFF/SONORA no meio */
+      #bloco-corpo-vt { break-inside: auto; }
       #lista-itens { break-inside: auto; }
-      .item-vt { break-inside: avoid-page; border: 1px solid #ccc; margin: 0 10px 10px; }
+      .item-vt { break-inside: avoid; border: 1px solid #ccc; margin: 0 10px 10px; }
       .item-vt-cabecalho { background: #eee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .tipo-badge { background: none !important; color: #000 !important; border: 1px solid #999; }
+      .campo-duracao { border: none !important; background: transparent !important; font-weight: bold; text-align: left; padding: 0; }
+
+      /* Indicações (esquerda, 25%) e Texto (direita, 75%) lado a lado —
+         cada item é pequeno e já não quebra entre páginas (break-inside
+         acima), então o flex não sofre o mesmo problema que grid/colunas
+         tinham pra fragmentar uma lista inteira */
+      .item-vt-corpo { display: flex !important; gap: 10px; padding: 8px 10px; }
+      .campo-indicacoes { flex: 0 0 25%; }
+      .campo-indicacoes textarea { border: none !important; background: transparent !important; padding: 0 !important; resize: none; }
+      #corpo-gcs { display: block !important; }
 
       /* Editor Quill: tira toda a moldura de edição, deixa só o texto */
       .ql-toolbar { display: none !important; }
@@ -145,40 +199,49 @@
   <div class="info-impressao somente-impressao" id="info-impressao"></div>
 
   <div class="conteudo">
-    <div class="bloco">
+    <div class="bloco" id="bloco-cabeca">
       <h2>🎤 Cabeça do Apresentador (vai para o Teleprompter) <button id="btn-ouvir-cabeca" style="font-size:12px; padding:4px 10px; border-radius:6px; border:1px solid #ddd; background:#fafafa; cursor:pointer; margin-left:8px;">🗣️ Ouvir</button></h2>
       <div id="editor-cabeca" class="editor-caixa"></div>
     </div>
 
-    <div class="bloco">
-      <h2>📹 Corpo do VT (Offs, Sonoras e Passagens)</h2>
+    <div class="bloco" id="bloco-corpo-vt">
+      <h2>📹 Corpo do VT (Offs, Sonoras, Passagens, Artes e Sobe Som)</h2>
+      <div class="linha-ferramentas-vt">
+        <div class="add-itens">
+          <button data-tipo="OFF">+ OFF</button>
+          <button data-tipo="SONORA">+ SONORA</button>
+          <button data-tipo="PASSAGEM">+ PASSAGEM</button>
+          <button data-tipo="ARTE">+ ARTE</button>
+          <button data-tipo="SOBE_SOM">+ SOBE SOM</button>
+        </div>
+        <div class="total-vt">⏱️ Total: <strong id="total-vt">00:00</strong></div>
+      </div>
       <div id="lista-itens"></div>
-      <div class="add-itens">
-        <button data-tipo="OFF">+ OFF</button>
-        <button data-tipo="SONORA">+ SONORA</button>
-        <button data-tipo="PASSAGEM">+ PASSAGEM</button>
+    </div>
+
+    <div class="bloco" id="bloco-gcs">
+      <h2 class="cabecalho-recolhivel" data-alvo="corpo-gcs"><span class="seta-recolher">▶</span>🏷️ Geradores de Caracteres (GCs)</h2>
+      <div id="corpo-gcs" style="display:none;">
+        <table id="tabela-gcs" style="width:100%; border-collapse:collapse; font-size:13px;">
+          <thead>
+            <tr style="text-align:left; color:#5b6472; font-size:12px;">
+              <th style="padding:6px;">Nome</th>
+              <th style="padding:6px;">Cargo / Subtítulo</th>
+              <th style="padding:6px; width:120px;">Tempo de Entrada</th>
+              <th style="width:40px;"></th>
+            </tr>
+          </thead>
+          <tbody id="corpo-tabela-gcs"></tbody>
+        </table>
+        <button id="btn-add-gc" style="margin-top:10px; padding:8px 12px; border:1px dashed #ccc; background:#fafafa; border-radius:6px; cursor:pointer; font-size:12px;">+ Adicionar GC</button>
       </div>
     </div>
 
-    <div class="bloco">
-      <h2>🏷️ Geradores de Caracteres (GCs)</h2>
-      <table id="tabela-gcs" style="width:100%; border-collapse:collapse; font-size:13px;">
-        <thead>
-          <tr style="text-align:left; color:#5b6472; font-size:12px;">
-            <th style="padding:6px;">Nome</th>
-            <th style="padding:6px;">Cargo / Subtítulo</th>
-            <th style="padding:6px; width:120px;">Tempo de Entrada</th>
-            <th style="width:40px;"></th>
-          </tr>
-        </thead>
-        <tbody id="corpo-tabela-gcs"></tbody>
-      </table>
-      <button id="btn-add-gc" style="margin-top:10px; padding:8px 12px; border:1px dashed #ccc; background:#fafafa; border-radius:6px; cursor:pointer; font-size:12px;">+ Adicionar GC</button>
-    </div>
-
-    <div class="bloco">
-      <h2>🌐 Texto Adaptado — Site / Instagram / YouTube</h2>
-      <div id="editor-web" class="editor-caixa"></div>
+    <div class="bloco" id="bloco-texto-web">
+      <h2 class="cabecalho-recolhivel" data-alvo="corpo-texto-web"><span class="seta-recolher">▶</span>🌐 Texto Adaptado — Site / Instagram / YouTube</h2>
+      <div id="corpo-texto-web" style="display:none;">
+        <div id="editor-web" class="editor-caixa"></div>
+      </div>
     </div>
   </div>
 
@@ -194,8 +257,42 @@
     const pautaId = params.get('pauta_id');
     let quillCabeca, quillWeb;
     const quillItens = {}; // id do item -> instância Quill
+    const itensMeta = {}; // id do item -> { duracao_segundos, duracao_automatica }
+    let itensCache = []; // último retorno de GET /materia, na ordem — usado pra achar vizinho ao reordenar
 
     let gcsCache = [];
+
+    const labelTipo = { OFF: 'OFF', SONORA: 'SONORA', PASSAGEM: 'PASSAGEM', ARTE: 'ARTE', SOBE_SOM: 'SOBE SOM' };
+
+    // Estimativa de tempo de leitura pra quem não quer cronometrar na mão:
+    // ~150 palavras por minuto é uma referência comum de ritmo de locução em
+    // telejornal. Fica ligado por padrão; o repórter desliga o interruptor
+    // quando quiser digitar o tempo real (ex.: sonora já cronometrada).
+    const PALAVRAS_POR_MINUTO = 150;
+
+    function calcularSegundosAutomaticos(quillInstance) {
+      const texto = quillInstance.getText().trim();
+      if (!texto) return 0;
+      const palavras = texto.split(/\s+/).filter(Boolean).length;
+      return Math.round(palavras / PALAVRAS_POR_MINUTO * 60);
+    }
+
+    function formatarMMSS(segundosTotais) {
+      const s = Math.max(0, Number(segundosTotais) || 0);
+      return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+    }
+
+    function interpretarMMSS(texto) {
+      const m = String(texto || '').trim().match(/^(\d{1,3}):([0-5]?\d)$/);
+      if (!m) return null;
+      return Number(m[1]) * 60 + Number(m[2]);
+    }
+
+    function atualizarTotalVt() {
+      const total = Object.values(itensMeta).reduce((soma, m) => soma + (m.duracao_segundos || 0), 0);
+      const el = document.getElementById('total-vt');
+      if (el) el.textContent = formatarMMSS(total);
+    }
 
     function falarTexto(quillInstance) {
       window.speechSynthesis.cancel(); // para qualquer leitura em andamento antes de começar outra
@@ -227,9 +324,10 @@
       return (dia && mes && ano) ? `${dia}/${mes}/${ano}` : iso;
     }
 
-    // Monta o cabeçalho completo que só aparece na impressão — usa dados que
-    // já existem na pauta (local, data do fato, produtor, destinos,
-    // orientação, fontes) mas que a tela compacta não mostra
+    // Monta o cabeçalho que só aparece na impressão — só os campos que o
+    // repórter pediu (Título, Programa, Status, Repórter, Cinegrafista,
+    // Produtor, Local, Data/Hora do Fato, Destinos); Motorista, Equipamentos,
+    // Orientação, Roteiro e Fontes ficam de fora de propósito.
     function montarInfoImpressao(p, nomePrograma) {
       const destinos = [
         p.destino_tv ? '📺 TV' : null,
@@ -237,14 +335,6 @@
         p.destino_youtube ? '▶️ YouTube' : null,
         p.destino_site ? '🌐 Site' : null,
       ].filter(Boolean);
-
-      const equipamentos = [
-        p.equip_lapela ? 'Lapela' : null,
-        p.equip_iluminacao ? 'Iluminação' : null,
-        p.equip_mochilink ? 'Mochilink' : null,
-      ].filter(Boolean);
-
-      const fontes = Array.isArray(p.fontes) ? p.fontes : [];
 
       document.getElementById('info-impressao').innerHTML = `
         <div class="linha-info"><strong>Título:</strong>${escaparHtml(p.titulo) || '—'}</div>
@@ -255,7 +345,6 @@
         <div class="linha-info">
           <strong>Repórter:</strong>${escaparHtml(p.reporter) || '—'}
           &nbsp;&nbsp;<strong>Cinegrafista:</strong>${escaparHtml(p.cinegrafista) || '—'}
-          &nbsp;&nbsp;<strong>Motorista:</strong>${escaparHtml(p.motorista) || '—'}
           &nbsp;&nbsp;<strong>Produtor:</strong>${escaparHtml(p.produtor) || '—'}
         </div>
         <div class="linha-info">
@@ -266,25 +355,6 @@
         <div class="linha-info destinos-impressao">
           <strong>Destinos:</strong> ${destinos.length ? destinos.map(d => `<span>${d}</span>`).join('') : '—'}
         </div>
-        ${equipamentos.length ? `<div class="linha-info"><strong>Equipamentos:</strong> ${equipamentos.join(', ')}</div>` : ''}
-        ${p.orientacao ? `<div class="linha-info"><strong>Orientação:</strong> ${escaparHtml(p.orientacao)}</div>` : ''}
-        ${p.roteiro ? `<div class="linha-info"><strong>Roteiro:</strong> ${escaparHtml(p.roteiro)}</div>` : ''}
-        ${fontes.length ? `
-          <div class="linha-info"><strong>Fontes</strong></div>
-          <table class="fontes-impressao">
-            <thead><tr><th>Nome</th><th>Cargo</th><th>Contato</th><th>Horário Confirmado</th></tr></thead>
-            <tbody>
-              ${fontes.map(f => `
-                <tr>
-                  <td>${escaparHtml(f.nome) || '—'}</td>
-                  <td>${escaparHtml(f.cargo) || '—'}</td>
-                  <td>${escaparHtml(f.contato) || '—'}</td>
-                  <td>${escaparHtml(f.horario_confirmado) || '—'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        ` : ''}
       `;
     }
 
@@ -317,7 +387,7 @@
     }
 
     function badgeTipo(tipo) {
-      return `<span class="tipo-badge tipo-${tipo}">${tipo}</span>`;
+      return `<span class="tipo-badge tipo-${tipo}">${labelTipo[tipo] || tipo}</span>`;
     }
 
     async function carregarGcs() {
@@ -370,22 +440,43 @@
 
     async function carregarItens() {
       const resp = await fetch('/materia?pauta_id=' + pautaId);
-      const itens = await resp.json();
+      itensCache = await resp.json();
       const lista = document.getElementById('lista-itens');
       lista.innerHTML = '';
 
-      itens.forEach(item => {
+      itensCache.forEach((item, indice) => {
+        itensMeta[item.id] = {
+          duracao_segundos: item.duracao_segundos || 0,
+          duracao_automatica: !!item.duracao_automatica,
+        };
+
         const div = document.createElement('div');
         div.className = 'item-vt';
         div.innerHTML = `
           <div class="item-vt-cabecalho">
             ${badgeTipo(item.tipo)}
-            <div>
-              <button class="btn-ouvir-item" data-id="${item.id}" style="font-size:11px; padding:3px 8px; border-radius:6px; border:1px solid #ddd; background:#fff; cursor:pointer; margin-right:6px;">🗣️ Ouvir</button>
-              <button class="btn-remover-item" data-id="${item.id}">✕ remover</button>
+            <div class="controles-item">
+              <button class="btn-mover" data-acao="subir" data-id="${item.id}" title="Mover para cima" ${indice === 0 ? 'disabled' : ''}>▲</button>
+              <button class="btn-mover" data-acao="descer" data-id="${item.id}" title="Mover para baixo" ${indice === itensCache.length - 1 ? 'disabled' : ''}>▼</button>
+              <button class="btn-ouvir-item" data-id="${item.id}" title="Ouvir">🗣️</button>
+              <button class="btn-maiusculas" data-id="${item.id}" title="Colocar texto em maiúsculas">Aa</button>
+              <button class="btn-remover-item" data-id="${item.id}" title="Remover">🗑️</button>
+              <label class="toggle-auto" title="Duração automática pelo texto (desligue pra digitar o tempo na mão)">
+                <input type="checkbox" class="chk-auto" data-id="${item.id}" ${item.duracao_automatica ? 'checked' : ''}>
+                <span class="toggle-trilho"></span>
+              </label>
+              <input type="text" class="campo-duracao" data-id="${item.id}" value="${formatarMMSS(item.duracao_segundos)}" ${item.duracao_automatica ? 'readonly' : ''}>
             </div>
           </div>
-          <div class="editor-caixa" id="editor-item-${item.id}"></div>
+          <div class="item-vt-corpo">
+            <div class="campo-indicacoes">
+              <label>Indicações (para o Editor)</label>
+              <textarea class="campo-indicacoes-texto" data-id="${item.id}" placeholder="Timecode, GC, entrevistado, local...">${escaparHtml(item.indicacoes)}</textarea>
+            </div>
+            <div class="editor-caixa-wrapper">
+              <div class="editor-caixa" id="editor-item-${item.id}"></div>
+            </div>
+          </div>
         `;
         lista.appendChild(div);
 
@@ -393,10 +484,36 @@
         quillItem.root.setAttribute('spellcheck', 'true');
         if (item.texto) quillItem.root.innerHTML = item.texto;
         quillItens[item.id] = quillItem;
+
+        quillItem.on('text-change', () => {
+          if (!itensMeta[item.id].duracao_automatica) return;
+          const segundos = calcularSegundosAutomaticos(quillItem);
+          itensMeta[item.id].duracao_segundos = segundos;
+          const campo = lista.querySelector(`.campo-duracao[data-id="${item.id}"]`);
+          if (campo) campo.value = formatarMMSS(segundos);
+          atualizarTotalVt();
+        });
       });
 
+      ligarEventosItens();
+      atualizarTotalVt();
+    }
+
+    function ligarEventosItens() {
       document.querySelectorAll('.btn-ouvir-item').forEach(btn => {
         btn.addEventListener('click', () => falarTexto(quillItens[btn.dataset.id]));
+      });
+
+      // Converte o texto do bloco pra maiúsculas — o texto que vai ao ar já é
+      // sempre forçado a caixa alta no Teleprompter, isso só adianta o
+      // trabalho de quem prefere já ver assim na Lauda
+      document.querySelectorAll('.btn-maiusculas').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const quill = quillItens[btn.dataset.id];
+          const texto = quill.getText().replace(/\n$/, '');
+          quill.deleteText(0, quill.getLength());
+          quill.insertText(0, texto.toUpperCase());
+        });
       });
 
       document.querySelectorAll('.btn-remover-item').forEach(btn => {
@@ -406,7 +523,54 @@
           await salvarTudo('💾 Salvo automaticamente');
           await fetch('/materia/' + id, { method: 'DELETE' });
           delete quillItens[id];
+          delete itensMeta[id];
           carregarItens();
+        });
+      });
+
+      document.querySelectorAll('.btn-mover').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (btn.disabled) return;
+          const id = btn.dataset.id;
+          const item = itensCache.find(i => String(i.id) === id);
+          if (!item) return;
+          const novaOrdem = btn.dataset.acao === 'subir' ? item.ordem - 1 : item.ordem + 1;
+          await salvarTudo();
+          await fetch('/materia/' + id + '/ordem', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nova_ordem: novaOrdem })
+          });
+          carregarItens();
+        });
+      });
+
+      document.querySelectorAll('.chk-auto').forEach(chk => {
+        chk.addEventListener('change', () => {
+          const id = chk.dataset.id;
+          itensMeta[id].duracao_automatica = chk.checked;
+          const campo = document.querySelector(`.campo-duracao[data-id="${id}"]`);
+          if (chk.checked) {
+            const segundos = calcularSegundosAutomaticos(quillItens[id]);
+            itensMeta[id].duracao_segundos = segundos;
+            campo.value = formatarMMSS(segundos);
+            campo.readOnly = true;
+          } else {
+            campo.readOnly = false;
+          }
+          atualizarTotalVt();
+        });
+      });
+
+      document.querySelectorAll('.campo-duracao').forEach(campo => {
+        campo.addEventListener('change', () => {
+          const id = campo.dataset.id;
+          if (itensMeta[id].duracao_automatica) return;
+          const segundos = interpretarMMSS(campo.value);
+          if (segundos === null) { campo.value = formatarMMSS(itensMeta[id].duracao_segundos); return; }
+          itensMeta[id].duracao_segundos = segundos;
+          campo.value = formatarMMSS(segundos);
+          atualizarTotalVt();
         });
       });
     }
@@ -429,10 +593,17 @@
       });
 
       for (const id in quillItens) {
+        const meta = itensMeta[id] || {};
+        const campoIndicacoes = document.querySelector(`.campo-indicacoes-texto[data-id="${id}"]`);
         await fetch('/materia/' + id, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ texto: quillItens[id].root.innerHTML })
+          body: JSON.stringify({
+            texto: quillItens[id].root.innerHTML,
+            indicacoes: campoIndicacoes ? campoIndicacoes.value : undefined,
+            duracao_segundos: meta.duracao_segundos,
+            duracao_automatica: meta.duracao_automatica
+          })
         });
       }
 
@@ -458,6 +629,17 @@
     document.getElementById('btn-salvar').addEventListener('click', () => salvarTudo('✔️ Salvo!'));
 
     document.getElementById('btn-imprimir').addEventListener('click', () => window.print());
+
+    // GCs e Texto Adaptado começam recolhidos — clicar na barra revela
+    document.querySelectorAll('.cabecalho-recolhivel').forEach(cabecalho => {
+      cabecalho.addEventListener('click', () => {
+        const corpo = document.getElementById(cabecalho.dataset.alvo);
+        const seta = cabecalho.querySelector('.seta-recolher');
+        const abrindo = corpo.style.display === 'none';
+        corpo.style.display = abrindo ? 'block' : 'none';
+        seta.textContent = abrindo ? '▼' : '▶';
+      });
+    });
 
     (async function init() {
       await carregarPauta();

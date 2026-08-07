@@ -17,7 +17,9 @@ router.get('/', (req, res) => {
   res.json(itens);
 });
 
-// POST /materia -> adiciona um novo item (OFF, SONORA ou PASSAGEM) à matéria
+// POST /materia -> adiciona um novo item (OFF, SONORA, PASSAGEM, ARTE ou
+// SOBE_SOM) à matéria. duracao_automatica começa ligada por padrão (o tempo
+// é estimado a partir do texto até o repórter desligar manualmente).
 router.post('/', (req, res) => {
   const { pauta_id, tipo, texto } = req.body;
 
@@ -27,15 +29,15 @@ router.post('/', (req, res) => {
   const novaOrdem = (ultimo.maior || 0) + 1;
 
   const resultado = db.prepare(`
-    INSERT INTO materia_itens (pauta_id, ordem, tipo, texto)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO materia_itens (pauta_id, ordem, tipo, texto, duracao_segundos, duracao_automatica, indicacoes)
+    VALUES (?, ?, ?, ?, 0, 1, '')
   `).run(pauta_id, novaOrdem, tipo, texto || '');
 
   const novoItem = db.prepare('SELECT * FROM materia_itens WHERE id = ?').get(resultado.lastInsertRowid);
   res.status(201).json(novoItem);
 });
 
-// PATCH /materia/:id -> edita o texto de um item
+// PATCH /materia/:id -> edita o texto, as indicações ao editor e/ou a duração de um item
 router.patch('/:id', (req, res) => {
   const id = Number(req.params.id);
   const item = db.prepare('SELECT * FROM materia_itens WHERE id = ?').get(id);
@@ -45,8 +47,12 @@ router.patch('/:id', (req, res) => {
   }
 
   const novoTexto = req.body.texto !== undefined ? req.body.texto : item.texto;
+  const novasIndicacoes = req.body.indicacoes !== undefined ? req.body.indicacoes : item.indicacoes;
+  const duracaoSegundos = req.body.duracao_segundos !== undefined ? req.body.duracao_segundos : item.duracao_segundos;
+  const duracaoAutomatica = req.body.duracao_automatica !== undefined ? (req.body.duracao_automatica ? 1 : 0) : item.duracao_automatica;
 
-  db.prepare('UPDATE materia_itens SET texto = ? WHERE id = ?').run(novoTexto, id);
+  db.prepare('UPDATE materia_itens SET texto = ?, indicacoes = ?, duracao_segundos = ?, duracao_automatica = ? WHERE id = ?')
+    .run(novoTexto, novasIndicacoes, duracaoSegundos, duracaoAutomatica, id);
 
   const itemAtualizado = db.prepare('SELECT * FROM materia_itens WHERE id = ?').get(id);
   res.json(itemAtualizado);

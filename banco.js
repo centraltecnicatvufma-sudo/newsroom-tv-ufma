@@ -133,6 +133,10 @@ db.exec(`
   )
 `);
 
+try { db.exec(`ALTER TABLE materia_itens ADD COLUMN duracao_segundos INTEGER DEFAULT 0`); } catch (e) {}
+try { db.exec(`ALTER TABLE materia_itens ADD COLUMN duracao_automatica INTEGER DEFAULT 1`); } catch (e) {}
+try { db.exec(`ALTER TABLE materia_itens ADD COLUMN indicacoes TEXT DEFAULT ''`); } catch (e) {}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS programas_quadros (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
