@@ -4,60 +4,91 @@
   <meta charset="UTF-8">
   <title>Sugestões de Pauta — HORUS Newsroom</title>
   <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+
+    .topo { background: #336699; color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .topo h1 { font-size: 18px; margin: 0; white-space: nowrap; }
+    .topo input { flex: 1; max-width: 320px; padding: 8px 10px; border-radius: 6px; border: none; font-size: 13px; }
+    .topo button { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+
+    .filtros { display: flex; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; }
+    .filtros select, .filtros input { padding: 6px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
+
+    .conteudo { flex: 1; overflow-y: auto; padding: 20px; }
+
+    table.lista-sugestoes { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    table.lista-sugestoes th { background: #eef1f5; text-align: left; padding: 10px 12px; font-size: 12px; color: #5b6472; text-transform: uppercase; }
+    table.lista-sugestoes td { padding: 10px 12px; font-size: 13px; border-top: 1px solid #f0f0f0; vertical-align: top; }
+
+    .tag { font-size: 11px; padding: 3px 8px; border-radius: 4px; color: #fff; text-transform: uppercase; font-weight: bold; white-space: nowrap; }
+    .tag-urgente { background: #8D0333; }
+    .tag-relevante { background: #C98A1F; }
+    .tag-rotina { background: #5b6472; }
+
+    .status-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; color: #fff; font-weight: bold; white-space: nowrap; }
+    .status-nova { background: #C98A1F; }
+    .status-em_analise { background: #075B91; }
+    .status-aprovada { background: #2e8b57; }
+    .status-arquivada { background: #5A021F; }
+
+    .acoes-lista { white-space: nowrap; }
+    .acoes-lista button { font-size: 14px; padding: 6px 10px; line-height: 1; border-radius: 6px; border: none; cursor: pointer; margin-right: 4px; }
+    .btn-ver { background: #eee; color: #333; }
+    .btn-excluir { background: #8D0333; color: #fff; }
+
+    .estado-vazio { text-align: center; color: #999; padding: 60px 20px; }
+
+    /* ---- Barra de abas de documentos (só aparece com sugestões abertas) ---- */
+    .barra-abas-doc { display: none; align-items: center; background: #eef1f5; border-bottom: 1px solid #ddd; flex-shrink: 0; overflow-x: auto; }
+    .aba-doc { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: transparent; border: none; border-bottom: 3px solid transparent; font-size: 13px; color: #5b6472; cursor: pointer; white-space: nowrap; }
+    .aba-doc:hover { background: #e2e7ee; }
+    .aba-doc.ativa { color: #336699; font-weight: bold; border-bottom-color: #336699; background: #fff; }
+    .aba-doc .fechar-aba { font-size: 13px; color: #999; padding: 1px 5px; border-radius: 3px; }
+    .aba-doc .fechar-aba:hover { background: #ddd; color: #333; }
+    .btn-nova-aba { background: transparent; border: none; font-size: 18px; color: #5b6472; cursor: pointer; padding: 6px 14px; }
+    .btn-nova-aba:hover { color: #336699; }
+
+    /* ---- Painéis de documento (a Capa e cada sugestão aberta) ---- */
+    .painel-doc { display: none; }
+    .painel-doc.ativo { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+    .form-pauta-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 24px; border-bottom: 1px solid #eee; background: #fff; flex-wrap: wrap; gap: 10px; }
+    .form-pauta-header h1 { font-size: 20px; margin: 0; }
+    .form-pauta-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+    .form-pauta-botoes button { padding: 9px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+    .btn-cancelar { background: #eee; color: #333; }
+    .btn-agenda { background: #336699; color: #fff; }
+    .btn-lauda-modal { background: #2e8b57; color: #fff; }
+    .btn-excluir-sugestao { background: #8D0333; color: #fff; }
+    .btn-confirmar { background: #8D0333; color: #fff; }
+
+    .form-pauta-campos { display: flex; gap: 20px; padding: 14px 24px; background: #fff; border-bottom: 1px solid #eee; flex-wrap: wrap; }
+    .form-pauta-campos .campo { display: flex; flex-direction: column; gap: 4px; min-width: 160px; }
+    .form-pauta-campos .campo.campo-titulo { flex: 2; min-width: 260px; }
+    .form-pauta-campos label { font-size: 11px; color: #5b6472; text-transform: uppercase; }
+    .form-pauta-campos input, .form-pauta-campos select { padding: 7px 9px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+
+    .form-pauta-corpo { flex: 1; overflow-y: auto; padding: 20px 24px; background: #f4f5f7; max-width: 900px; }
+    .form-pauta-corpo label { font-size: 12px; color: #5b6472; display: block; margin: 14px 0 4px; }
+    .form-pauta-corpo label:first-child { margin-top: 0; }
+    .form-pauta-corpo input[type="text"], .form-pauta-corpo textarea {
+      width: 100%; padding: 9px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; background: #fff;
+    }
+    .form-pauta-corpo textarea { min-height: 90px; resize: vertical; }
+    .linha-checkboxes { display: flex; gap: 10px 20px; flex-wrap: wrap; align-items: center; font-size: 13px; margin-top: 6px; }
+    .form-pauta-corpo .linha-checkboxes label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; margin: 0; }
+
+    /* ---- Modal de aprovação (ação pontual com campos extras, não fica na aba) ---- */
+    .overlay-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 10; overflow-y: auto; padding: 30px 0; }
+    .overlay-modal.aberto { display: flex; }
     .modal-aprovar { background: #fff; border-radius: 10px; padding: 24px; width: 420px; max-height: 90vh; overflow-y: auto; }
     .modal-aprovar h2 { font-size: 18px; margin: 0 0 4px; }
     .modal-aprovar label { font-size: 12px; color: #5b6472; display: block; margin: 12px 0 4px; }
     .modal-aprovar select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
-    * { box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+    .modal-aprovar .botoes-modal { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+    .modal-aprovar .botoes-modal button { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
 
-    .topo { background: #336699; color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
-    .topo h1 { font-size: 18px; margin: 0; }
-    .topo button { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-size: 13px; }
-
-    .abas-topo { display: flex; background: #fff; border-bottom: 1px solid #ddd; }
-    .abas-topo button { flex: 1; background: transparent; border: none; padding: 12px 0; cursor: pointer; font-size: 13px; color: #5b6472; }
-    .abas-topo button.ativo { color: #336699; font-weight: bold; border-bottom: 3px solid #336699; }
-
-    .filtros { display: flex; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; }
-    .filtros select { padding: 6px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
-
-    .conteudo { flex: 1; overflow-y: auto; padding: 20px; }
-
-    .card-sugestao { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); padding: 16px 20px; margin-bottom: 14px; }
-    .card-sugestao .tags { display: flex; gap: 6px; margin-bottom: 8px; }
-    .tag { font-size: 11px; padding: 3px 8px; border-radius: 4px; color: #fff; text-transform: uppercase; font-weight: bold; }
-    .tag-urgente { background: #8D0333; }
-    .tag-relevante { background: #C98A1F; }
-    .tag-rotina { background: #5b6472; }
-    .tag-midia { background: #336699; }
-    .enviado-por { float: right; font-size: 12px; color: #999; }
-    .card-sugestao .titulo { font-size: 16px; font-weight: bold; margin-top: 6px; }
-    .card-sugestao .resumo { font-size: 13px; color: #5b6472; margin-top: 4px; }
-    .card-sugestao .meta { font-size: 12px; color: #777; margin-top: 8px; }
-    .card-sugestao .status-linha { font-size: 12px; margin-top: 8px; color: #336699; }
-    .card-sugestao .acoes { display: flex; gap: 8px; margin-top: 12px; }
-    .card-sugestao .acoes button { font-size: 12px; padding: 6px 10px; border-radius: 6px; border: none; cursor: pointer; }
-    .btn-detalhes { background: #eee; color: #333; }
-    .btn-aprovar { background: #2e8b57; color: #fff; }
-    .btn-arquivar { background: #8D0333; color: #fff; }
-    .overlay-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 10; overflow-y: auto; padding: 30px 0; }
-    .overlay-modal.aberto { display: flex; }
-    .modal-sugestao { background: #fff; border-radius: 10px; padding: 24px; width: 480px; max-height: 90vh; overflow-y: auto; }
-    .modal-sugestao h2 { font-size: 18px; margin: 0 0 4px; }
-    .modal-sugestao .secao-titulo { font-size: 12px; text-transform: uppercase; color: #999; margin-top: 20px; margin-bottom: 8px; border-top: 1px solid #eee; padding-top: 16px; }
-    .modal-sugestao label { font-size: 12px; color: #5b6472; display: block; margin: 10px 0 4px; }
-    .modal-sugestao input[type="text"], .modal-sugestao input[type="date"], .modal-sugestao input[type="time"], .modal-sugestao select, .modal-sugestao textarea {
-      width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;
-    }
-    .modal-sugestao textarea { min-height: 70px; resize: vertical; }
-    .modal-sugestao .linha-checkboxes { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; margin-top: 6px; }
-    .modal-sugestao .opcoes-urgencia { display: flex; gap: 12px; font-size: 13px; margin-top: 6px; }
-    .modal-sugestao .botoes-modal { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
-    .modal-sugestao .botoes-modal button { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
-    .modal-sugestao .btn-cancelar { background: #eee; color: #333; }
-    .modal-sugestao .btn-confirmar { background: #8D0333; color: #fff; }
-  
     /* ---- Navegação lateral (unificada em todas as telas) ---- */
     body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
     .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
@@ -96,50 +127,25 @@
   </div>
   <div class="nr-app">
 
+  <div class="barra-abas-doc" id="barra-abas-doc"></div>
 
-  <div class="topo">
-    <h1>HORUS NEWSROOM — Sugestões de Pauta</h1>
-    <button id="btn-nova-sugestao">+ Nova Sugestão</button>
-  </div>
+  <div class="painel-doc ativo" id="painel-capa">
+    <div class="topo">
+      <h1>HORUS NEWSROOM — Sugestões de Pauta</h1>
+      <input type="text" id="busca-sugestao" placeholder="🔍 Buscar sugestão...">
+      <button id="btn-nova-sugestao">+ Nova Sugestão</button>
+    </div>
 
-  <div class="abas-topo">
-    <button data-status="nova" id="aba-nova">📥 Banco de Sugestões</button>
-    <button data-status="em_analise" id="aba-em_analise">⏳ Em Análise</button>
-    <button data-status="aprovada" id="aba-aprovada">✅ Aprovadas</button>
-    <button data-status="arquivada" id="aba-arquivada">📁 Arquivo</button>
-  </div>
-
-  <div class="filtros">
-    <select id="filtro-editoria">
-      <option value="">Editoria: Todas</option>
-      <option value="Arte e Cultura">Arte e Cultura</option>
-      <option value="Cidade">Cidade</option>
-      <option value="Ciência e Tecnologia">Ciência e Tecnologia</option>
-      <option value="Comportamento e Sociedade">Comportamento e Sociedade</option>
-      <option value="Direitos Humanos e Inclusão">Direitos Humanos e Inclusão</option>
-      <option value="Economia e Trabalho">Economia e Trabalho</option>
-      <option value="Esporte e Lazer">Esporte e Lazer</option>
-      <option value="Educação">Educação</option>
-      <option value="Meio Ambiente">Meio Ambiente</option>
-      <option value="Política">Política</option>
-      <option value="Saúde">Saúde</option>
-      <option value="Segurança e Justiça">Segurança e Justiça</option>
-      <option value="Especial">Especial</option>
-      <option value="UFMA">UFMA</option>
-      <option value="Outra">Outra</option>
-    </select>
-  </div>
-
-  <div class="overlay-modal" id="modal-sugestao">
-    <div class="modal-sugestao">
-      <h2>+ Nova Sugestão de Pauta</h2>
-
-      <div class="secao-titulo">Essencial</div>
-      <label>Título / Chamada da Sugestão</label>
-      <input type="text" id="s-titulo" placeholder='Ex: "Procon faz mutirão na UFMA"'>
-
-      <label>Editoria</label>
-      <select id="s-editoria">
+    <div class="filtros">
+      <select id="filtro-status">
+        <option value="">Status: Todos</option>
+        <option value="nova">📥 Nova</option>
+        <option value="em_analise">⏳ Em Análise</option>
+        <option value="aprovada">✅ Aprovada</option>
+        <option value="arquivada">📁 Arquivada</option>
+      </select>
+      <select id="filtro-editoria">
+        <option value="">Editoria: Todas</option>
         <option value="Arte e Cultura">Arte e Cultura</option>
         <option value="Cidade">Cidade</option>
         <option value="Ciência e Tecnologia">Ciência e Tecnologia</option>
@@ -156,46 +162,10 @@
         <option value="UFMA">UFMA</option>
         <option value="Outra">Outra</option>
       </select>
+    </div>
 
-      <label>Resumo / O que é o fato</label>
-      <textarea id="s-resumo" placeholder="Explique a ideia..."></textarea>
-
-      <label>Data e Hora Prevista do Fato</label>
-      <div style="display:flex; gap:8px;">
-        <input type="date" id="s-data" style="flex:1;">
-        <input type="time" id="s-hora" style="flex:1;">
-      </div>
-
-      <div class="secao-titulo">Detalhes (opcional)</div>
-
-      <label>Local</label>
-      <input type="text" id="s-local" placeholder="Onde vai acontecer">
-
-      <label>Sugestão de Fontes e Contatos</label>
-      <textarea id="s-fontes" placeholder="Nome, cargo e telefone/WhatsApp"></textarea>
-
-      <label>Destino Multiplataforma Sugerido</label>
-      <div class="linha-checkboxes">
-        <label><input type="checkbox" id="s-tv"> TV Aberta</label>
-        <label><input type="checkbox" id="s-insta"> Instagram</label>
-        <label><input type="checkbox" id="s-youtube"> YouTube</label>
-        <label><input type="checkbox" id="s-site"> Site TV UFMA</label>
-      </div>
-
-      <label>Nível de Urgência</label>
-      <div class="opcoes-urgencia">
-        <label><input type="radio" name="s-urgencia" value="rotina" checked> Rotina</label>
-        <label><input type="radio" name="s-urgencia" value="relevante"> Relevante</label>
-        <label><input type="radio" name="s-urgencia" value="urgente"> Fato do Dia / Urgente</label>
-      </div>
-
-      <label>Enviado por</label>
-      <input type="text" id="s-enviado-por" placeholder="Seu nome">
-
-      <div class="botoes-modal">
-        <button class="btn-cancelar" id="cancelar-sugestao">Cancelar</button>
-        <button class="btn-confirmar" id="confirmar-sugestao">Enviar Sugestão</button>
-      </div>
+    <div class="conteudo" id="conteudo">
+      <!-- tabela entra aqui -->
     </div>
   </div>
 
@@ -226,212 +196,406 @@
     </div>
   </div>
 
-  <div class="conteudo" id="conteudo">
-    <!-- cards entram aqui -->
-  </div>
-
   <script>
-    let statusAtivo = 'nova';
-    let listaCarregada = [];
-    let idEmEdicaoSugestao = null;
+    let contadorAbas = 0;
+    let abas = {}; // idAba -> { id, sugestaoId, tituloAba, status }
+    let abaAtivaId = 'capa';
+    let sugestoesCache = [];
+    let aprovandoIdAba = null;
 
-    function trocarAba(status) {
-      statusAtivo = status;
-      document.querySelectorAll('.abas-topo button').forEach(b => b.classList.remove('ativo'));
-      document.getElementById('aba-' + status).classList.add('ativo');
-      carregarSugestoes();
+    const rotulosUrgencia = { rotina: 'Rotina', relevante: 'Relevante', urgente: 'Fato do Dia / Urgente' };
+    const rotulosStatus = { nova: 'Nova Sugestão', em_analise: 'Em Análise', aprovada: 'Aprovada', arquivada: 'Arquivada' };
+
+    function escaparHtml(texto) {
+      return String(texto == null ? '' : texto)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    document.querySelectorAll('.abas-topo button').forEach(btn => {
-      btn.addEventListener('click', () => trocarAba(btn.dataset.status));
-    });
+    function formatarData(iso) {
+      if (!iso) return '—';
+      const [ano, mes, dia] = iso.split('-');
+      return (dia && mes && ano) ? `${dia}/${mes}/${ano}` : iso;
+    }
 
-    // Filtros com checagem segura de existência
-    const filtroEditoriaEl = document.getElementById('filtro-editoria');
-    if (filtroEditoriaEl) filtroEditoriaEl.addEventListener('change', carregarSugestoes);
-
-    const filtroUrgenciaEl = document.getElementById('filtro-urgencia');
-    if (filtroUrgenciaEl) filtroUrgenciaEl.addEventListener('change', carregarSugestoes);
-
-    const rotulosUrgencia = { rotina: 'Rotina', relevante: 'Relevante', urgente: 'Urgente' };
-    const rotulosStatus = { nova: 'Nova Sugestão', em_analise: 'Em Análise pelo Editor', aprovada: 'Aprovada', arquivada: 'Arquivada' };
+    function elCampo(container, nome) {
+      return container.querySelector(`[data-campo="${nome}"]`);
+    }
 
     async function carregarSugestoes() {
-      const conteudo = document.getElementById('conteudo');
-      conteudo.innerHTML = '<p>Carregando...</p>';
+      const resp = await fetch('/sugestoes');
+      sugestoesCache = await resp.json();
+    }
 
-      const resposta = await fetch('/sugestoes?status=' + statusAtivo);
-      let lista = await resposta.json();
-      listaCarregada = lista;
+    function sugestoesFiltradas() {
+      const status = document.getElementById('filtro-status').value;
+      const editoria = document.getElementById('filtro-editoria').value;
+      const busca = document.getElementById('busca-sugestao').value.trim().toLowerCase();
 
-      const editoriaFiltro = filtroEditoriaEl ? filtroEditoriaEl.value : '';
-      const urgenciaFiltro = filtroUrgenciaEl ? filtroUrgenciaEl.value : '';
+      return sugestoesCache
+        .filter(s => {
+          if (status && s.status !== status) return false;
+          if (editoria && s.editoria !== editoria) return false;
+          if (busca && !(s.titulo || '').toLowerCase().includes(busca)) return false;
+          return true;
+        })
+        .sort((a, b) => b.id - a.id);
+    }
 
-      if (editoriaFiltro) lista = lista.filter(s => s.editoria === editoriaFiltro);
-      if (urgenciaFiltro) lista = lista.filter(s => s.urgencia === urgenciaFiltro);
+    function renderListaCapa() {
+      const filtradas = sugestoesFiltradas();
+      const area = document.getElementById('conteudo');
 
-      if (lista.length === 0) {
-        conteudo.innerHTML = '<p style="text-align:center; color:#999;">Nenhuma sugestão nesta aba.</p>';
+      if (filtradas.length === 0) {
+        area.innerHTML = '<div class="estado-vazio">Nenhuma sugestão encontrada para esse filtro.</div>';
         return;
       }
 
-      conteudo.innerHTML = lista.map(s => {
-        const destinos = [];
-        if (s.destino_tv) destinos.push('TV');
-        if (s.destino_instagram) destinos.push('Instagram');
-        if (s.destino_youtube) destinos.push('YouTube');
-        if (s.destino_site) destinos.push('Site');
+      area.innerHTML = `
+        <table class="lista-sugestoes">
+          <thead>
+            <tr>
+              <th>Título</th><th>Editoria</th><th>Data Prevista</th>
+              <th>Urgência</th><th>Status</th><th>Enviado por</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtradas.map(s => `
+              <tr>
+                <td>${escaparHtml(s.titulo)}</td>
+                <td>${escaparHtml(s.editoria) || '—'}</td>
+                <td>${formatarData(s.data_prevista)}${s.hora_prevista ? ' · ' + s.hora_prevista : ''}</td>
+                <td><span class="tag tag-${s.urgencia}">${rotulosUrgencia[s.urgencia] || s.urgencia}</span></td>
+                <td><span class="status-badge status-${s.status}">${rotulosStatus[s.status] || s.status}</span></td>
+                <td>${escaparHtml(s.enviado_por) || '—'}</td>
+                <td class="acoes-lista">
+                  <button class="btn-ver" data-id="${s.id}" title="Ver/Editar">👁️</button>
+                  <button class="btn-excluir" data-id="${s.id}" title="Excluir">🗑️</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
 
-        return `
-          <div class="card-sugestao">
-            <div class="tags">
-              <span class="tag tag-${s.urgencia}">${rotulosUrgencia[s.urgencia] || s.urgencia}</span>
-              ${destinos.length ? `<span class="tag tag-midia">${destinos.join(' + ')}</span>` : ''}
-            </div>
-            <span class="enviado-por">Enviado por: ${s.enviado_por || '—'}</span>
-            <div class="titulo">📌 ${s.titulo}</div>
-            <div class="resumo">📝 ${s.resumo || ''}</div>
-            <div class="meta">📍 ${s.local || '—'} | 📅 ${s.data_prevista || '—'} ${s.hora_prevista ? '· ' + s.hora_prevista.replace(':', 'h') : ''}</div>
-            <div class="status-linha">Status atual: ${rotulosStatus[s.status] || s.status}</div>
-            <div class="acoes">
-              <button class="btn-detalhes" data-id="${s.id}">👁 Ver Detalhes</button>
-              ${s.status !== 'em_analise' ? `<button class="btn-em-analise" data-id="${s.id}">🔎 Em Análise</button>` : ''}
-              ${s.status !== 'aprovada' ? `<button class="btn-aprovar" data-id="${s.id}">✅ Aprovar</button>` : ''}
-              ${s.status !== 'arquivada' ? `<button class="btn-arquivar" data-id="${s.id}">❌ Arquivar</button>` : ''}
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      document.querySelectorAll('.btn-em-analise').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          await fetch(`/sugestoes/${btn.dataset.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'em_analise' })
-          });
-          carregarSugestoes();
-        });
+      area.querySelectorAll('.btn-ver').forEach(btn => {
+        btn.addEventListener('click', () => abrirAbaSugestao(Number(btn.dataset.id)));
       });
-
-      document.querySelectorAll('.btn-arquivar').forEach(btn => {
+      area.querySelectorAll('.btn-excluir').forEach(btn => {
         btn.addEventListener('click', async () => {
-          await fetch(`/sugestoes/${btn.dataset.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'arquivada' })
-          });
-          carregarSugestoes();
-        });
-      });
-
-      document.querySelectorAll('.btn-aprovar').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const id = Number(btn.dataset.id);
-          const s = listaCarregada.find(item => item.id === id);
-          if (!s) return;
-          await abrirModalAprovar(s);
-        });
-      });
-
-      document.querySelectorAll('.btn-detalhes').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const id = Number(btn.dataset.id);
-          const s = listaCarregada.find(item => item.id === id);
-          if (!s) return;
-
-          idEmEdicaoSugestao = id;
-
-          document.getElementById('s-titulo').value = s.titulo || '';
-          document.getElementById('s-editoria').value = s.editoria || 'Cidade';
-          document.getElementById('s-resumo').value = s.resumo || '';
-          document.getElementById('s-data').value = s.data_prevista || '';
-          document.getElementById('s-hora').value = s.hora_prevista || '';
-          document.getElementById('s-local').value = s.local || '';
-          document.getElementById('s-fontes').value = s.fontes || '';
-          document.getElementById('s-tv').checked = !!s.destino_tv;
-          document.getElementById('s-insta').checked = !!s.destino_instagram;
-          document.getElementById('s-youtube').checked = !!s.destino_youtube;
-          document.getElementById('s-site').checked = !!s.destino_site;
-          document.querySelector(`input[name="s-urgencia"][value="${s.urgencia}"]`).checked = true;
-          document.getElementById('s-enviado-por').value = s.enviado_por || '';
-
-          document.getElementById('modal-sugestao').classList.add('aberto');
+          if (!confirm('Tem certeza que deseja excluir esta sugestão? Essa ação não pode ser desfeita.')) return;
+          await fetch('/sugestoes/' + btn.dataset.id, { method: 'DELETE' });
+          await carregarSugestoes();
+          renderListaCapa();
         });
       });
     }
 
-    document.getElementById('btn-nova-sugestao').addEventListener('click', () => {
-      idEmEdicaoSugestao = null;
-      document.getElementById('s-titulo').value = '';
-      document.getElementById('s-editoria').value = 'Cidade';
-      document.getElementById('s-resumo').value = '';
-      document.getElementById('s-data').value = '';
-      document.getElementById('s-hora').value = '';
-      document.getElementById('s-local').value = '';
-      document.getElementById('s-fontes').value = '';
-      document.getElementById('s-tv').checked = false;
-      document.getElementById('s-insta').checked = false;
-      document.getElementById('s-youtube').checked = false;
-      document.getElementById('s-site').checked = false;
-      document.querySelector('input[name="s-urgencia"][value="rotina"]').checked = true;
-      document.getElementById('s-enviado-por').value = '';
-
-      document.getElementById('modal-sugestao').classList.add('aberto');
+    document.getElementById('filtro-status').addEventListener('change', renderListaCapa);
+    document.getElementById('filtro-editoria').addEventListener('change', renderListaCapa);
+    document.getElementById('busca-sugestao').addEventListener('input', () => {
+      clearTimeout(window._buscaTimeout);
+      window._buscaTimeout = setTimeout(renderListaCapa, 300);
     });
 
-    document.getElementById('cancelar-sugestao').addEventListener('click', () => {
-      document.getElementById('modal-sugestao').classList.remove('aberto');
-    });
+    // ═══════════════════════ Abas de sugestão (tela cheia) ═══════════════════════
 
-    document.getElementById('confirmar-sugestao').addEventListener('click', async () => {
-      const titulo = document.getElementById('s-titulo').value.trim();
-      const resumo = document.getElementById('s-resumo').value.trim();
+    function htmlFormularioSugestao() {
+      return `
+        <div class="form-pauta-header">
+          <h1 data-campo="titulo-painel">+ Nova Sugestão</h1>
+          <div class="form-pauta-botoes" data-campo="botoes"></div>
+        </div>
 
-      if (!titulo || !resumo) {
-        alert('Preencha ao menos o título e o resumo.');
-        return;
+        <div class="form-pauta-campos">
+          <div class="campo campo-titulo">
+            <label>Título / Chamada da Sugestão</label>
+            <input type="text" data-campo="titulo" placeholder='Ex: "Procon faz mutirão na UFMA"'>
+          </div>
+          <div class="campo">
+            <label>Editoria</label>
+            <select data-campo="editoria">
+              <option value="Arte e Cultura">Arte e Cultura</option>
+              <option value="Cidade">Cidade</option>
+              <option value="Ciência e Tecnologia">Ciência e Tecnologia</option>
+              <option value="Comportamento e Sociedade">Comportamento e Sociedade</option>
+              <option value="Direitos Humanos e Inclusão">Direitos Humanos e Inclusão</option>
+              <option value="Economia e Trabalho">Economia e Trabalho</option>
+              <option value="Esporte e Lazer">Esporte e Lazer</option>
+              <option value="Educação">Educação</option>
+              <option value="Meio Ambiente">Meio Ambiente</option>
+              <option value="Política">Política</option>
+              <option value="Saúde">Saúde</option>
+              <option value="Segurança e Justiça">Segurança e Justiça</option>
+              <option value="Especial">Especial</option>
+              <option value="UFMA">UFMA</option>
+              <option value="Outra">Outra</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label>Data Prevista</label>
+            <input type="date" data-campo="data-prevista">
+          </div>
+          <div class="campo">
+            <label>Hora Prevista</label>
+            <input type="time" data-campo="hora-prevista">
+          </div>
+          <div class="campo">
+            <label>Urgência</label>
+            <select data-campo="urgencia">
+              <option value="rotina">Rotina</option>
+              <option value="relevante">Relevante</option>
+              <option value="urgente">Fato do Dia / Urgente</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-pauta-corpo">
+          <label>Resumo / O que é o fato</label>
+          <textarea data-campo="resumo" placeholder="Explique a ideia..."></textarea>
+
+          <label>Local</label>
+          <input type="text" data-campo="local" placeholder="Onde vai acontecer">
+
+          <label>Sugestão de Fontes e Contatos</label>
+          <textarea data-campo="fontes" placeholder="Nome, cargo e telefone/WhatsApp"></textarea>
+
+          <label>Destino Multiplataforma Sugerido</label>
+          <div class="linha-checkboxes">
+            <label><input type="checkbox" data-campo="tv"> TV Aberta</label>
+            <label><input type="checkbox" data-campo="insta"> Instagram</label>
+            <label><input type="checkbox" data-campo="youtube"> YouTube</label>
+            <label><input type="checkbox" data-campo="site"> Site TV UFMA</label>
+          </div>
+
+          <label>Enviado por</label>
+          <input type="text" data-campo="enviado-por" placeholder="Seu nome">
+        </div>
+      `;
+    }
+
+    function limparPainel(idAba) {
+      const container = document.getElementById('painel-' + idAba);
+      elCampo(container, 'titulo').value = '';
+      elCampo(container, 'editoria').value = 'Cidade';
+      elCampo(container, 'data-prevista').value = '';
+      elCampo(container, 'hora-prevista').value = '';
+      elCampo(container, 'urgencia').value = 'rotina';
+      elCampo(container, 'resumo').value = '';
+      elCampo(container, 'local').value = '';
+      elCampo(container, 'fontes').value = '';
+      elCampo(container, 'tv').checked = false;
+      elCampo(container, 'insta').checked = false;
+      elCampo(container, 'youtube').checked = false;
+      elCampo(container, 'site').checked = false;
+      elCampo(container, 'enviado-por').value = '';
+    }
+
+    function preencherPainel(idAba, s) {
+      const container = document.getElementById('painel-' + idAba);
+      elCampo(container, 'titulo').value = s.titulo || '';
+      elCampo(container, 'editoria').value = s.editoria || 'Cidade';
+      elCampo(container, 'data-prevista').value = s.data_prevista || '';
+      elCampo(container, 'hora-prevista').value = s.hora_prevista || '';
+      elCampo(container, 'urgencia').value = s.urgencia || 'rotina';
+      elCampo(container, 'resumo').value = s.resumo || '';
+      elCampo(container, 'local').value = s.local || '';
+      elCampo(container, 'fontes').value = s.fontes || '';
+      elCampo(container, 'tv').checked = !!s.destino_tv;
+      elCampo(container, 'insta').checked = !!s.destino_instagram;
+      elCampo(container, 'youtube').checked = !!s.destino_youtube;
+      elCampo(container, 'site').checked = !!s.destino_site;
+      elCampo(container, 'enviado-por').value = s.enviado_por || '';
+    }
+
+    function coletarDadosFormulario(idAba) {
+      const container = document.getElementById('painel-' + idAba);
+      return {
+        titulo: elCampo(container, 'titulo').value.trim(),
+        editoria: elCampo(container, 'editoria').value,
+        data_prevista: elCampo(container, 'data-prevista').value,
+        hora_prevista: elCampo(container, 'hora-prevista').value,
+        urgencia: elCampo(container, 'urgencia').value,
+        resumo: elCampo(container, 'resumo').value.trim(),
+        local: elCampo(container, 'local').value.trim(),
+        fontes: elCampo(container, 'fontes').value.trim(),
+        destino_tv: elCampo(container, 'tv').checked,
+        destino_instagram: elCampo(container, 'insta').checked,
+        destino_youtube: elCampo(container, 'youtube').checked,
+        destino_site: elCampo(container, 'site').checked,
+        enviado_por: elCampo(container, 'enviado-por').value.trim()
+      };
+    }
+
+    // Abre uma sugestão existente numa aba (reaproveitando se já estiver
+    // aberta) ou uma aba em branco de Nova Sugestão quando sugestaoId é null
+    async function abrirAbaSugestao(sugestaoId) {
+      if (sugestaoId !== null) {
+        const existente = Object.values(abas).find(a => a.sugestaoId === sugestaoId);
+        if (existente) { mudarAbaAtiva(existente.id); return; }
       }
 
-      const dados = {
-        titulo,
-        editoria: document.getElementById('s-editoria').value,
-        resumo,
-        data_prevista: document.getElementById('s-data').value,
-        hora_prevista: document.getElementById('s-hora').value,
-        local: document.getElementById('s-local').value.trim(),
-        fontes: document.getElementById('s-fontes').value.trim(),
-        destino_tv: document.getElementById('s-tv').checked,
-        destino_instagram: document.getElementById('s-insta').checked,
-        destino_youtube: document.getElementById('s-youtube').checked,
-        destino_site: document.getElementById('s-site').checked,
-        urgencia: document.querySelector('input[name="s-urgencia"]:checked').value,
-        enviado_por: document.getElementById('s-enviado-por').value.trim()
+      const idAba = 'aba' + (++contadorAbas);
+      const dados = sugestaoId !== null ? sugestoesCache.find(s => s.id === sugestaoId) : null;
+
+      abas[idAba] = {
+        id: idAba,
+        sugestaoId: sugestaoId,
+        tituloAba: sugestaoId !== null ? ('#S-' + sugestaoId) : 'Nova Sugestão',
+        status: dados ? dados.status : 'nova'
       };
 
-      if (idEmEdicaoSugestao !== null) {
-        await fetch(`/sugestoes/${idEmEdicaoSugestao}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dados)
+      const container = document.createElement('div');
+      container.className = 'painel-doc';
+      container.id = 'painel-' + idAba;
+      container.innerHTML = htmlFormularioSugestao();
+      document.querySelector('.nr-app').appendChild(container);
+
+      if (dados) preencherPainel(idAba, dados);
+      else limparPainel(idAba);
+      renderCabecalhoAba(idAba);
+
+      mudarAbaAtiva(idAba);
+    }
+
+    // Título e botões da aba mudam de acordo com o estado (salva? qual
+    // status?) — refeitos aqui toda vez que algo muda, em vez de ficar
+    // escondendo/mostrando botões espalhados pelo código
+    function renderCabecalhoAba(idAba) {
+      const aba = abas[idAba];
+      const container = document.getElementById('painel-' + idAba);
+      const salva = aba.sugestaoId !== null;
+
+      elCampo(container, 'titulo-painel').textContent = salva ? ('Editar Sugestão #S-' + aba.sugestaoId) : '+ Nova Sugestão';
+
+      const botoes = [];
+      if (salva) {
+        if (aba.status !== 'em_analise') botoes.push('<button class="btn-agenda" data-acao="em-analise">🔎 Marcar Em Análise</button>');
+        if (aba.status !== 'aprovada') botoes.push('<button class="btn-lauda-modal" data-acao="aprovar">✅ Aprovar e Gerar Pauta</button>');
+        if (aba.status !== 'arquivada') botoes.push('<button class="btn-cancelar" data-acao="arquivar">❌ Arquivar</button>');
+        botoes.push('<button class="btn-excluir-sugestao" data-acao="excluir">🗑️ Excluir</button>');
+      }
+      botoes.push('<button class="btn-cancelar" data-acao="fechar">Fechar</button>');
+      botoes.push('<button class="btn-confirmar" data-acao="salvar">💾 Salvar</button>');
+
+      const botoesEl = elCampo(container, 'botoes');
+      botoesEl.innerHTML = botoes.join('');
+
+      const ligarSe = (acao, fn) => { const el = botoesEl.querySelector(`[data-acao="${acao}"]`); if (el) el.addEventListener('click', fn); };
+      ligarSe('fechar', () => fecharAba(idAba));
+      ligarSe('salvar', () => salvarSugestao(idAba));
+      ligarSe('em-analise', () => mudarStatusSugestao(idAba, 'em_analise'));
+      ligarSe('arquivar', () => mudarStatusSugestao(idAba, 'arquivada'));
+      ligarSe('aprovar', () => abrirModalAprovar(idAba));
+      ligarSe('excluir', () => excluirSugestaoDaAba(idAba));
+    }
+
+    async function salvarSugestao(idAba, statusForcado) {
+      const aba = abas[idAba];
+      const dados = coletarDadosFormulario(idAba);
+      if (!dados.titulo || !dados.resumo) { alert('Preencha ao menos o título e o resumo.'); return null; }
+      if (statusForcado) dados.status = statusForcado;
+
+      let salva;
+      if (aba.sugestaoId !== null) {
+        const resp = await fetch('/sugestoes/' + aba.sugestaoId, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados)
         });
+        salva = await resp.json();
       } else {
-        await fetch('/sugestoes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dados)
+        const resp = await fetch('/sugestoes', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados)
         });
+        salva = await resp.json();
       }
 
-      document.getElementById('modal-sugestao').classList.remove('aberto');
-      carregarSugestoes();
-    });
+      aba.sugestaoId = salva.id;
+      aba.tituloAba = '#S-' + salva.id;
+      aba.status = salva.status;
 
-    trocarAba('nova');
-    let sugestaoAprovando = null;
+      await carregarSugestoes();
+      renderBarraAbas();
+      renderCabecalhoAba(idAba);
+      renderListaCapa();
 
-    async function abrirModalAprovar(sugestao) {
-      sugestaoAprovando = sugestao;
+      return salva;
+    }
+
+    async function mudarStatusSugestao(idAba, novoStatus) {
+      await salvarSugestao(idAba, novoStatus);
+    }
+
+    async function excluirSugestaoDaAba(idAba) {
+      const aba = abas[idAba];
+      if (!confirm('Tem certeza que deseja excluir esta sugestão? Essa ação não pode ser desfeita.')) return;
+      await fetch('/sugestoes/' + aba.sugestaoId, { method: 'DELETE' });
+      fecharAba(idAba);
+      await carregarSugestoes();
+      renderListaCapa();
+    }
+
+    function fecharAba(idAba) {
+      document.getElementById('painel-' + idAba)?.remove();
+      delete abas[idAba];
+      if (abaAtivaId === idAba) {
+        mudarAbaAtiva('capa');
+      } else {
+        renderBarraAbas();
+      }
+    }
+
+    function mudarAbaAtiva(idAba) {
+      abaAtivaId = idAba;
+      document.getElementById('painel-capa').classList.toggle('ativo', idAba === 'capa');
+      Object.keys(abas).forEach(id => {
+        document.getElementById('painel-' + id)?.classList.toggle('ativo', id === idAba);
+      });
+      renderBarraAbas();
+    }
+
+    function renderBarraAbas() {
+      const barra = document.getElementById('barra-abas-doc');
+
+      if (Object.keys(abas).length === 0) {
+        barra.style.display = 'none';
+        barra.innerHTML = '';
+        return;
+      }
+      barra.style.display = 'flex';
+
+      const abasHtml = Object.values(abas).map(a => `
+        <button class="aba-doc ${abaAtivaId === a.id ? 'ativa' : ''}" data-aba="${a.id}">
+          ${a.tituloAba} <span class="fechar-aba" data-fechar="${a.id}">×</span>
+        </button>
+      `).join('');
+
+      barra.innerHTML = `
+        <button class="aba-doc ${abaAtivaId === 'capa' ? 'ativa' : ''}" data-aba="capa">🗂️ Capa</button>
+        ${abasHtml}
+        <button class="btn-nova-aba" id="btn-nova-aba" title="Nova Sugestão">+</button>
+      `;
+
+      barra.querySelectorAll('.aba-doc').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          if (e.target.classList.contains('fechar-aba')) return;
+          mudarAbaAtiva(btn.dataset.aba);
+        });
+      });
+      barra.querySelectorAll('.fechar-aba').forEach(el => {
+        el.addEventListener('click', (e) => { e.stopPropagation(); fecharAba(el.dataset.fechar); });
+      });
+      document.getElementById('btn-nova-aba').addEventListener('click', () => abrirAbaSugestao(null));
+    }
+
+    document.getElementById('btn-nova-sugestao').addEventListener('click', () => abrirAbaSugestao(null));
+
+    // ═══════════════════════ Aprovar e Gerar Pauta ═══════════════════════
+    // Fica como modal à parte (não como campo da aba) porque pede dados que
+    // não são da sugestão em si (programa, equipe) e dispara uma ação
+    // composta (cria Pauta + Agendamento, então marca a sugestão aprovada)
+    async function abrirModalAprovar(idAba) {
+      const salva = await salvarSugestao(idAba); // preserva o que estiver digitado antes de aprovar
+      if (!salva) return;
+      aprovandoIdAba = idAba;
 
       const [respProgramas, respEquipe] = await Promise.all([
         fetch('/agenda/programas'),
@@ -441,11 +605,11 @@
       const equipeLista = await respEquipe.json();
 
       document.getElementById('ap-programa').innerHTML = programas.map(p =>
-        `<option value="${p.id}">${p.nome}</option>`
+        `<option value="${p.id}">${escaparHtml(p.nome)}</option>`
       ).join('');
 
       const opcoesPessoas = equipeLista.map(m =>
-        `<option value="${m.nome}">${m.nome} (${m.funcao})</option>`
+        `<option value="${escaparHtml(m.nome)}">${escaparHtml(m.nome)} (${escaparHtml(m.funcao)})</option>`
       ).join('');
 
       document.getElementById('ap-produtor').innerHTML = opcoesPessoas;
@@ -458,10 +622,14 @@
 
     document.getElementById('cancelar-aprovar').addEventListener('click', () => {
       document.getElementById('modal-aprovar').classList.remove('aberto');
+      aprovandoIdAba = null;
     });
 
     document.getElementById('confirmar-aprovar').addEventListener('click', async () => {
-      const s = sugestaoAprovando;
+      const idAba = aprovandoIdAba;
+      const aba = idAba ? abas[idAba] : null;
+      if (!aba) return;
+      const s = sugestoesCache.find(item => item.id === aba.sugestaoId);
       if (!s) return;
 
       const programaId = Number(document.getElementById('ap-programa').value);
@@ -526,10 +694,21 @@
         body: JSON.stringify({ status: 'aprovada', pauta_id: novaPauta.id })
       });
 
+      aba.status = 'aprovada';
+      await carregarSugestoes();
+      renderCabecalhoAba(idAba);
+      renderListaCapa();
+
       document.getElementById('modal-aprovar').classList.remove('aberto');
+      aprovandoIdAba = null;
       alert('Pauta e Agendamento criados com sucesso!');
-      carregarSugestoes();
     });
+
+    (async function init() {
+      await carregarSugestoes();
+      renderListaCapa();
+      renderBarraAbas();
+    })();
   </script>
   </div>
 </body>

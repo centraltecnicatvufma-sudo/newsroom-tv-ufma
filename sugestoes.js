@@ -54,7 +54,11 @@ router.patch('/:id', (req, res) => {
     return res.status(404).json({ erro: "Sugestão não encontrada" });
   }
 
-  const campos = ['titulo', 'editoria', 'resumo', 'data_prevista', 'hora_prevista', 'local', 'fontes', 'urgencia', 'status', 'pauta_id'];
+  const campos = [
+    'titulo', 'editoria', 'resumo', 'data_prevista', 'hora_prevista', 'local', 'fontes',
+    'destino_tv', 'destino_instagram', 'destino_youtube', 'destino_site',
+    'urgencia', 'status', 'pauta_id'
+  ];
   const atualizado = {};
   campos.forEach(c => {
     atualizado[c] = req.body[c] !== undefined ? req.body[c] : item[c];
@@ -69,12 +73,17 @@ router.patch('/:id', (req, res) => {
     : item.decidido_em;
 
   db.prepare(`
-    UPDATE sugestoes SET titulo=?, editoria=?, resumo=?, data_prevista=?, hora_prevista=?, local=?, fontes=?, urgencia=?, status=?, pauta_id=?, decidido_em=?
+    UPDATE sugestoes SET
+      titulo=?, editoria=?, resumo=?, data_prevista=?, hora_prevista=?, local=?, fontes=?,
+      destino_tv=?, destino_instagram=?, destino_youtube=?, destino_site=?,
+      urgencia=?, status=?, pauta_id=?, decidido_em=?
     WHERE id = ?
   `).run(
     atualizado.titulo, atualizado.editoria, atualizado.resumo, atualizado.data_prevista,
-    atualizado.hora_prevista, atualizado.local, atualizado.fontes, atualizado.urgencia,
-    atualizado.status, atualizado.pauta_id, decidido_em, id
+    atualizado.hora_prevista, atualizado.local, atualizado.fontes,
+    atualizado.destino_tv ? 1 : 0, atualizado.destino_instagram ? 1 : 0,
+    atualizado.destino_youtube ? 1 : 0, atualizado.destino_site ? 1 : 0,
+    atualizado.urgencia, atualizado.status, atualizado.pauta_id, decidido_em, id
   );
 
   const item_atualizado = db.prepare('SELECT * FROM sugestoes WHERE id = ?').get(id);
