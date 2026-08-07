@@ -36,18 +36,18 @@
     .btn-excluir { background: #8D0333; color: #fff; }
 
     /* Folha de impressão da Pauta — só existe visualmente durante a
-       impressão (@media print mais abaixo); layout inspirado numa lauda
-       impressa de NRCS real: tabela de cabeçalho com borda + caixa de
-       conteúdo com borda + rodapé com data de impressão. */
+       impressão (@media print mais abaixo). Mesmo layout "uma coluna" usado
+       na Lauda (materia.html): cabeçalho com linhas simples (rótulo em
+       negrito + valor, sem caixa/borda) separado por uma linha fina, seguido
+       de blocos empilhados de conteúdo (.entrada-impressao) — sem tabela de
+       cabeçalho nem caixa com borda ao redor do conteúdo. */
     .somente-impressao { display: none; }
-    .impressao-pauta .cab-impressao-tabela { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-    .impressao-pauta .cab-impressao-tabela th { text-align: left; font-size: 10px; text-transform: uppercase; color: #5b6472; padding: 6px 8px; border: 1px solid #999; background: #f4f5f7; font-weight: bold; }
-    .impressao-pauta .cab-impressao-tabela td { padding: 8px; border: 1px solid #999; font-weight: bold; font-size: 13px; }
-    .impressao-pauta .caixa-impressao { border: 1px solid #999; padding: 12px 14px; }
-    .impressao-pauta .linha-imp { margin-bottom: 10px; font-size: 13px; }
-    .impressao-pauta .linha-imp strong { color: #5b6472; display: block; font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }
-    .impressao-pauta table.fontes-impressao { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 12px; }
-    .impressao-pauta table.fontes-impressao th, .impressao-pauta table.fontes-impressao td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; }
+    .impressao-pauta .cabecalho-impressao { padding: 0 0 12px; border-bottom: 1px solid #ccc; margin-bottom: 14px; }
+    .impressao-pauta .linha-info { margin-bottom: 6px; font-size: 13px; }
+    .impressao-pauta .linha-info strong { color: #5b6472; font-weight: bold; margin-right: 4px; }
+    .impressao-pauta .destinos-impressao span { display: inline-block; margin-right: 14px; }
+    .impressao-pauta .entrada-impressao { margin-bottom: 10px; font-size: 13px; }
+    .impressao-pauta .entrada-impressao strong { display: block; font-size: 11px; margin-bottom: 2px; }
     .impressao-pauta .rodape-impressao { display: flex; justify-content: space-between; font-size: 10px; color: #5b6472; margin-top: 16px; border-top: 1px solid #ccc; padding-top: 6px; }
 
     @media print {
@@ -659,10 +659,19 @@
       return (dia && mes && ano) ? `${dia}/${mes}/${ano}` : iso;
     }
 
-    // Monta a folha de impressão da pauta (tabela de cabeçalho + caixa de
-    // conteúdo, ver CSS .impressao-pauta) com os dados vindos direto do
+    // Um bloco de conteúdo empilhado — rótulo em negrito numa linha, valor
+    // na linha de baixo. Mesmo padrão .entrada-impressao usado na impressão
+    // "uma coluna" da Lauda (materia.html), pra manter as duas folhas com a
+    // cara exatamente igual.
+    function entradaImpressao(rotulo, conteudoHtml) {
+      return `<div class="entrada-impressao"><strong>${rotulo}</strong><div>${conteudoHtml}</div></div>`;
+    }
+
+    // Monta a folha de impressão da pauta com os dados vindos direto do
     // backend — sempre busca a versão mais recente, mesmo que a pauta esteja
-    // aberta numa aba com alterações ainda não salvas.
+    // aberta numa aba com alterações ainda não salvas. Layout "uma coluna":
+    // cabeçalho com linhas simples + blocos empilhados, sem tabela de
+    // cabeçalho nem caixa com borda (ver CSS .impressao-pauta).
     function montarImpressaoPauta(p) {
       const destinos = [
         p.destino_tv ? '📺 VT TV Aberta' : null,
@@ -689,53 +698,37 @@
       const dataImpressao = agora.toLocaleDateString('pt-BR') + ' ' +
         agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
+      const blocos = [
+        entradaImpressao('Enquadramento / Ângulo da Notícia', p.orientacao ? p.orientacao.replace(/\n/g, '<br>') : '—'),
+        entradaImpressao('Encaminhamento / Roteiro Sugerido', p.roteiro ? p.roteiro.replace(/\n/g, '<br>') : '—'),
+        entradaImpressao('Equipe', equipe.length ? equipe.join(' · ') : '—'),
+        equipamentos.length ? entradaImpressao('Equipamentos Especiais', equipamentos.join(', ')) : '',
+        ...fontes.map((f, i) => entradaImpressao(
+          'Fonte ' + (i + 1) + (f.cargo ? ' — ' + f.cargo : ''),
+          [f.nome || '—', f.contato, f.horario_confirmado ? 'Horário confirmado: ' + f.horario_confirmado : null].filter(Boolean).join(' · ')
+        )),
+        p.anexos ? entradaImpressao('Anexos', p.anexos.replace(/\n/g, '<br>')) : ''
+      ].filter(Boolean).join('');
+
       document.getElementById('impressao-pauta').innerHTML = `
-        <table class="cab-impressao-tabela">
-          <tr>
-            <th style="width:16%;">Data</th>
-            <th style="width:44%;">Retranca</th>
-            <th style="width:40%;">Programa</th>
-          </tr>
-          <tr>
-            <td>${formatarDataImpressao(p.data_fato)}</td>
-            <td>${(p.titulo || '—').toUpperCase()}</td>
-            <td>${nomePrograma(p.programa_id)}</td>
-          </tr>
-          <tr><th>Pauteiro</th><th colspan="2">Status</th></tr>
-          <tr><td>${p.produtor || '—'}</td><td colspan="2">${rotulosStatus[p.status] || p.status || '—'}</td></tr>
-        </table>
-
-        <div class="caixa-impressao">
-          ${p.local ? `<div class="linha-imp"><strong>Endereço / Local</strong>${p.local}</div>` : ''}
-          ${(p.data_fato || p.hora_fato) ? `<div class="linha-imp"><strong>Data e Hora do Fato</strong>${formatarDataImpressao(p.data_fato)} ${p.hora_fato || ''}</div>` : ''}
-
-          ${fontes.length ? `
-            <div class="linha-imp">
-              <strong>Entrevistados / Fontes</strong>
-              <table class="fontes-impressao">
-                <thead><tr><th>Nome</th><th>Cargo</th><th>Contato</th><th>Horário Confirmado</th></tr></thead>
-                <tbody>
-                  ${fontes.map(f => `
-                    <tr>
-                      <td>${f.nome || '—'}</td>
-                      <td>${f.cargo || '—'}</td>
-                      <td>${f.contato || '—'}</td>
-                      <td>${f.horario_confirmado || '—'}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
-          ` : ''}
-
-          ${p.orientacao ? `<div class="linha-imp"><strong>Enquadramento / Ângulo da Notícia</strong>${p.orientacao}</div>` : ''}
-          ${p.roteiro ? `<div class="linha-imp"><strong>Encaminhamento / Roteiro Sugerido</strong>${p.roteiro}</div>` : ''}
-
-          <div class="linha-imp"><strong>Equipe</strong>${equipe.length ? equipe.join(' · ') : '—'}</div>
-          ${equipamentos.length ? `<div class="linha-imp"><strong>Equipamentos Especiais</strong>${equipamentos.join(', ')}</div>` : ''}
-          <div class="linha-imp"><strong>Formatos / Destinos</strong>${destinos.length ? destinos.join('  ') : '—'}</div>
-          ${p.anexos ? `<div class="linha-imp"><strong>Anexos</strong>${p.anexos.replace(/\n/g, '<br>')}</div>` : ''}
+        <div class="cabecalho-impressao">
+          <div class="linha-info"><strong>Título:</strong>${p.titulo || '—'}</div>
+          <div class="linha-info">
+            <strong>Programa:</strong>${nomePrograma(p.programa_id)}
+            &nbsp;&nbsp;<strong>Status:</strong>${rotulosStatus[p.status] || p.status || '—'}
+          </div>
+          <div class="linha-info">
+            <strong>Data do Fato:</strong>${formatarDataImpressao(p.data_fato)}
+            &nbsp;&nbsp;<strong>Hora do Fato:</strong>${p.hora_fato || '—'}
+            &nbsp;&nbsp;<strong>Pauteiro/Produtor:</strong>${p.produtor || '—'}
+          </div>
+          <div class="linha-info"><strong>Local:</strong>${p.local || '—'}</div>
+          <div class="linha-info destinos-impressao">
+            <strong>Formatos / Destinos:</strong> ${destinos.length ? destinos.map(d => `<span>${d}</span>`).join('') : '—'}
+          </div>
         </div>
+
+        ${blocos}
 
         <div class="rodape-impressao">
           <span>Data de Impressão: ${dataImpressao}</span>
