@@ -41,7 +41,7 @@ router.post('/', (req, res) => {
     orientacao, roteiro, local, anexos,
     produtor, reporter, cinegrafista, motorista, editor_imagens,
     equip_lapela, equip_iluminacao, equip_mochilink,
-    data_fato, hora_fato, status, fontes
+    data_fato, hora_fato, status, editoria, fontes
   } = req.body;
 
   if (!titulo) return res.status(400).json({ erro: 'Título é obrigatório' });
@@ -53,16 +53,16 @@ router.post('/', (req, res) => {
       orientacao, roteiro, local, anexos,
       produtor, reporter, cinegrafista, motorista, editor_imagens,
       equip_lapela, equip_iluminacao, equip_mochilink,
-      data_fato, hora_fato, status
+      data_fato, hora_fato, status, editoria
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     sugestao_id || null, agenda_id || null, titulo, programa_id || null,
     destino_tv ? 1 : 0, destino_instagram ? 1 : 0, destino_youtube ? 1 : 0, destino_site ? 1 : 0,
     orientacao || '', roteiro || '', local || '', anexos || '',
     produtor || '', reporter || '', cinegrafista || '', motorista || '', editor_imagens || '',
     equip_lapela ? 1 : 0, equip_iluminacao ? 1 : 0, equip_mochilink ? 1 : 0,
-    data_fato || '', hora_fato || '', status || 'em_producao'
+    data_fato || '', hora_fato || '', status || 'em_producao', editoria || ''
   );
 
   const novaId = resultado.lastInsertRowid;
@@ -94,7 +94,7 @@ router.patch('/:id', (req, res) => {
     'orientacao', 'roteiro', 'local', 'anexos',
     'produtor', 'reporter', 'cinegrafista', 'motorista', 'editor_imagens',
     'equip_lapela', 'equip_iluminacao', 'equip_mochilink',
-    'data_fato', 'hora_fato', 'status',
+    'data_fato', 'hora_fato', 'status', 'editoria',
     'cabeca_texto', 'texto_web'
   ];
 
@@ -110,7 +110,7 @@ router.patch('/:id', (req, res) => {
       orientacao=?, roteiro=?, local=?, anexos=?,
       produtor=?, reporter=?, cinegrafista=?, motorista=?, editor_imagens=?,
       equip_lapela=?, equip_iluminacao=?, equip_mochilink=?,
-      data_fato=?, hora_fato=?, status=?,
+      data_fato=?, hora_fato=?, status=?, editoria=?,
       cabeca_texto=?, texto_web=?
     WHERE id = ?
   `).run(
@@ -120,7 +120,7 @@ router.patch('/:id', (req, res) => {
     atualizado.orientacao, atualizado.roteiro, atualizado.local, atualizado.anexos,
     atualizado.produtor, atualizado.reporter, atualizado.cinegrafista, atualizado.motorista, atualizado.editor_imagens,
     atualizado.equip_lapela ? 1 : 0, atualizado.equip_iluminacao ? 1 : 0, atualizado.equip_mochilink ? 1 : 0,
-    atualizado.data_fato, atualizado.hora_fato, atualizado.status,
+    atualizado.data_fato, atualizado.hora_fato, atualizado.status, atualizado.editoria,
     atualizado.cabeca_texto, atualizado.texto_web,
     id
   );

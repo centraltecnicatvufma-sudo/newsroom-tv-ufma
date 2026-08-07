@@ -395,6 +395,27 @@
             <select data-campo="programa"></select>
           </div>
           <div class="campo">
+            <label>Editoria</label>
+            <select data-campo="editoria">
+              <option value="">Selecione...</option>
+              <option value="Arte e Cultura">Arte e Cultura</option>
+              <option value="Cidade">Cidade</option>
+              <option value="Ciência e Tecnologia">Ciência e Tecnologia</option>
+              <option value="Comportamento e Sociedade">Comportamento e Sociedade</option>
+              <option value="Direitos Humanos e Inclusão">Direitos Humanos e Inclusão</option>
+              <option value="Economia e Trabalho">Economia e Trabalho</option>
+              <option value="Esporte e Lazer">Esporte e Lazer</option>
+              <option value="Educação">Educação</option>
+              <option value="Meio Ambiente">Meio Ambiente</option>
+              <option value="Política">Política</option>
+              <option value="Saúde">Saúde</option>
+              <option value="Segurança e Justiça">Segurança e Justiça</option>
+              <option value="Especial">Especial</option>
+              <option value="UFMA">UFMA</option>
+              <option value="Outra">Outra</option>
+            </select>
+          </div>
+          <div class="campo">
             <label>Data do Fato</label>
             <input type="date" data-campo="data-fato">
           </div>
@@ -512,6 +533,7 @@
       elCampo(container, 'titulo-painel').textContent = '+ Nova Pauta';
       elCampo(container, 'titulo').value = '';
       elCampo(container, 'programa').value = '';
+      elCampo(container, 'editoria').value = '';
       elCampo(container, 'tv').checked = false;
       elCampo(container, 'insta').checked = false;
       elCampo(container, 'site').checked = false;
@@ -538,6 +560,7 @@
       elCampo(container, 'titulo-painel').textContent = 'Editar Pauta #P-' + p.id;
       elCampo(container, 'titulo').value = p.titulo || '';
       elCampo(container, 'programa').value = p.programa_id || '';
+      elCampo(container, 'editoria').value = p.editoria || '';
       elCampo(container, 'tv').checked = !!p.destino_tv;
       elCampo(container, 'insta').checked = !!p.destino_instagram;
       elCampo(container, 'site').checked = !!p.destino_site;
@@ -564,6 +587,7 @@
       return {
         titulo: elCampo(container, 'titulo').value.trim(),
         programa_id: elCampo(container, 'programa').value ? Number(elCampo(container, 'programa').value) : null,
+        editoria: elCampo(container, 'editoria').value,
         destino_tv: elCampo(container, 'tv').checked,
         destino_instagram: elCampo(container, 'insta').checked,
         destino_site: elCampo(container, 'site').checked,

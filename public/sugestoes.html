@@ -476,6 +476,7 @@
         body: JSON.stringify({
           sugestao_id: s.id,
           titulo: s.titulo,
+          editoria: s.editoria || '',
           programa_id: programaId,
           destino_tv: !!s.destino_tv,
           destino_instagram: !!s.destino_instagram,

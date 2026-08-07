@@ -197,13 +197,10 @@
       pautasCache = await resp.json();
     }
 
-    // No Quadro o status não filtra (é ele quem organiza os cards em
-    // colunas) — ignorarStatus evita que um valor deixado no select antes
-    // de trocar de visão esconda colunas inteiras sem motivo aparente
-    function pautasFiltradas(ignorarStatus) {
+    function pautasFiltradas() {
       const dataIni = document.getElementById('filtro-data-inicial').value;
       const dataFim = document.getElementById('filtro-data-final').value;
-      const status = ignorarStatus ? '' : document.getElementById('filtro-status').value;
+      const status = document.getElementById('filtro-status').value;
       const busca = document.getElementById('filtro-busca').value.trim().toLowerCase();
 
       return pautasCache
@@ -277,7 +274,7 @@
     }
 
     function renderQuadro() {
-      const filtradas = pautasFiltradas(true);
+      const filtradas = pautasFiltradas();
       const container = document.getElementById('quadro-kanban');
 
       container.innerHTML = ordemStatusQuadro.map(status => {
@@ -360,12 +357,6 @@
       document.getElementById('area-tabela').style.display = visao === 'lista' ? '' : 'none';
       document.getElementById('quadro-kanban').classList.toggle('ativo', visao === 'quadro');
       document.getElementById('paginacao').style.display = visao === 'lista' ? 'flex' : 'none';
-
-      // status não se aplica dentro do Quadro (ele já organiza por status)
-      const filtroStatus = document.getElementById('filtro-status');
-      filtroStatus.disabled = visao === 'quadro';
-      if (visao === 'quadro') filtroStatus.value = '';
-
       renderConteudo();
     }
 

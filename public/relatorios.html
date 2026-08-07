@@ -127,6 +127,7 @@
     <button id="aba-produtividade" class="ativa">📊 Produtividade por Papel</button>
     <button id="aba-funil">🗂️ Funil de Sugestões</button>
     <button id="aba-pontualidade">⏱️ Pontualidade do Espelho</button>
+    <button id="aba-cobertura">📂 Cobertura por Editoria</button>
   </div>
 
   <!-- ═══════════ PRODUTIVIDADE ═══════════ -->
@@ -221,6 +222,33 @@
     </div>
   </div>
 
+  <!-- ═══════════ COBERTURA POR EDITORIA ═══════════ -->
+  <div id="painel-cobertura" style="display:none;">
+    <div class="filtros">
+      <div>
+        <label>Data do fato — de</label>
+        <input type="date" id="cobertura-data-de">
+      </div>
+      <div>
+        <label>até</label>
+        <input type="date" id="cobertura-data-ate">
+      </div>
+      <div>
+        <label>Editoria</label>
+        <select id="cobertura-editoria"><option value="">Todas</option></select>
+      </div>
+      <button class="btn-limpar" id="btn-limpar-cobertura">Limpar filtros</button>
+    </div>
+
+    <div class="conteudo">
+      <div class="largura-maxima">
+        <div id="aviso-cobertura"></div>
+        <div class="cartoes-resumo" id="cartoes-cobertura"></div>
+        <div id="tabela-cobertura">Carregando...</div>
+      </div>
+    </div>
+  </div>
+
   <script>
     function escaparHtml(texto) {
       return String(texto == null ? '' : texto)
@@ -243,19 +271,17 @@
       produtividade: { titulo: 'HORUS NEWSROOM — Relatório de Produtividade', sub: 'Quantas pautas cada pessoa produziu, por papel e por período' },
       funil: { titulo: 'HORUS NEWSROOM — Funil de Sugestões', sub: 'Do envio à decisão: quantas sugestões avançam, quem envia, quanto tempo leva' },
       pontualidade: { titulo: 'HORUS NEWSROOM — Pontualidade do Espelho', sub: 'Quantas edições fecharam no tempo, estouraram ou sobrou buraco' },
+      cobertura: { titulo: 'HORUS NEWSROOM — Cobertura por Editoria', sub: 'Quantas pautas cada editoria produziu, com recorte de período' },
     };
 
-    document.getElementById('aba-produtividade').addEventListener('click', () => mudarAba('produtividade'));
-    document.getElementById('aba-funil').addEventListener('click', () => mudarAba('funil'));
-    document.getElementById('aba-pontualidade').addEventListener('click', () => mudarAba('pontualidade'));
+    const ABAS = ['produtividade', 'funil', 'pontualidade', 'cobertura'];
+    ABAS.forEach(aba => document.getElementById('aba-' + aba).addEventListener('click', () => mudarAba(aba)));
 
     function mudarAba(aba) {
-      document.getElementById('aba-produtividade').classList.toggle('ativa', aba === 'produtividade');
-      document.getElementById('aba-funil').classList.toggle('ativa', aba === 'funil');
-      document.getElementById('aba-pontualidade').classList.toggle('ativa', aba === 'pontualidade');
-      document.getElementById('painel-produtividade').style.display = aba === 'produtividade' ? '' : 'none';
-      document.getElementById('painel-funil').style.display = aba === 'funil' ? '' : 'none';
-      document.getElementById('painel-pontualidade').style.display = aba === 'pontualidade' ? '' : 'none';
+      ABAS.forEach(a => {
+        document.getElementById('aba-' + a).classList.toggle('ativa', a === aba);
+        document.getElementById('painel-' + a).style.display = a === aba ? '' : 'none';
+      });
       document.getElementById('titulo-relatorio').textContent = TITULOS_ABA[aba].titulo;
       document.getElementById('subtitulo-relatorio').textContent = TITULOS_ABA[aba].sub;
     }
@@ -760,13 +786,167 @@
       atualizarPontualidade();
     });
 
+    // ═══════════════════════ COBERTURA POR EDITORIA ═══════════════════════
+    // A pauta não tem campo de editoria próprio — só a Sugestão que a
+    // originou tem. Pra maioria das pautas isso funciona (rastreia via
+    // sugestao_id), mas pautas criadas direto, sem passar por uma Sugestão,
+    // ficam sem editoria conhecida — entram no bucket "sem editoria" em vez
+    // de sumir da contagem, mesmo padrão já usado no Funil.
+    const SEM_EDITORIA_PAUTA = '— (sem editoria) —';
+
+    // A pauta agora tem campo de editoria próprio (herdado da Sugestão na
+    // aprovação, ou preenchido na mão quando é nativa). Pautas antigas,
+    // criadas antes desse campo existir, ainda podem ter esse dado só na
+    // Sugestão de origem — por isso o lookup via sugestao_id continua como
+    // retaguarda.
+    function editoriaDaPauta(p) {
+      if (p.editoria && p.editoria.trim()) return p.editoria.trim();
+      if (!p.sugestao_id) return null;
+      const sugestao = sugestoesCache.find(s => s.id === p.sugestao_id);
+      const editoria = sugestao ? (sugestao.editoria || '').trim() : '';
+      return editoria || null;
+    }
+
+    function pautasComEditoria() {
+      return pautasCache.map(p => ({ ...p, editoria: editoriaDaPauta(p) || SEM_EDITORIA_PAUTA }));
+    }
+
+    function preencherFiltroEditoriaCobertura() {
+      const editorias = [...new Set(pautasComEditoria().map(p => p.editoria).filter(e => e !== SEM_EDITORIA_PAUTA))].sort();
+      const select = document.getElementById('cobertura-editoria');
+      select.innerHTML = '<option value="">Todas</option>' + editorias.map(e => `<option value="${escaparHtml(e)}">${escaparHtml(e)}</option>`).join('');
+    }
+
+    function coberturaFiltrada() {
+      const dataDe = document.getElementById('cobertura-data-de').value;
+      const dataAte = document.getElementById('cobertura-data-ate').value;
+      const editoria = document.getElementById('cobertura-editoria').value;
+
+      return pautasComEditoria().filter(p => {
+        if (dataDe && (!p.data_fato || p.data_fato < dataDe)) return false;
+        if (dataAte && (!p.data_fato || p.data_fato > dataAte)) return false;
+        if (editoria && p.editoria !== editoria) return false;
+        return true;
+      });
+    }
+
+    function renderAvisoCobertura(pautas) {
+      const semEditoria = pautas.filter(p => p.editoria === SEM_EDITORIA_PAUTA).length;
+      const aviso = document.getElementById('aviso-cobertura');
+      if (semEditoria === 0) { aviso.innerHTML = ''; return; }
+      aviso.innerHTML = `<div class="aviso-dados">⚠️ ${semEditoria} pauta${semEditoria > 1 ? 's' : ''} sem editoria identificada
+        (criada${semEditoria > 1 ? 's' : ''} direto, sem passar por uma Sugestão com editoria preenchida) — aparece${semEditoria > 1 ? 'm' : ''}
+        agrupada${semEditoria > 1 ? 's' : ''} em "sem editoria" em vez de sumir da contagem.</div>`;
+    }
+
+    function renderResumoCobertura(pautas) {
+      const editoriasUnicas = new Set(pautas.map(p => p.editoria)).size;
+      const concluidas = pautas.filter(p => p.status === 'concluida').length;
+      const pct = pautas.length ? Math.round((concluidas / pautas.length) * 100) : 0;
+
+      document.getElementById('cartoes-cobertura').innerHTML = `
+        <div class="cartao-resumo">
+          <div class="valor">${pautas.length}</div>
+          <div class="rotulo">Pautas no período</div>
+        </div>
+        <div class="cartao-resumo destaque">
+          <div class="valor">${editoriasUnicas}</div>
+          <div class="rotulo">Editorias com cobertura</div>
+        </div>
+        <div class="cartao-resumo">
+          <div class="valor">${pct}%</div>
+          <div class="rotulo">Concluídas (${concluidas})</div>
+        </div>
+      `;
+    }
+
+    function agruparPautasPorEditoria(pautas) {
+      const grupos = {};
+      pautas.forEach(p => {
+        if (!grupos[p.editoria]) {
+          grupos[p.editoria] = { nome: p.editoria, total: 0, porStatus: { em_producao: 0, em_gravacao: 0, em_edicao: 0, concluida: 0 }, itens: [] };
+        }
+        grupos[p.editoria].total++;
+        const status = ordemStatusPauta.includes(p.status) ? p.status : 'em_producao';
+        grupos[p.editoria].porStatus[status]++;
+        grupos[p.editoria].itens.push(p);
+      });
+      return Object.values(grupos).sort((a, b) => b.total - a.total);
+    }
+
+    function renderTabelaCobertura(grupos) {
+      const area = document.getElementById('tabela-cobertura');
+
+      if (grupos.length === 0) {
+        area.innerHTML = '<div class="estado-vazio">Nenhuma pauta encontrada para esse período/filtro.</div>';
+        return;
+      }
+
+      area.innerHTML = `
+        <table class="tabela-relatorio">
+          <thead>
+            <tr>
+              <th>Editoria</th>
+              <th style="width:70px;">Total</th>
+              <th style="width:220px;">Por status</th>
+              <th style="width:170px;">% Concluída</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${grupos.map((g, i) => `
+              <tr class="clicavel" data-indice="${i}">
+                <td class="nome-linha">${escaparHtml(g.nome)}</td>
+                <td>${g.total}</td>
+                <td class="contagem-status">
+                  ${ordemStatusPauta.map(s => g.porStatus[s] ? `${labelStatusPauta[s]}: ${g.porStatus[s]}` : null).filter(Boolean).join(' · ') || '—'}
+                </td>
+                <td>
+                  <div class="celula-progresso">
+                    <div class="barra-progresso"><div class="preenchimento" style="width:${g.total ? Math.round((g.porStatus.concluida / g.total) * 100) : 0}%"></div></div>
+                    <span class="porcentagem">${g.total ? Math.round((g.porStatus.concluida / g.total) * 100) : 0}%</span>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+
+      ligarExpansaoDetalhe(area, grupos, (item) => `
+        <span class="titulo-item-detalhe">#P-${item.id} — ${escaparHtml(item.titulo)}</span>
+        <span>
+          ${formatarData(item.data_fato)}
+          <span class="status-mini status-mini-${item.status}">${labelStatusPauta[item.status] || item.status}</span>
+        </span>
+      `, (item) => item.data_fato, 4);
+    }
+
+    function atualizarCobertura() {
+      const filtradas = coberturaFiltrada();
+      renderAvisoCobertura(filtradas);
+      renderResumoCobertura(filtradas);
+      renderTabelaCobertura(agruparPautasPorEditoria(filtradas));
+    }
+
+    document.getElementById('cobertura-data-de').addEventListener('change', atualizarCobertura);
+    document.getElementById('cobertura-data-ate').addEventListener('change', atualizarCobertura);
+    document.getElementById('cobertura-editoria').addEventListener('change', atualizarCobertura);
+    document.getElementById('btn-limpar-cobertura').addEventListener('click', () => {
+      document.getElementById('cobertura-data-de').value = '';
+      document.getElementById('cobertura-data-ate').value = '';
+      document.getElementById('cobertura-editoria').value = '';
+      atualizarCobertura();
+    });
+
     (async function init() {
       await Promise.all([carregarProgramas(), carregarPautas(), carregarSugestoes(), carregarEspelhos()]);
       preencherFiltroEditoria();
       preencherFiltroProgramaEspelho();
+      preencherFiltroEditoriaCobertura();
       atualizarProdutividade();
       atualizarFunil();
       atualizarPontualidade();
+      atualizarCobertura();
     })();
   </script>
   </div>
