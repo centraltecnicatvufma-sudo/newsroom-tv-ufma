@@ -28,36 +28,91 @@
     .status-em_edicao { background: #6b3fa0; }
     .status-concluida { background: #2e8b57; }
 
-    .acoes-lista button { font-size: 12px; padding: 5px 9px; border-radius: 6px; border: none; cursor: pointer; margin-right: 4px; }
+    .acoes-lista { white-space: nowrap; }
+    .acoes-lista button { font-size: 14px; padding: 6px 10px; line-height: 1; border-radius: 6px; border: none; cursor: pointer; margin-right: 4px; }
     .btn-ver { background: #eee; color: #333; }
     .btn-lauda { background: #336699; color: #fff; }
+    .btn-imprimir-pauta { background: #5b6472; color: #fff; }
     .btn-excluir { background: #8D0333; color: #fff; }
 
-    .overlay-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 10; overflow-y: auto; padding: 30px 0; }
-    .overlay-modal.aberto { display: flex; }
-    .modal-pauta { background: #fff; border-radius: 10px; padding: 24px; width: 560px; max-height: 90vh; overflow-y: auto; }
-    .modal-pauta h2 { font-size: 18px; margin: 0 0 4px; }
-    .bloco-titulo { font-size: 12px; text-transform: uppercase; color: #999; margin-top: 20px; margin-bottom: 8px; border-top: 1px solid #eee; padding-top: 16px; }
-    .modal-pauta label { font-size: 12px; color: #5b6472; display: block; margin: 10px 0 4px; }
-    .modal-pauta input[type="text"], .modal-pauta input[type="date"], .modal-pauta input[type="time"], .modal-pauta select, .modal-pauta textarea {
-      width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;
+    /* Folha de impressão da Pauta — só existe visualmente durante a
+       impressão (@media print mais abaixo); layout inspirado numa lauda
+       impressa de NRCS real: tabela de cabeçalho com borda + caixa de
+       conteúdo com borda + rodapé com data de impressão. */
+    .somente-impressao { display: none; }
+    .impressao-pauta .cab-impressao-tabela { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    .impressao-pauta .cab-impressao-tabela th { text-align: left; font-size: 10px; text-transform: uppercase; color: #5b6472; padding: 6px 8px; border: 1px solid #999; background: #f4f5f7; font-weight: bold; }
+    .impressao-pauta .cab-impressao-tabela td { padding: 8px; border: 1px solid #999; font-weight: bold; font-size: 13px; }
+    .impressao-pauta .caixa-impressao { border: 1px solid #999; padding: 12px 14px; }
+    .impressao-pauta .linha-imp { margin-bottom: 10px; font-size: 13px; }
+    .impressao-pauta .linha-imp strong { color: #5b6472; display: block; font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }
+    .impressao-pauta table.fontes-impressao { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 12px; }
+    .impressao-pauta table.fontes-impressao th, .impressao-pauta table.fontes-impressao td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; }
+    .impressao-pauta .rodape-impressao { display: flex; justify-content: space-between; font-size: 10px; color: #5b6472; margin-top: 16px; border-top: 1px solid #ccc; padding-top: 6px; }
+
+    @media print {
+      @page { size: A4; margin: 15mm; }
+      .nr-sidebar, .barra-abas-doc, .painel-doc { display: none !important; }
+      body { background: #fff; }
+      .nr-app { height: auto !important; overflow: visible !important; }
+      .somente-impressao { display: block !important; }
     }
-    .modal-pauta textarea { min-height: 60px; resize: vertical; }
-    .linha-checkboxes { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; margin-top: 6px; }
-    .linha-dupla { display: flex; gap: 8px; }
-    .linha-dupla > * { flex: 1; }
 
-    .fonte-item { border: 1px solid #eee; border-radius: 6px; padding: 10px; margin-top: 8px; position: relative; }
-    .fonte-item .remover-fonte { position: absolute; top: 6px; right: 8px; background: none; border: none; color: #8D0333; cursor: pointer; font-size: 13px; }
-    .btn-add-fonte { background: #eef1f5; color: #336699; border: none; border-radius: 6px; padding: 8px 12px; font-size: 12px; cursor: pointer; margin-top: 10px; }
+    /* ---- Barra de abas de documentos (só aparece com pautas abertas) ---- */
+    .barra-abas-doc { display: none; align-items: center; background: #eef1f5; border-bottom: 1px solid #ddd; flex-shrink: 0; overflow-x: auto; }
+    .aba-doc { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: transparent; border: none; border-bottom: 3px solid transparent; font-size: 13px; color: #5b6472; cursor: pointer; white-space: nowrap; }
+    .aba-doc:hover { background: #e2e7ee; }
+    .aba-doc.ativa { color: #336699; font-weight: bold; border-bottom-color: #336699; background: #fff; }
+    .aba-doc .fechar-aba { font-size: 13px; color: #999; padding: 1px 5px; border-radius: 3px; }
+    .aba-doc .fechar-aba:hover { background: #ddd; color: #333; }
+    .btn-nova-aba { background: transparent; border: none; font-size: 18px; color: #5b6472; cursor: pointer; padding: 6px 14px; }
+    .btn-nova-aba:hover { color: #336699; }
 
-    .botoes-modal { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; flex-wrap: wrap; }
-    .botoes-modal button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    /* ---- Painéis de documento (a Capa e cada pauta aberta) ---- */
+    .painel-doc { display: none; }
+    .painel-doc.ativo { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+    .form-pauta-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 24px; border-bottom: 1px solid #eee; background: #fff; flex-wrap: wrap; gap: 10px; }
+    .form-pauta-header h1 { font-size: 20px; margin: 0; }
+    .form-pauta-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+    .form-pauta-botoes button { padding: 9px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; white-space: nowrap; }
     .btn-cancelar { background: #eee; color: #333; }
     .btn-agenda { background: #336699; color: #fff; }
     .btn-lauda-modal { background: #C98A1F; color: #fff; }
     .btn-confirmar { background: #8D0333; color: #fff; }
-  
+
+    .form-pauta-campos { display: flex; gap: 20px; padding: 14px 24px; background: #fff; border-bottom: 1px solid #eee; flex-wrap: wrap; }
+    .form-pauta-campos .campo { display: flex; flex-direction: column; gap: 4px; min-width: 160px; }
+    .form-pauta-campos .campo.campo-titulo { flex: 2; min-width: 260px; }
+    .form-pauta-campos label { font-size: 11px; color: #5b6472; text-transform: uppercase; }
+    .form-pauta-campos input, .form-pauta-campos select { padding: 7px 9px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+
+    .form-pauta-subabas { display: flex; padding: 0 24px; background: #fff; border-bottom: 1px solid #eee; }
+    .form-pauta-subabas button { padding: 10px 6px; margin-right: 24px; background: transparent; border: none; border-bottom: 3px solid transparent; font-size: 13px; color: #5b6472; cursor: pointer; }
+    .form-pauta-subabas button.ativa { color: #336699; font-weight: bold; border-bottom-color: #336699; }
+
+    .form-pauta-corpo { flex: 1; overflow-y: auto; padding: 20px 24px; background: #f4f5f7; }
+    .form-pauta-corpo .subpainel { display: none; max-width: 900px; }
+    .form-pauta-corpo .subpainel.ativa { display: block; }
+    .form-pauta-corpo label { font-size: 12px; color: #5b6472; display: block; margin: 14px 0 4px; }
+    .form-pauta-corpo label:first-child { margin-top: 0; }
+    .form-pauta-corpo input[type="text"], .form-pauta-corpo input[type="date"], .form-pauta-corpo input[type="time"],
+    .form-pauta-corpo select, .form-pauta-corpo textarea {
+      width: 100%; padding: 9px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; background: #fff;
+    }
+    .form-pauta-corpo textarea { min-height: 100px; resize: vertical; }
+    .linha-checkboxes { display: flex; gap: 10px 20px; flex-wrap: wrap; align-items: center; font-size: 13px; margin-top: 6px; }
+    /* .form-pauta-corpo label:first-child (acima) zera a margem só do 1º
+       campo de cada seção — sem essa regra mais específica, ela também
+       pegava o 1º checkbox de cada linha e o desalinhava dos outros */
+    .form-pauta-corpo .linha-checkboxes label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; margin: 0; }
+    .linha-dupla { display: flex; gap: 8px; }
+    .linha-dupla > * { flex: 1; }
+
+    .fonte-item { border: 1px solid #eee; border-radius: 6px; padding: 10px; margin-top: 8px; position: relative; background: #fff; }
+    .fonte-item .remover-fonte { position: absolute; top: 6px; right: 8px; background: none; border: none; color: #8D0333; cursor: pointer; font-size: 13px; }
+    .btn-add-fonte { background: #eef1f5; color: #336699; border: none; border-radius: 6px; padding: 8px 12px; font-size: 12px; cursor: pointer; margin-top: 10px; }
+
     /* ---- Navegação lateral (unificada em todas as telas) ---- */
     body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
     .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
@@ -96,118 +151,46 @@
   </div>
   <div class="nr-app">
 
+  <div class="barra-abas-doc" id="barra-abas-doc"></div>
 
-  <div class="topo">
-    <h1>HORUS NEWSROOM — Pautas</h1>
-    <input type="text" id="busca-pauta" placeholder="🔍 Buscar pauta...">
-    <button id="btn-nova-pauta">+ Nova Pauta</button>
-  </div>
+  <div class="painel-doc ativo" id="painel-capa">
+    <div class="topo">
+      <h1>HORUS NEWSROOM — Pautas</h1>
+      <input type="text" id="busca-pauta" placeholder="🔍 Buscar pauta...">
+      <button id="btn-nova-pauta">+ Nova Pauta</button>
+    </div>
 
-  <div class="filtros">
-    <select id="filtro-programa"><option value="">Programa: Todos</option></select>
-    <select id="filtro-status">
-      <option value="">Status: Todos</option>
-      <option value="em_producao">🟡 Em Produção</option>
-      <option value="em_gravacao">🔵 Em Gravação</option>
-      <option value="em_edicao">🟣 Gravado / Em Edição</option>
-      <option value="concluida">🟢 Concluída / Pronta</option>
-    </select>
-    <input type="date" id="filtro-data">
-  </div>
-
-  <div class="conteudo" id="conteudo">
-    <!-- tabela entra aqui -->
-  </div>
-
-  <div class="overlay-modal" id="modal-pauta">
-    <div class="modal-pauta">
-      <h2 id="modal-titulo-topo">+ Nova Pauta</h2>
-
-      <div class="bloco-titulo">Bloco A — Identificação & Veiculação</div>
-      <label>Título da Pauta</label>
-      <input type="text" id="p-titulo" placeholder='Ex: "Aula Inaugural UFMA"'>
-
-      <label>Programa</label>
-      <select id="p-programa"></select>
-
-      <label>Formatos / Destinos</label>
-      <div class="linha-checkboxes">
-        <label><input type="checkbox" id="p-tv"> VT TV Aberta</label>
-        <label><input type="checkbox" id="p-insta"> Reels/Instagram</label>
-        <label><input type="checkbox" id="p-site"> Matéria Site</label>
-        <label><input type="checkbox" id="p-youtube"> YouTube</label>
-      </div>
-
-      <div class="bloco-titulo">Bloco B — Orientação Jornalística</div>
-      <label>Enquadramento / Ângulo da Notícia</label>
-      <textarea id="p-orientacao" placeholder="Orientação da chefia de redação..."></textarea>
-
-      <label>Perguntas Principais / Roteiro Sugerido</label>
-      <textarea id="p-roteiro" placeholder="Tópicos essenciais a abordar..."></textarea>
-
-      <div class="bloco-titulo">Bloco C — Fontes e Logística</div>
-      <label>Local / Endereço</label>
-      <input type="text" id="p-local" placeholder="Endereço ou local no campus">
-
-      <label>Fontes e Entrevistados</label>
-      <div id="lista-fontes"></div>
-      <button type="button" class="btn-add-fonte" id="btn-add-fonte">+ Adicionar Fonte</button>
-
-      <label style="margin-top:16px;">Arquivos e Anexos de Apoio (um por linha)</label>
-      <textarea id="p-anexos" placeholder="Releases, links de fotos, briefings..."></textarea>
-
-      <div class="bloco-titulo">Bloco D — Equipe & Recursos Técnicos</div>
-      <label>Data e Hora do Fato</label>
-      <div class="linha-dupla">
-        <input type="date" id="p-data-fato">
-        <input type="time" id="p-hora-fato">
-      </div>
-
-      <label>Produtor</label>
-      <select id="p-produtor"></select>
-
-      <label>Repórter</label>
-      <select id="p-reporter"></select>
-
-      <label>Cinegrafista</label>
-      <select id="p-cinegrafista"></select>
-
-      <label>Editor de Imagens</label>
-      <select id="p-editor-imagens"></select>
-
-      <label>Motorista / Transporte</label>
-      <input type="text" id="p-motorista" placeholder="Opcional">
-
-      <label>Equipamentos Especiais</label>
-      <div class="linha-checkboxes">
-        <label><input type="checkbox" id="p-lapela"> Microfone Lapela</label>
-        <label><input type="checkbox" id="p-iluminacao"> Iluminação Externa</label>
-        <label><input type="checkbox" id="p-mochilink"> Mochilink / Transmissão ao Vivo</label>
-      </div>
-
-      <label>Status da Produção</label>
-      <select id="p-status">
+    <div class="filtros">
+      <select id="filtro-programa"><option value="">Programa: Todos</option></select>
+      <select id="filtro-status">
+        <option value="">Status: Todos</option>
         <option value="em_producao">🟡 Em Produção</option>
         <option value="em_gravacao">🔵 Em Gravação</option>
         <option value="em_edicao">🟣 Gravado / Em Edição</option>
         <option value="concluida">🟢 Concluída / Pronta</option>
       </select>
+      <input type="date" id="filtro-data">
+    </div>
 
-      <div class="botoes-modal">
-        <button class="btn-cancelar" id="cancelar-pauta">Cancelar</button>
-        <button class="btn-agenda" id="btn-ver-agenda">📅 Ver na Agenda</button>
-        <button class="btn-lauda-modal" id="btn-criar-lauda">📝 Criar Texto / Lauda</button>
-        <button class="btn-confirmar" id="confirmar-pauta">💾 Salvar Pauta</button>
-      </div>
+    <div class="conteudo" id="conteudo">
+      <!-- tabela entra aqui -->
     </div>
   </div>
+
+  <div class="somente-impressao impressao-pauta" id="impressao-pauta"></div>
 
   <script>
     let programasCache = [];
     let equipeCache = [];
     let pautasCache = [];
-    let idEmEdicaoPauta = null;
-    let fontesAtual = [];
+
+    // Cada pauta aberta vira uma aba independente, com seu próprio painel no
+    // DOM e seu próprio estado (fontes, sub-aba ativa) — dá pra ter várias
+    // pautas abertas ao mesmo tempo, cada uma fechável, sem interferir uma
+    // na outra.
+    let contadorAbas = 0;
+    let abas = {};
+    let abaAtivaId = 'capa';
 
     const rotulosStatus = {
       em_producao: '🟡 Em Produção',
@@ -216,15 +199,14 @@
       concluida: '🟢 Concluída / Pronta'
     };
 
+    function elCampo(container, nome) {
+      return container.querySelector(`[data-campo="${nome}"]`);
+    }
+
     async function carregarProgramas() {
       const resp = await fetch('/agenda/programas');
       programasCache = await resp.json();
 
-      const opcoes = '<option value="">Selecione...</option>' + programasCache.map(p =>
-        `<option value="${p.id}">${p.nome}</option>`
-      ).join('');
-
-      document.getElementById('p-programa').innerHTML = opcoes;
       document.getElementById('filtro-programa').innerHTML =
         '<option value="">Programa: Todos</option>' + programasCache.map(p =>
           `<option value="${p.id}">${p.nome}</option>`
@@ -234,15 +216,57 @@
     async function carregarEquipe() {
       const resp = await fetch('/agenda/equipe');
       equipeCache = await resp.json();
+    }
 
-      const opcoes = '<option value="">Selecione...</option>' + equipeCache.map(m =>
-        `<option value="${m.nome}">${m.nome} (${m.funcao})</option>`
+    // A "função" na Agenda é texto livre (não um select fixo), então o
+    // cadastro real tem grafias variadas pra a mesma função ("REPORTER",
+    // "Repórter", "PRODUÇÃO", "Produtor"...). Por isso o filtro compara por
+    // palavra-chave, sem acento e sem diferenciar maiúscula/minúscula, em vez
+    // de exigir o texto exato.
+    function normalizarTexto(txt) {
+      return String(txt || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+    }
+
+    function funcaoCorresponde(funcao, papel) {
+      const f = normalizarTexto(funcao);
+      if (papel === 'produtor') return f.includes('produt') || f.includes('producao');
+      if (papel === 'reporter') return f.includes('reporter');
+      if (papel === 'cinegrafista') return f.includes('cinegrafista');
+      if (papel === 'editor-imagens') return f.includes('imagens') && (f.includes('edit') || f.includes('edic'));
+      return false;
+    }
+
+    // Monta as opções do select de um papel, só com quem tem essa função
+    // cadastrada na Agenda. Se a pauta já tem alguém salvo nesse campo que
+    // não bate com o filtro (função com grafia não reconhecida, ou pessoa
+    // removida da equipe depois), mantém essa opção visível mesmo assim —
+    // senão o valor sumiria do select e seria apagado sem querer ao salvar.
+    function opcoesPorPapel(papel, valorAtual) {
+      const vistos = new Set();
+      const membros = equipeCache
+        .filter(m => funcaoCorresponde(m.funcao, papel))
+        .filter(m => (vistos.has(m.nome) ? false : (vistos.add(m.nome), true)))
+        .sort((a, b) => a.nome.localeCompare(b.nome));
+
+      let opcoesHtml = membros.map(m => `<option value="${m.nome}">${m.nome} (${m.funcao})</option>`).join('');
+
+      if (valorAtual && !membros.some(m => m.nome === valorAtual)) {
+        opcoesHtml += `<option value="${valorAtual}">${valorAtual} (fora da lista — confira a função na Agenda)</option>`;
+      }
+
+      return '<option value="">Selecione...</option>' + opcoesHtml;
+    }
+
+    function preencherSelectsPainel(container, dadosPauta) {
+      const opcoesPrograma = '<option value="">Selecione...</option>' + programasCache.map(p =>
+        `<option value="${p.id}">${p.nome}</option>`
       ).join('');
+      elCampo(container, 'programa').innerHTML = opcoesPrograma;
 
-      document.getElementById('p-produtor').innerHTML = opcoes;
-      document.getElementById('p-reporter').innerHTML = opcoes;
-      document.getElementById('p-cinegrafista').innerHTML = opcoes;
-      document.getElementById('p-editor-imagens').innerHTML = opcoes;
+      elCampo(container, 'produtor').innerHTML = opcoesPorPapel('produtor', dadosPauta && dadosPauta.produtor);
+      elCampo(container, 'reporter').innerHTML = opcoesPorPapel('reporter', dadosPauta && dadosPauta.reporter);
+      elCampo(container, 'cinegrafista').innerHTML = opcoesPorPapel('cinegrafista', dadosPauta && dadosPauta.cinegrafista);
+      elCampo(container, 'editor-imagens').innerHTML = opcoesPorPapel('editor-imagens', dadosPauta && dadosPauta.editor_imagens);
     }
 
     function nomePrograma(id) {
@@ -296,9 +320,10 @@
                 </td>
                 <td><span class="status-badge status-${p.status}">${rotulosStatus[p.status] || p.status}</span></td>
                 <td class="acoes-lista">
-                  <button class="btn-ver" data-id="${p.id}">👁️ Ver/Editar</button>
-                  <button class="btn-lauda" data-id="${p.id}">📝 Lauda</button>
-                  <button class="btn-excluir" data-id="${p.id}">🗑️ Excluir</button>
+                  <button class="btn-ver" data-id="${p.id}" title="Ver/Editar">👁️</button>
+                  <button class="btn-lauda" data-id="${p.id}" title="Lauda">📝</button>
+                  <button class="btn-imprimir-pauta" data-id="${p.id}" title="Imprimir Pauta">🖨️</button>
+                  <button class="btn-excluir" data-id="${p.id}" title="Excluir">🗑️</button>
                 </td>
               </tr>
             `).join('')}
@@ -307,10 +332,16 @@
       `;
 
       document.querySelectorAll('.btn-ver').forEach(btn => {
-        btn.addEventListener('click', () => abrirModalPauta(Number(btn.dataset.id)));
+        btn.addEventListener('click', () => abrirAbaPauta(Number(btn.dataset.id)));
       });
       document.querySelectorAll('.btn-lauda').forEach(btn => {
-        btn.addEventListener('click', () => abrirLauda(Number(btn.dataset.id)));
+        btn.addEventListener('click', () => {
+          const p = pautasCache.find(item => item.id === Number(btn.dataset.id));
+          if (p) abrirLaudaComDados(p.id, p.titulo, p.programa_id, p.reporter);
+        });
+      });
+      document.querySelectorAll('.btn-imprimir-pauta').forEach(btn => {
+        btn.addEventListener('click', () => imprimirPauta(Number(btn.dataset.id)));
       });
       document.querySelectorAll('.btn-excluir').forEach(btn => {
         btn.addEventListener('click', () => excluirPauta(Number(btn.dataset.id)));
@@ -324,6 +355,8 @@
       const resposta = await fetch('/pautas/' + id, { method: 'DELETE' });
 
       if (resposta.ok) {
+        const abaAberta = Object.values(abas).find(a => a.pautaId === id);
+        if (abaAberta) fecharAba(abaAberta.id);
         carregarPautas();
       } else {
         const erro = await resposta.json().catch(() => ({}));
@@ -338,8 +371,111 @@
       window._buscaTimeout = setTimeout(carregarPautas, 300);
     });
 
-    function renderFontes() {
-      document.getElementById('lista-fontes').innerHTML = fontesAtual.map((f, i) => `
+    // ═══════════════════════ Abas de pauta (tela cheia) ═══════════════════════
+
+    function htmlFormularioPauta() {
+      return `
+        <div class="form-pauta-header">
+          <h1 data-campo="titulo-painel">+ Nova Pauta</h1>
+          <div class="form-pauta-botoes">
+            <button class="btn-agenda" data-acao="ver-agenda">📅 Ver na Agenda</button>
+            <button class="btn-lauda-modal" data-acao="criar-lauda">📝 Criar Texto / Lauda</button>
+            <button class="btn-cancelar" data-acao="fechar">Fechar</button>
+            <button class="btn-confirmar" data-acao="salvar">💾 Salvar Pauta</button>
+          </div>
+        </div>
+
+        <div class="form-pauta-campos">
+          <div class="campo campo-titulo">
+            <label>Título da Pauta</label>
+            <input type="text" data-campo="titulo" placeholder='Ex: "Aula Inaugural UFMA"'>
+          </div>
+          <div class="campo">
+            <label>Programa</label>
+            <select data-campo="programa"></select>
+          </div>
+          <div class="campo">
+            <label>Data do Fato</label>
+            <input type="date" data-campo="data-fato">
+          </div>
+          <div class="campo">
+            <label>Hora do Fato</label>
+            <input type="time" data-campo="hora-fato">
+          </div>
+          <div class="campo">
+            <label>Status da Produção</label>
+            <select data-campo="status">
+              <option value="em_producao">🟡 Em Produção</option>
+              <option value="em_gravacao">🔵 Em Gravação</option>
+              <option value="em_edicao">🟣 Gravado / Em Edição</option>
+              <option value="concluida">🟢 Concluída / Pronta</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-pauta-subabas">
+          <button class="ativa" data-subaba="conteudo">Conteúdo</button>
+          <button data-subaba="equipe">Equipe &amp; Logística</button>
+          <button data-subaba="fontes">Fontes</button>
+          <button data-subaba="anexos">Anexos</button>
+        </div>
+
+        <div class="form-pauta-corpo">
+          <div class="subpainel ativa" data-subpainel="conteudo">
+            <label>Formatos / Destinos</label>
+            <div class="linha-checkboxes">
+              <label><input type="checkbox" data-campo="tv"> VT TV Aberta</label>
+              <label><input type="checkbox" data-campo="insta"> Reels/Instagram</label>
+              <label><input type="checkbox" data-campo="site"> Matéria Site</label>
+              <label><input type="checkbox" data-campo="youtube"> YouTube</label>
+            </div>
+            <label>Enquadramento / Ângulo da Notícia</label>
+            <textarea data-campo="orientacao" placeholder="Orientação da chefia de redação..."></textarea>
+            <label>Perguntas Principais / Roteiro Sugerido</label>
+            <textarea data-campo="roteiro" placeholder="Tópicos essenciais a abordar..."></textarea>
+          </div>
+
+          <div class="subpainel" data-subpainel="equipe">
+            <label>Local / Endereço</label>
+            <input type="text" data-campo="local" placeholder="Endereço ou local no campus">
+            <label>Produtor</label>
+            <select data-campo="produtor"></select>
+            <label>Repórter</label>
+            <select data-campo="reporter"></select>
+            <label>Cinegrafista</label>
+            <select data-campo="cinegrafista"></select>
+            <label>Editor de Imagens</label>
+            <select data-campo="editor-imagens"></select>
+            <label>Motorista / Transporte</label>
+            <input type="text" data-campo="motorista" placeholder="Opcional">
+            <label>Equipamentos Especiais</label>
+            <div class="linha-checkboxes">
+              <label><input type="checkbox" data-campo="lapela"> Microfone Lapela</label>
+              <label><input type="checkbox" data-campo="iluminacao"> Iluminação Externa</label>
+              <label><input type="checkbox" data-campo="mochilink"> Mochilink / Transmissão ao Vivo</label>
+            </div>
+          </div>
+
+          <div class="subpainel" data-subpainel="fontes">
+            <label>Fontes e Entrevistados</label>
+            <div data-campo="lista-fontes"></div>
+            <button type="button" class="btn-add-fonte" data-acao="add-fonte">+ Adicionar Fonte</button>
+          </div>
+
+          <div class="subpainel" data-subpainel="anexos">
+            <label>Arquivos e Anexos de Apoio (um por linha)</label>
+            <textarea data-campo="anexos" placeholder="Releases, links de fotos, briefings..."></textarea>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFontes(idAba) {
+      const container = document.getElementById('painel-' + idAba);
+      const aba = abas[idAba];
+      const listaEl = elCampo(container, 'lista-fontes');
+
+      listaEl.innerHTML = aba.fontes.map((f, i) => `
         <div class="fonte-item">
           <button type="button" class="remover-fonte" data-i="${i}">✕</button>
           <label>Nome</label>
@@ -359,119 +495,95 @@
         </div>
       `).join('');
 
-      document.querySelectorAll('.remover-fonte').forEach(btn => {
+      listaEl.querySelectorAll('.remover-fonte').forEach(btn => {
         btn.addEventListener('click', () => {
-          fontesAtual.splice(Number(btn.dataset.i), 1);
-          renderFontes();
+          aba.fontes.splice(Number(btn.dataset.i), 1);
+          renderFontes(idAba);
         });
       });
-      document.querySelectorAll('.fonte-nome').forEach(el => el.addEventListener('input', () => fontesAtual[el.dataset.i].nome = el.value));
-      document.querySelectorAll('.fonte-cargo').forEach(el => el.addEventListener('input', () => fontesAtual[el.dataset.i].cargo = el.value));
-      document.querySelectorAll('.fonte-contato').forEach(el => el.addEventListener('input', () => fontesAtual[el.dataset.i].contato = el.value));
-      document.querySelectorAll('.fonte-horario').forEach(el => el.addEventListener('input', () => fontesAtual[el.dataset.i].horario_confirmado = el.value));
+      listaEl.querySelectorAll('.fonte-nome').forEach(el => el.addEventListener('input', () => aba.fontes[el.dataset.i].nome = el.value));
+      listaEl.querySelectorAll('.fonte-cargo').forEach(el => el.addEventListener('input', () => aba.fontes[el.dataset.i].cargo = el.value));
+      listaEl.querySelectorAll('.fonte-contato').forEach(el => el.addEventListener('input', () => aba.fontes[el.dataset.i].contato = el.value));
+      listaEl.querySelectorAll('.fonte-horario').forEach(el => el.addEventListener('input', () => aba.fontes[el.dataset.i].horario_confirmado = el.value));
     }
 
-    document.getElementById('btn-add-fonte').addEventListener('click', () => {
-      fontesAtual.push({ nome: '', cargo: '', contato: '', horario_confirmado: '' });
-      renderFontes();
-    });
-
-    function limparFormulario() {
-      idEmEdicaoPauta = null;
-      fontesAtual = [];
-      document.getElementById('modal-titulo-topo').textContent = '+ Nova Pauta';
-      document.getElementById('p-titulo').value = '';
-      document.getElementById('p-programa').value = '';
-      document.getElementById('p-tv').checked = false;
-      document.getElementById('p-insta').checked = false;
-      document.getElementById('p-site').checked = false;
-      document.getElementById('p-youtube').checked = false;
-      document.getElementById('p-orientacao').value = '';
-      document.getElementById('p-roteiro').value = '';
-      document.getElementById('p-local').value = '';
-      document.getElementById('p-anexos').value = '';
-      document.getElementById('p-data-fato').value = '';
-      document.getElementById('p-hora-fato').value = '';
-      document.getElementById('p-produtor').value = '';
-      document.getElementById('p-reporter').value = '';
-      document.getElementById('p-cinegrafista').value = '';
-      document.getElementById('p-editor-imagens').value = '';
-      document.getElementById('p-motorista').value = '';
-      document.getElementById('p-lapela').checked = false;
-      document.getElementById('p-iluminacao').checked = false;
-      document.getElementById('p-mochilink').checked = false;
-      document.getElementById('p-status').value = 'em_producao';
-      renderFontes();
+    function limparPainel(idAba) {
+      const container = document.getElementById('painel-' + idAba);
+      elCampo(container, 'titulo-painel').textContent = '+ Nova Pauta';
+      elCampo(container, 'titulo').value = '';
+      elCampo(container, 'programa').value = '';
+      elCampo(container, 'tv').checked = false;
+      elCampo(container, 'insta').checked = false;
+      elCampo(container, 'site').checked = false;
+      elCampo(container, 'youtube').checked = false;
+      elCampo(container, 'orientacao').value = '';
+      elCampo(container, 'roteiro').value = '';
+      elCampo(container, 'local').value = '';
+      elCampo(container, 'anexos').value = '';
+      elCampo(container, 'data-fato').value = '';
+      elCampo(container, 'hora-fato').value = '';
+      elCampo(container, 'produtor').value = '';
+      elCampo(container, 'reporter').value = '';
+      elCampo(container, 'cinegrafista').value = '';
+      elCampo(container, 'editor-imagens').value = '';
+      elCampo(container, 'motorista').value = '';
+      elCampo(container, 'lapela').checked = false;
+      elCampo(container, 'iluminacao').checked = false;
+      elCampo(container, 'mochilink').checked = false;
+      elCampo(container, 'status').value = 'em_producao';
     }
 
-    async function abrirModalPauta(id) {
-      if (id === null) {
-        limparFormulario();
-      } else {
-        const resp = await fetch('/pautas/' + id);
-        const p = await resp.json();
-
-        idEmEdicaoPauta = id;
-        fontesAtual = (p.fontes || []).map(f => ({ ...f }));
-
-        document.getElementById('modal-titulo-topo').textContent = 'Editar Pauta #P-' + p.id;
-        document.getElementById('p-titulo').value = p.titulo || '';
-        document.getElementById('p-programa').value = p.programa_id || '';
-        document.getElementById('p-tv').checked = !!p.destino_tv;
-        document.getElementById('p-insta').checked = !!p.destino_instagram;
-        document.getElementById('p-site').checked = !!p.destino_site;
-        document.getElementById('p-youtube').checked = !!p.destino_youtube;
-        document.getElementById('p-orientacao').value = p.orientacao || '';
-        document.getElementById('p-roteiro').value = p.roteiro || '';
-        document.getElementById('p-local').value = p.local || '';
-        document.getElementById('p-anexos').value = p.anexos || '';
-        document.getElementById('p-data-fato').value = p.data_fato || '';
-        document.getElementById('p-hora-fato').value = p.hora_fato || '';
-        document.getElementById('p-produtor').value = p.produtor || '';
-        document.getElementById('p-reporter').value = p.reporter || '';
-        document.getElementById('p-cinegrafista').value = p.cinegrafista || '';
-        document.getElementById('p-editor-imagens').value = p.editor_imagens || '';
-        document.getElementById('p-motorista').value = p.motorista || '';
-        document.getElementById('p-lapela').checked = !!p.equip_lapela;
-        document.getElementById('p-iluminacao').checked = !!p.equip_iluminacao;
-        document.getElementById('p-mochilink').checked = !!p.equip_mochilink;
-        document.getElementById('p-status').value = p.status || 'em_producao';
-
-        renderFontes();
-      }
-
-      document.getElementById('modal-pauta').classList.add('aberto');
+    function preencherPainel(idAba, p) {
+      const container = document.getElementById('painel-' + idAba);
+      elCampo(container, 'titulo-painel').textContent = 'Editar Pauta #P-' + p.id;
+      elCampo(container, 'titulo').value = p.titulo || '';
+      elCampo(container, 'programa').value = p.programa_id || '';
+      elCampo(container, 'tv').checked = !!p.destino_tv;
+      elCampo(container, 'insta').checked = !!p.destino_instagram;
+      elCampo(container, 'site').checked = !!p.destino_site;
+      elCampo(container, 'youtube').checked = !!p.destino_youtube;
+      elCampo(container, 'orientacao').value = p.orientacao || '';
+      elCampo(container, 'roteiro').value = p.roteiro || '';
+      elCampo(container, 'local').value = p.local || '';
+      elCampo(container, 'anexos').value = p.anexos || '';
+      elCampo(container, 'data-fato').value = p.data_fato || '';
+      elCampo(container, 'hora-fato').value = p.hora_fato || '';
+      elCampo(container, 'produtor').value = p.produtor || '';
+      elCampo(container, 'reporter').value = p.reporter || '';
+      elCampo(container, 'cinegrafista').value = p.cinegrafista || '';
+      elCampo(container, 'editor-imagens').value = p.editor_imagens || '';
+      elCampo(container, 'motorista').value = p.motorista || '';
+      elCampo(container, 'lapela').checked = !!p.equip_lapela;
+      elCampo(container, 'iluminacao').checked = !!p.equip_iluminacao;
+      elCampo(container, 'mochilink').checked = !!p.equip_mochilink;
+      elCampo(container, 'status').value = p.status || 'em_producao';
     }
 
-    document.getElementById('btn-nova-pauta').addEventListener('click', () => abrirModalPauta(null));
-    document.getElementById('cancelar-pauta').addEventListener('click', () => {
-      document.getElementById('modal-pauta').classList.remove('aberto');
-    });
-
-    function coletarDadosFormulario() {
+    function coletarDadosFormulario(idAba) {
+      const container = document.getElementById('painel-' + idAba);
       return {
-        titulo: document.getElementById('p-titulo').value.trim(),
-        programa_id: document.getElementById('p-programa').value ? Number(document.getElementById('p-programa').value) : null,
-        destino_tv: document.getElementById('p-tv').checked,
-        destino_instagram: document.getElementById('p-insta').checked,
-        destino_site: document.getElementById('p-site').checked,
-        destino_youtube: document.getElementById('p-youtube').checked,
-        orientacao: document.getElementById('p-orientacao').value.trim(),
-        roteiro: document.getElementById('p-roteiro').value.trim(),
-        local: document.getElementById('p-local').value.trim(),
-        anexos: document.getElementById('p-anexos').value.trim(),
-        data_fato: document.getElementById('p-data-fato').value,
-        hora_fato: document.getElementById('p-hora-fato').value,
-        produtor: document.getElementById('p-produtor').value,
-        reporter: document.getElementById('p-reporter').value,
-        cinegrafista: document.getElementById('p-cinegrafista').value,
-        editor_imagens: document.getElementById('p-editor-imagens').value,
-        motorista: document.getElementById('p-motorista').value.trim(),
-        equip_lapela: document.getElementById('p-lapela').checked,
-        equip_iluminacao: document.getElementById('p-iluminacao').checked,
-        equip_mochilink: document.getElementById('p-mochilink').checked,
-        status: document.getElementById('p-status').value,
-        fontes: fontesAtual
+        titulo: elCampo(container, 'titulo').value.trim(),
+        programa_id: elCampo(container, 'programa').value ? Number(elCampo(container, 'programa').value) : null,
+        destino_tv: elCampo(container, 'tv').checked,
+        destino_instagram: elCampo(container, 'insta').checked,
+        destino_site: elCampo(container, 'site').checked,
+        destino_youtube: elCampo(container, 'youtube').checked,
+        orientacao: elCampo(container, 'orientacao').value.trim(),
+        roteiro: elCampo(container, 'roteiro').value.trim(),
+        local: elCampo(container, 'local').value.trim(),
+        anexos: elCampo(container, 'anexos').value.trim(),
+        data_fato: elCampo(container, 'data-fato').value,
+        hora_fato: elCampo(container, 'hora-fato').value,
+        produtor: elCampo(container, 'produtor').value,
+        reporter: elCampo(container, 'reporter').value,
+        cinegrafista: elCampo(container, 'cinegrafista').value,
+        editor_imagens: elCampo(container, 'editor-imagens').value,
+        motorista: elCampo(container, 'motorista').value.trim(),
+        equip_lapela: elCampo(container, 'lapela').checked,
+        equip_iluminacao: elCampo(container, 'iluminacao').checked,
+        equip_mochilink: elCampo(container, 'mochilink').checked,
+        status: elCampo(container, 'status').value,
+        fontes: abas[idAba].fontes
       };
     }
 
@@ -507,13 +619,188 @@
       }
     }
 
-    document.getElementById('confirmar-pauta').addEventListener('click', async () => {
-      const dados = coletarDadosFormulario();
+    function abrirLaudaComDados(pautaId, titulo, programaId, reporter) {
+      const params = new URLSearchParams({
+        pauta_id: pautaId,
+        titulo: titulo || '',
+        programa: nomePrograma(programaId),
+        reporter: reporter || ''
+      });
+      window.location.href = 'materia.html?' + params.toString();
+    }
+
+    function formatarDataImpressao(iso) {
+      if (!iso) return '—';
+      const [ano, mes, dia] = iso.split('-');
+      return (dia && mes && ano) ? `${dia}/${mes}/${ano}` : iso;
+    }
+
+    // Monta a folha de impressão da pauta (tabela de cabeçalho + caixa de
+    // conteúdo, ver CSS .impressao-pauta) com os dados vindos direto do
+    // backend — sempre busca a versão mais recente, mesmo que a pauta esteja
+    // aberta numa aba com alterações ainda não salvas.
+    function montarImpressaoPauta(p) {
+      const destinos = [
+        p.destino_tv ? '📺 VT TV Aberta' : null,
+        p.destino_instagram ? '📷 Reels/Instagram' : null,
+        p.destino_youtube ? '▶️ YouTube' : null,
+        p.destino_site ? '🌐 Matéria Site' : null,
+      ].filter(Boolean);
+
+      const equipamentos = [
+        p.equip_lapela ? 'Microfone Lapela' : null,
+        p.equip_iluminacao ? 'Iluminação Externa' : null,
+        p.equip_mochilink ? 'Mochilink / Transmissão ao Vivo' : null,
+      ].filter(Boolean);
+
+      const fontes = Array.isArray(p.fontes) ? p.fontes : [];
+      const equipe = [
+        p.reporter ? 'Repórter: ' + p.reporter : null,
+        p.cinegrafista ? 'Cinegrafista: ' + p.cinegrafista : null,
+        p.editor_imagens ? 'Editor de Imagens: ' + p.editor_imagens : null,
+        p.motorista ? 'Motorista: ' + p.motorista : null,
+      ].filter(Boolean);
+
+      const agora = new Date();
+      const dataImpressao = agora.toLocaleDateString('pt-BR') + ' ' +
+        agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+      document.getElementById('impressao-pauta').innerHTML = `
+        <table class="cab-impressao-tabela">
+          <tr>
+            <th style="width:16%;">Data</th>
+            <th style="width:44%;">Retranca</th>
+            <th style="width:40%;">Programa</th>
+          </tr>
+          <tr>
+            <td>${formatarDataImpressao(p.data_fato)}</td>
+            <td>${(p.titulo || '—').toUpperCase()}</td>
+            <td>${nomePrograma(p.programa_id)}</td>
+          </tr>
+          <tr><th>Pauteiro</th><th colspan="2">Status</th></tr>
+          <tr><td>${p.produtor || '—'}</td><td colspan="2">${rotulosStatus[p.status] || p.status || '—'}</td></tr>
+        </table>
+
+        <div class="caixa-impressao">
+          ${p.local ? `<div class="linha-imp"><strong>Endereço / Local</strong>${p.local}</div>` : ''}
+          ${(p.data_fato || p.hora_fato) ? `<div class="linha-imp"><strong>Data e Hora do Fato</strong>${formatarDataImpressao(p.data_fato)} ${p.hora_fato || ''}</div>` : ''}
+
+          ${fontes.length ? `
+            <div class="linha-imp">
+              <strong>Entrevistados / Fontes</strong>
+              <table class="fontes-impressao">
+                <thead><tr><th>Nome</th><th>Cargo</th><th>Contato</th><th>Horário Confirmado</th></tr></thead>
+                <tbody>
+                  ${fontes.map(f => `
+                    <tr>
+                      <td>${f.nome || '—'}</td>
+                      <td>${f.cargo || '—'}</td>
+                      <td>${f.contato || '—'}</td>
+                      <td>${f.horario_confirmado || '—'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : ''}
+
+          ${p.orientacao ? `<div class="linha-imp"><strong>Enquadramento / Ângulo da Notícia</strong>${p.orientacao}</div>` : ''}
+          ${p.roteiro ? `<div class="linha-imp"><strong>Encaminhamento / Roteiro Sugerido</strong>${p.roteiro}</div>` : ''}
+
+          <div class="linha-imp"><strong>Equipe</strong>${equipe.length ? equipe.join(' · ') : '—'}</div>
+          ${equipamentos.length ? `<div class="linha-imp"><strong>Equipamentos Especiais</strong>${equipamentos.join(', ')}</div>` : ''}
+          <div class="linha-imp"><strong>Formatos / Destinos</strong>${destinos.length ? destinos.join('  ') : '—'}</div>
+          ${p.anexos ? `<div class="linha-imp"><strong>Anexos</strong>${p.anexos.replace(/\n/g, '<br>')}</div>` : ''}
+        </div>
+
+        <div class="rodape-impressao">
+          <span>Data de Impressão: ${dataImpressao}</span>
+          <span>HORUS Newsroom</span>
+          <span>Pauta #P-${p.id}</span>
+        </div>
+      `;
+    }
+
+    async function imprimirPauta(id) {
+      const resp = await fetch('/pautas/' + id);
+      const p = await resp.json();
+      montarImpressaoPauta(p);
+      window.print();
+    }
+
+    // Abre uma pauta existente numa aba (reaproveitando se já estiver aberta)
+    // ou uma aba em branco de Nova Pauta quando pautaId é null.
+    async function abrirAbaPauta(pautaId) {
+      if (pautaId !== null) {
+        const existente = Object.values(abas).find(a => a.pautaId === pautaId);
+        if (existente) { mudarAbaAtiva(existente.id); return; }
+      }
+
+      const idAba = 'aba' + (++contadorAbas);
+      let dadosPauta = null;
+      if (pautaId !== null) {
+        const resp = await fetch('/pautas/' + pautaId);
+        dadosPauta = await resp.json();
+      }
+
+      abas[idAba] = {
+        id: idAba,
+        pautaId: pautaId,
+        fontes: dadosPauta ? (dadosPauta.fontes || []).map(f => ({ ...f })) : [],
+        tituloAba: pautaId !== null ? ('#P-' + pautaId) : 'Nova Pauta'
+      };
+
+      const container = document.createElement('div');
+      container.className = 'painel-doc';
+      container.id = 'painel-' + idAba;
+      container.innerHTML = htmlFormularioPauta();
+      document.querySelector('.nr-app').appendChild(container);
+
+      preencherSelectsPainel(container, dadosPauta);
+      if (dadosPauta) preencherPainel(idAba, dadosPauta);
+      else limparPainel(idAba);
+      renderFontes(idAba);
+      ligarEventosPainel(idAba, container);
+
+      mudarAbaAtiva(idAba);
+    }
+
+    function ligarEventosPainel(idAba, container) {
+      container.querySelector('[data-acao="fechar"]').addEventListener('click', () => fecharAba(idAba));
+      container.querySelector('[data-acao="ver-agenda"]').addEventListener('click', () => {
+        window.location.href = 'agenda.html';
+      });
+      container.querySelector('[data-acao="criar-lauda"]').addEventListener('click', () => {
+        const aba = abas[idAba];
+        if (aba.pautaId === null) { alert('Salve a pauta antes de criar o texto.'); return; }
+        const programaId = elCampo(container, 'programa').value ? Number(elCampo(container, 'programa').value) : null;
+        abrirLaudaComDados(aba.pautaId, elCampo(container, 'titulo').value, programaId, elCampo(container, 'reporter').value);
+      });
+      container.querySelector('[data-acao="add-fonte"]').addEventListener('click', () => {
+        abas[idAba].fontes.push({ nome: '', cargo: '', contato: '', horario_confirmado: '' });
+        renderFontes(idAba);
+      });
+      container.querySelector('[data-acao="salvar"]').addEventListener('click', () => salvarPauta(idAba));
+
+      container.querySelectorAll('[data-subaba]').forEach(btn => {
+        btn.addEventListener('click', () => mudarSubAba(idAba, btn.dataset.subaba));
+      });
+    }
+
+    function mudarSubAba(idAba, subaba) {
+      const container = document.getElementById('painel-' + idAba);
+      container.querySelectorAll('[data-subaba]').forEach(btn => btn.classList.toggle('ativa', btn.dataset.subaba === subaba));
+      container.querySelectorAll('[data-subpainel]').forEach(el => el.classList.toggle('ativa', el.dataset.subpainel === subaba));
+    }
+
+    async function salvarPauta(idAba) {
+      const dados = coletarDadosFormulario(idAba);
       if (!dados.titulo) { alert('Preencha ao menos o título da pauta.'); return; }
 
+      const aba = abas[idAba];
       let pautaSalva;
-      if (idEmEdicaoPauta !== null) {
-        const resp = await fetch('/pautas/' + idEmEdicaoPauta, {
+      if (aba.pautaId !== null) {
+        const resp = await fetch('/pautas/' + aba.pautaId, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(dados)
@@ -537,34 +824,80 @@
         });
       }
 
-      document.getElementById('modal-pauta').classList.remove('aberto');
+      // A pauta salva continua aberta na aba (agora já identificada), pra
+      // permitir seguir editando ou criar a Lauda sem precisar reabrir.
+      aba.pautaId = pautaSalva.id;
+      aba.tituloAba = '#P-' + pautaSalva.id;
+      const container = document.getElementById('painel-' + idAba);
+      elCampo(container, 'titulo-painel').textContent = 'Editar Pauta #P-' + pautaSalva.id;
+      renderBarraAbas();
+
       carregarPautas();
-    });
-
-    document.getElementById('btn-ver-agenda').addEventListener('click', () => {
-      window.location.href = 'agenda.html';
-    });
-
-    function abrirLauda(id) {
-      const p = pautasCache.find(item => item.id === id) || { id, titulo: document.getElementById('p-titulo').value };
-      const params = new URLSearchParams({
-        pauta_id: p.id,
-        titulo: p.titulo || '',
-        programa: nomePrograma(p.programa_id),
-        reporter: p.reporter || ''
-      });
-      window.location.href = 'materia.html?' + params.toString();
     }
 
-    document.getElementById('btn-criar-lauda').addEventListener('click', () => {
-      if (idEmEdicaoPauta === null) { alert('Salve a pauta antes de criar o texto.'); return; }
-      abrirLauda(idEmEdicaoPauta);
-    });
+    function fecharAba(idAba) {
+      document.getElementById('painel-' + idAba)?.remove();
+      delete abas[idAba];
+      if (abaAtivaId === idAba) {
+        mudarAbaAtiva('capa');
+      } else {
+        renderBarraAbas();
+      }
+    }
+
+    function mudarAbaAtiva(idAba) {
+      abaAtivaId = idAba;
+      document.getElementById('painel-capa').classList.toggle('ativo', idAba === 'capa');
+      Object.keys(abas).forEach(id => {
+        document.getElementById('painel-' + id)?.classList.toggle('ativo', id === idAba);
+      });
+      renderBarraAbas();
+    }
+
+    function renderBarraAbas() {
+      const barra = document.getElementById('barra-abas-doc');
+
+      // Sem nenhuma pauta aberta, a barra fica totalmente oculta (nem a Capa
+      // nem o "+" aparecem) — o layout volta a ser exatamente a tela de
+      // lista simples. Ela só se revela quando a primeira aba é aberta.
+      if (Object.keys(abas).length === 0) {
+        barra.style.display = 'none';
+        barra.innerHTML = '';
+        return;
+      }
+      barra.style.display = 'flex';
+
+      const abasHtml = Object.values(abas).map(a => `
+        <button class="aba-doc ${abaAtivaId === a.id ? 'ativa' : ''}" data-aba="${a.id}">
+          ${a.tituloAba} <span class="fechar-aba" data-fechar="${a.id}">×</span>
+        </button>
+      `).join('');
+
+      barra.innerHTML = `
+        <button class="aba-doc ${abaAtivaId === 'capa' ? 'ativa' : ''}" data-aba="capa">🗂️ Capa</button>
+        ${abasHtml}
+        <button class="btn-nova-aba" id="btn-nova-aba" title="Nova Pauta">+</button>
+      `;
+
+      barra.querySelectorAll('.aba-doc').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          if (e.target.classList.contains('fechar-aba')) return;
+          mudarAbaAtiva(btn.dataset.aba);
+        });
+      });
+      barra.querySelectorAll('.fechar-aba').forEach(el => {
+        el.addEventListener('click', (e) => { e.stopPropagation(); fecharAba(el.dataset.fechar); });
+      });
+      document.getElementById('btn-nova-aba').addEventListener('click', () => abrirAbaPauta(null));
+    }
+
+    document.getElementById('btn-nova-pauta').addEventListener('click', () => abrirAbaPauta(null));
 
     (async function init() {
       await carregarProgramas();
       await carregarEquipe();
       await carregarPautas();
+      renderBarraAbas();
     })();
   </script>
   </div>
