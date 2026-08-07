@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Mapa de Produções — HORUS Newsroom</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+
+    .topo { background: #336699; color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .topo h1 { font-size: 18px; margin: 0; white-space: nowrap; }
+    .status-conexao { font-size: 12px; background: rgba(255,255,255,0.15); padding: 5px 10px; border-radius: 6px; white-space: nowrap; }
+
+    .filtros { display: flex; align-items: center; gap: 10px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; flex-wrap: wrap; }
+    .filtros select, .filtros input { padding: 7px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
+    .filtros input[type="text"]#filtro-busca { min-width: 200px; }
+    .filtros input[type="text"]#campo-meu-nome { min-width: 160px; }
+    #btn-minhas-pautas { padding: 7px 12px; border-radius: 6px; border: 1px solid #ddd; background: #fff; color: #5b6472; font-size: 13px; cursor: pointer; white-space: nowrap; }
+    #btn-minhas-pautas.ativo { background: #336699; border-color: #336699; color: #fff; font-weight: bold; }
+
+    .conteudo { flex: 1; overflow: auto; padding: 20px; }
+
+    .tag { font-size: 11px; padding: 3px 8px; border-radius: 4px; color: #fff; text-transform: uppercase; font-weight: bold; white-space: nowrap; }
+    .tag-urgente { background: #8D0333; }
+    .tag-relevante { background: #C98A1F; }
+    .tag-rotina { background: #5b6472; }
+
+    .estado-vazio { text-align: center; color: #999; padding: 40px 20px; }
+
+    .quadro-kanban { display: flex; gap: 14px; align-items: flex-start; min-width: 1100px; }
+    .coluna-kanban { flex: 1; min-width: 0; background: #eef1f5; border-radius: 10px; padding: 12px; border-top: 4px solid #ccc; }
+    .coluna-kanban h3 { font-size: 12px; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; color: #333; white-space: nowrap; }
+    .coluna-kanban .contagem { background: #fff; border-radius: 10px; padding: 1px 8px; font-size: 11px; color: #5b6472; }
+    .cards-coluna { display: flex; flex-direction: column; gap: 10px; min-height: 60px; max-height: calc(100vh - 220px); overflow-y: auto; }
+
+    .card-kanban { background: #fff; border-radius: 8px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+    .card-kanban .titulo-card { font-size: 13px; font-weight: bold; margin-bottom: 6px; }
+    .card-kanban .meta-card { font-size: 11px; color: #5b6472; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin-bottom: 8px; }
+    .card-kanban .link-abrir { font-size: 11px; color: #336699; text-decoration: none; font-weight: bold; }
+    .card-kanban .link-abrir:hover { text-decoration: underline; }
+
+    /* ---- Navegação lateral (unificada em todas as telas) ---- */
+    body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
+    .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+    .nr-sidebar .nr-logo { padding: 0 20px 20px; border-bottom: 1px solid #4d7fb3; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
+    .nr-sidebar .nr-titulo, .nr-sidebar .nr-subtitulo { font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+    .nr-sidebar .nr-subtitulo { margin-top: 4px; }
+    .nr-sidebar a, .nr-sidebar .nr-item-desabilitado { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #e8f0f7; text-decoration: none; font-size: 14px; }
+    .nr-sidebar a:hover { background: #4d7fb3; color: #fff; }
+    .nr-sidebar a.nr-ativo { background: #244d70; color: #fff; font-weight: bold; border-left: 4px solid #8D0333; padding-left: 16px; }
+    .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
+    .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
+    .nr-app { flex: 1; min-width: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+  </style>
+</head>
+<body>
+  <div class="nr-sidebar">
+    <a href="index.html" class="nr-logo">
+      <div class="nr-titulo">HORUS</div>
+      <div class="nr-subtitulo">NEWSROOM</div>
+    </a>
+    <a href="sugestoes.html">📋 Sugestões de Pauta</a>
+    <a href="pautas.html">📝 Pautas</a>
+    <a href="mapa-producao.html" class="nr-ativo">🗺 Mapa de Produções</a>
+    <a href="reportagens.html">🎬 Reportagens</a>
+    <a href="espelhos.html">📽️ Espelhos</a>
+    <div class="nr-item-desabilitado">🔍 Busca Geral <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📅 Calendário <span class="nr-badge">em breve</span></div>
+    <a href="agenda.html">🗓 Agenda</a>
+    <div class="nr-item-desabilitado">👥 Escala de Equipes <span class="nr-badge">em breve</span></div>
+    <a href="teleprompter.html">🎙 Teleprompter</a>
+    <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📊 Gráficos Gerenciais <span class="nr-badge">em breve</span></div>
+    <a href="relatorios.html">📄 Relatórios</a>
+    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+  </div>
+  <div class="nr-app">
+
+  <div class="topo">
+    <h1>HORUS NEWSROOM — Mapa de Produções</h1>
+    <span class="status-conexao" id="status-conexao">🟡 Conectando...</span>
+  </div>
+
+  <div class="filtros">
+    <select id="filtro-canal">
+      <option value="">Canal: Todos</option>
+      <option value="tv">📺 TV</option>
+      <option value="instagram">📷 Instagram</option>
+      <option value="youtube">▶️ YouTube</option>
+      <option value="site">🌐 Site</option>
+    </select>
+    <select id="filtro-urgencia">
+      <option value="">Urgência: Todas</option>
+      <option value="rotina">Rotina</option>
+      <option value="relevante">Relevante</option>
+      <option value="urgente">Fato do Dia / Urgente</option>
+    </select>
+    <input type="text" id="filtro-busca" placeholder="🔍 Buscar por título...">
+    <input type="text" id="campo-meu-nome" placeholder="Seu nome (pra Minhas Pautas)...">
+    <button id="btn-minhas-pautas" title="Mostra só o que tem seu nome como repórter, cinegrafista, produtor ou quem enviou a sugestão">👤 Minhas Pautas</button>
+  </div>
+
+  <div class="conteudo">
+    <div class="quadro-kanban" id="quadro-kanban"></div>
+  </div>
+
+  <script>
+    // Visão consolidada de Sugestões + Pautas, do banco de ideias até a
+    // conclusão — reaproveita os status que já existem nas duas telas (sem
+    // inventar etapas novas tipo "Revisão/Aprovação" ou "Publicado", que o
+    // sistema não rastreia hoje). É uma tela de consulta/monitoramento: pra
+    // editar, o link "Abrir" leva de volta pra Sugestões ou Pautas.
+    const COLUNAS = [
+      { chave: 'nova', titulo: '📥 Nova Sugestão' },
+      { chave: 'em_analise', titulo: '⏳ Em Análise' },
+      { chave: 'em_producao', titulo: '🟡 Em Apuração' },
+      { chave: 'em_gravacao', titulo: '🔵 Em Gravação' },
+      { chave: 'em_edicao', titulo: '🟣 Em Edição' },
+      { chave: 'concluida', titulo: '🟢 Concluída / Pronta' }
+    ];
+    const CORES_COLUNA = {
+      nova: '#C98A1F', em_analise: '#075B91',
+      em_producao: '#C98A1F', em_gravacao: '#336699', em_edicao: '#6b3fa0', concluida: '#2e8b57'
+    };
+    const rotulosUrgencia = { rotina: 'Rotina', relevante: 'Relevante', urgente: 'Fato do Dia / Urgente' };
+
+    let itensCache = [];
+    let minhasPautasAtivo = false;
+
+    function escaparHtml(texto) {
+      return String(texto == null ? '' : texto)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function normalizarTexto(txt) {
+      return String(txt || '').toLowerCase().trim().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+    }
+
+    function normalizarItens(sugestoesLista, pautasLista, programasLista) {
+      const nomePrograma = id => (programasLista.find(p => p.id === id) || {}).nome || '';
+
+      const doSugestoes = sugestoesLista
+        .filter(s => s.status === 'nova' || s.status === 'em_analise')
+        .map(s => ({
+          origem: 'sugestao', id: s.id, coluna: s.status,
+          titulo: s.titulo, editoria: s.editoria, urgencia: s.urgencia,
+          enviadoPor: s.enviado_por, reporter: '', cinegrafista: '', produtor: '',
+          destino_tv: !!s.destino_tv, destino_instagram: !!s.destino_instagram,
+          destino_youtube: !!s.destino_youtube, destino_site: !!s.destino_site,
+          link: 'sugestoes.html'
+        }));
+
+      const doPautas = pautasLista.map(p => ({
+        origem: 'pauta', id: p.id, coluna: p.status,
+        titulo: p.titulo, editoria: p.editoria, urgencia: null,
+        enviadoPor: '', reporter: p.reporter, cinegrafista: p.cinegrafista, produtor: p.produtor,
+        programa: nomePrograma(p.programa_id),
+        destino_tv: !!p.destino_tv, destino_instagram: !!p.destino_instagram,
+        destino_youtube: !!p.destino_youtube, destino_site: !!p.destino_site,
+        link: 'pautas.html'
+      }));
+
+      return [...doSugestoes, ...doPautas];
+    }
+
+    async function carregarTudo() {
+      const [respSugestoes, respPautas, respProgramas] = await Promise.all([
+        fetch('/sugestoes'), fetch('/pautas'), fetch('/agenda/programas')
+      ]);
+      const sugestoesLista = await respSugestoes.json();
+      const pautasLista = await respPautas.json();
+      const programasLista = await respProgramas.json();
+      itensCache = normalizarItens(sugestoesLista, pautasLista, programasLista);
+      renderQuadro();
+    }
+
+    function itensFiltrados() {
+      const canal = document.getElementById('filtro-canal').value;
+      const urgencia = document.getElementById('filtro-urgencia').value;
+      const busca = document.getElementById('filtro-busca').value.trim().toLowerCase();
+      const meuNome = normalizarTexto(document.getElementById('campo-meu-nome').value);
+
+      return itensCache.filter(item => {
+        if (canal && !item['destino_' + canal]) return false;
+        if (urgencia && item.urgencia !== urgencia) return false;
+        if (busca && !(item.titulo || '').toLowerCase().includes(busca)) return false;
+        if (minhasPautasAtivo) {
+          if (!meuNome) return false;
+          const nomes = [item.enviadoPor, item.reporter, item.cinegrafista, item.produtor].map(normalizarTexto);
+          if (!nomes.includes(meuNome)) return false;
+        }
+        return true;
+      });
+    }
+
+    function renderCard(item) {
+      const destinos = [
+        item.destino_tv ? '📺' : null,
+        item.destino_instagram ? '📷' : null,
+        item.destino_youtube ? '▶️' : null,
+        item.destino_site ? '🌐' : null,
+      ].filter(Boolean).join(' ');
+
+      const responsaveis = item.origem === 'sugestao'
+        ? (item.enviadoPor ? `✍️ ${escaparHtml(item.enviadoPor)}` : '')
+        : [
+            item.reporter ? `🎤 ${escaparHtml(item.reporter)}` : null,
+            item.cinegrafista ? `🎥 ${escaparHtml(item.cinegrafista)}` : null,
+            item.produtor ? `🧑‍💼 ${escaparHtml(item.produtor)}` : null,
+          ].filter(Boolean).join(' · ');
+
+      return `
+        <div class="card-kanban" data-origem="${item.origem}" data-id="${item.id}">
+          <div class="titulo-card">${escaparHtml(item.titulo)}</div>
+          <div class="meta-card">
+            ${item.editoria ? `<span>🏷️ ${escaparHtml(item.editoria)}</span>` : ''}
+            ${item.urgencia ? `<span class="tag tag-${item.urgencia}">${rotulosUrgencia[item.urgencia] || item.urgencia}</span>` : ''}
+            ${responsaveis ? `<span>${responsaveis}</span>` : ''}
+            ${destinos ? `<span>${destinos}</span>` : ''}
+          </div>
+          <a class="link-abrir" href="${item.link}" target="_blank" rel="noopener">Abrir →</a>
+        </div>
+      `;
+    }
+
+    function renderQuadro() {
+      const filtrados = itensFiltrados();
+      const container = document.getElementById('quadro-kanban');
+
+      container.innerHTML = COLUNAS.map(col => {
+        const itens = filtrados.filter(i => i.coluna === col.chave);
+        return `
+          <div class="coluna-kanban" data-status="${col.chave}" style="border-top-color:${CORES_COLUNA[col.chave]};">
+            <h3>${col.titulo} <span class="contagem">${itens.length}</span></h3>
+            <div class="cards-coluna">
+              ${itens.map(renderCard).join('') || '<div class="estado-vazio" style="padding:20px 8px;">Nada aqui</div>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('filtro-canal').addEventListener('change', renderQuadro);
+    document.getElementById('filtro-urgencia').addEventListener('change', renderQuadro);
+    document.getElementById('filtro-busca').addEventListener('input', () => {
+      clearTimeout(window._buscaTimeout);
+      window._buscaTimeout = setTimeout(renderQuadro, 300);
+    });
+
+    const campoMeuNome = document.getElementById('campo-meu-nome');
+    campoMeuNome.value = localStorage.getItem('mapaProducao.meuNome') || '';
+    campoMeuNome.addEventListener('input', () => {
+      localStorage.setItem('mapaProducao.meuNome', campoMeuNome.value);
+      if (minhasPautasAtivo) renderQuadro();
+    });
+
+    document.getElementById('btn-minhas-pautas').addEventListener('click', function () {
+      minhasPautasAtivo = !minhasPautasAtivo;
+      this.classList.toggle('ativo', minhasPautasAtivo);
+      if (minhasPautasAtivo && !campoMeuNome.value.trim()) {
+        campoMeuNome.focus();
+      }
+      renderQuadro();
+    });
+
+    // ---- Tempo real: WebSocket que avisa quando uma pauta ou sugestão muda
+    // em qualquer tela do sistema, pra esse mapa recarregar sozinho sem
+    // precisar de F5. Reconecta automaticamente se cair.
+    function atualizarStatusConexao(status) {
+      const el = document.getElementById('status-conexao');
+      if (status === 'conectado') el.textContent = '🟢 Tempo real conectado';
+      else if (status === 'desconectado') el.textContent = '🔴 Reconectando...';
+      else el.textContent = '🟡 Conectando...';
+    }
+
+    function conectarTempoReal() {
+      const protocolo = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocolo}//${location.host}/ws/tempo-real`);
+
+      ws.addEventListener('open', () => atualizarStatusConexao('conectado'));
+      ws.addEventListener('message', (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (msg.tipo === 'pautas' || msg.tipo === 'sugestoes') carregarTudo();
+      });
+      ws.addEventListener('close', () => {
+        atualizarStatusConexao('desconectado');
+        setTimeout(conectarTempoReal, 3000);
+      });
+      ws.addEventListener('error', () => ws.close());
+    }
+
+    (async function init() {
+      await carregarTudo();
+      conectarTempoReal();
+    })();
+  </script>
+  </div>
+</body>
+</html>

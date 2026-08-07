@@ -6,6 +6,13 @@ function buscarFontes(pautaId) {
   return db.prepare('SELECT * FROM pauta_fontes WHERE pauta_id = ?').all(pautaId);
 }
 
+// Avisa quem estiver com o Mapa de Produções aberto que uma pauta mudou,
+// pra tela recarregar sozinha (ver tempo_real.js) — opcional porque tanto
+// faz pra essa rota se tem alguém ouvindo ou não do outro lado
+function avisarMudanca(req) {
+  req.app.get('tempoReal')?.broadcast({ tipo: 'pautas' });
+}
+
 // GET /pautas -> lista com filtros opcionais: programa_id, status, data_fato, busca (por título)
 router.get('/', (req, res) => {
   const { programa_id, status, data_fato, busca } = req.query;
@@ -79,6 +86,7 @@ router.post('/', (req, res) => {
 
   const nova = db.prepare('SELECT * FROM pautas WHERE id = ?').get(novaId);
   nova.fontes = buscarFontes(novaId);
+  avisarMudanca(req);
   res.status(201).json(nova);
 });
 
@@ -138,6 +146,7 @@ router.patch('/:id', (req, res) => {
 
   const item_atualizado = db.prepare('SELECT * FROM pautas WHERE id = ?').get(id);
   item_atualizado.fontes = buscarFontes(id);
+  avisarMudanca(req);
   res.json(item_atualizado);
 });
 
@@ -165,6 +174,7 @@ router.delete('/:id', (req, res) => {
     if (resultado.changes === 0) {
       return res.status(404).json({ erro: 'Pauta não encontrada' });
     }
+    avisarMudanca(req);
     res.status(204).send();
   } catch (erro) {
     console.error('Erro ao excluir pauta:', erro);

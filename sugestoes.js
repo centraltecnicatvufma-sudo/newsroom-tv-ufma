@@ -2,6 +2,12 @@ const express = require('express');
 const router = express.Router();
 const db = require('./banco');
 
+// Avisa quem estiver com o Mapa de Produções aberto que uma sugestão mudou
+// (ver tempo_real.js)
+function avisarMudanca(req) {
+  req.app.get('tempoReal')?.broadcast({ tipo: 'sugestoes' });
+}
+
 // GET /sugestoes?status=nova -> lista sugestões, opcionalmente filtradas por status
 router.get('/', (req, res) => {
   const statusFiltro = req.query.status;
@@ -42,6 +48,7 @@ router.post('/', (req, res) => {
   );
 
   const nova = db.prepare('SELECT * FROM sugestoes WHERE id = ?').get(resultado.lastInsertRowid);
+  avisarMudanca(req);
   res.status(201).json(nova);
 });
 
@@ -87,6 +94,7 @@ router.patch('/:id', (req, res) => {
   );
 
   const item_atualizado = db.prepare('SELECT * FROM sugestoes WHERE id = ?').get(id);
+  avisarMudanca(req);
   res.json(item_atualizado);
 });
 
@@ -99,6 +107,7 @@ router.delete('/:id', (req, res) => {
     return res.status(404).json({ erro: "Sugestão não encontrada" });
   }
 
+  avisarMudanca(req);
   res.status(204).send();
 });
 
