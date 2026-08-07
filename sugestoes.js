@@ -32,13 +32,13 @@ router.post('/', (req, res) => {
     INSERT INTO sugestoes (
       titulo, editoria, resumo, data_prevista, hora_prevista, local, fontes,
       destino_tv, destino_instagram, destino_youtube, destino_site,
-      urgencia, enviado_por, status
+      urgencia, enviado_por, status, criado_em
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'nova')
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'nova', ?)
   `).run(
     titulo, editoria, resumo, data_prevista, hora_prevista, local, fontes || '',
     destino_tv ? 1 : 0, destino_instagram ? 1 : 0, destino_youtube ? 1 : 0, destino_site ? 1 : 0,
-    urgencia || 'rotina', enviado_por || ''
+    urgencia || 'rotina', enviado_por || '', new Date().toISOString()
   );
 
   const nova = db.prepare('SELECT * FROM sugestoes WHERE id = ?').get(resultado.lastInsertRowid);
@@ -60,13 +60,21 @@ router.patch('/:id', (req, res) => {
     atualizado[c] = req.body[c] !== undefined ? req.body[c] : item[c];
   });
 
+  // Marca a data da decisão só na primeira vez que a sugestão sai de
+  // nova/em_analise pra aprovada/arquivada — não sobrescreve se ela já
+  // tinha sido decidida antes (ex.: reaberta e decidida de novo)
+  const statusDecidido = ['aprovada', 'arquivada'];
+  const decidido_em = (statusDecidido.includes(atualizado.status) && !item.decidido_em)
+    ? new Date().toISOString()
+    : item.decidido_em;
+
   db.prepare(`
-    UPDATE sugestoes SET titulo=?, editoria=?, resumo=?, data_prevista=?, hora_prevista=?, local=?, fontes=?, urgencia=?, status=?, pauta_id=?
+    UPDATE sugestoes SET titulo=?, editoria=?, resumo=?, data_prevista=?, hora_prevista=?, local=?, fontes=?, urgencia=?, status=?, pauta_id=?, decidido_em=?
     WHERE id = ?
   `).run(
     atualizado.titulo, atualizado.editoria, atualizado.resumo, atualizado.data_prevista,
     atualizado.hora_prevista, atualizado.local, atualizado.fontes, atualizado.urgencia,
-    atualizado.status, atualizado.pauta_id, id
+    atualizado.status, atualizado.pauta_id, decidido_em, id
   );
 
   const item_atualizado = db.prepare('SELECT * FROM sugestoes WHERE id = ?').get(id);

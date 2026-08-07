@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Espelho — Newsroom TV UFMA</title>
+  <title>Espelho — HORUS Newsroom</title>
   <style>
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; }
@@ -15,17 +15,22 @@
     .status-tempo-ok { background: #2e8b57; color: #fff; }
     .status-tempo-estourado { background: #5A021F; color: #fff; }
     .status-tempo-buraco { background: #C98A1F; color: #1b2430; }
-    .bloco-grupo-titulo { display: flex; justify-content: space-between; align-items: center; }
-    .bloco-grupo-titulo .tempo-bloco { font-weight: normal; font-size: 12px; color: #5b6472; }
 
     .conteudo { max-width: 1600px; margin: 0 auto; padding: 20px; }
 
     .bloco-grupo { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; overflow: hidden; }
-    .bloco-grupo-titulo { background: #eef1f5; padding: 10px 16px; font-size: 13px; font-weight: bold; color: #336699; }
+    .bloco-grupo-titulo { background: #eef1f5; padding: 10px 16px; font-size: 13px; font-weight: bold; color: #336699; display: flex; justify-content: space-between; align-items: center; }
+    .bloco-grupo-titulo .tempo-bloco { font-weight: normal; font-size: 12px; color: #5b6472; }
+    .bloco-grupo.bloco-alvo { box-shadow: 0 0 0 2px #336699; }
 
     table.rundown { width: 100%; border-collapse: collapse; table-layout: fixed; }
     table.rundown th { text-align: left; padding: 8px 12px; font-size: 11px; color: #5b6472; text-transform: uppercase; border-bottom: 1px solid #eee; }
     table.rundown td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #f4f5f7; vertical-align: middle; }
+    table.rundown td.titulo-item { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Área de soltar no fim do bloco — permite jogar o item para o final */
+    .zona-fim-bloco { padding: 8px 16px; font-size: 11px; color: #b6bdc7; text-align: center; border-top: 1px dashed #e6e9ee; }
+    .zona-fim-bloco.ativa { background: #e7eef6; color: #336699; }
 
     .tipo-badge { font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; color: #fff; text-transform: uppercase; }
     .tipo-reportagem { background: #336699; }
@@ -44,10 +49,7 @@
     .tipo-vht_abertura { background: #5A021F; }
     .tipo-encerramento { background: #1e293b; }
 
-    .status-badge { font-size: 11px; padding: 3px 10px; border-radius: 4px; color: #fff; cursor: pointer; border: none; white-space: nowrap; }
-    .status-producao { background: #999; }
-    .status-chefia { background: #C98A1F; }
-    .status-externa { background: #336699; }
+    .status-badge { font-size: 11px; padding: 3px 10px; border-radius: 4px; color: #fff; cursor: pointer; border: none; white-space: nowrap; width: 100%; }
     .status-produzindo_vt { background: #6b3fa0; }
     .status-edicao { background: #075B91; }
     .status-revisao { background: #C98A1F; }
@@ -55,10 +57,14 @@
 
     table.rundown tbody tr { cursor: grab; }
     table.rundown tbody tr.arrastando { opacity: 0.4; }
-    table.rundown tbody tr.linha-alvo { border-top: 2px solid #336699; }
+    table.rundown tbody tr.linha-alvo td { border-top: 2px solid #336699; }
     .dur { font-family: monospace; font-size: 13px; color: #5b6472; }
 
-    .barra-acoes-espelho { max-width: 1600px; margin: 12px auto 0; padding: 0 20px; display: flex; gap: 8px; }
+    .acoes-rundown { white-space: nowrap; }
+    .acoes-rundown button { background: transparent; border: none; cursor: pointer; font-size: 14px; padding: 2px 2px; border-radius: 4px; }
+    .acoes-rundown button:hover { background: #eef1f5; }
+
+    .barra-acoes-espelho { max-width: 1600px; margin: 12px auto 0; padding: 0 20px; display: flex; gap: 8px; align-items: center; }
     .barra-acoes-espelho button { background: #336699; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
     .barra-acoes-espelho button:hover { background: #2a5580; }
     .barra-acoes-espelho .separador-acoes { flex: 1; }
@@ -75,29 +81,89 @@
     .botoes-modal-item button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
     .botoes-modal-item button:first-child { background: #eee; color: #333; }
     .botoes-modal-item button:last-child { background: #8D0333; color: #fff; }
+
     .lauda-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
     .lauda-pronta { background: #e3f5ea; color: #2e8b57; }
     .lauda-redacao { background: #fdf3e3; color: #C98A1F; }
     .lauda-pendente { background: #fbe4ea; color: #5A021F; }
+    .aviso-cabeca { color: #C98A1F; cursor: pointer; font-size: 13px; }
 
     @media print {
-      .barra-acoes-espelho, .acoes-rundown, .overlay-modal { display: none !important; }
+      @page { size: landscape; margin: 12mm; }
+
+      .barra-acoes-espelho, .acoes-rundown, .overlay-modal, .zona-fim-bloco, .nr-sidebar { display: none !important; }
       body { background: #fff; }
-      .bloco-grupo { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
-      .topo { background: #fff !important; color: #000 !important; }
-      .status-tempo-badge { border: 1px solid #999; }
+      .conteudo { max-width: 100%; margin: 0; padding: 0; }
+
+      .topo { background: #fff !important; color: #000 !important; padding: 0 0 10px; }
+      .status-tempo-badge { border: 1px solid #999; background: none !important; color: #000 !important; }
+
+      .bloco-grupo { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; margin-bottom: 12px; }
+      .bloco-grupo-titulo { background: #f0f0f0 !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+      /* table-layout:auto deixa o navegador distribuir a largura pelo conteúdo real
+         das linhas — o fixed usava só a largura do cabeçalho e espremia o Título
+         numa coluna quase sem espaço, quebrando palavra por palavra */
+      table.rundown { table-layout: auto; width: 100%; font-size: 11px; }
+      table.rundown th, table.rundown td { padding: 5px 6px; word-break: break-word; }
+      table.rundown td.titulo-item { white-space: normal; overflow: visible; text-overflow: clip; }
+
+      /* Badges de cor viram texto preto com contorno: o navegador nem sempre
+         imprime cor de fundo (depende da opção "gráficos de segundo plano" da
+         caixa de impressão), e texto branco sobre fundo que sumiu fica ilegível */
+      .tipo-badge, .status-badge, .lauda-badge {
+        background: none !important; color: #000 !important; border: 1px solid #999;
+      }
+      .status-badge { width: auto; }
     }
+  
+    /* ---- Navegação lateral (unificada em todas as telas) ---- */
+    body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
+    .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+    .nr-sidebar .nr-logo { padding: 0 20px 20px; border-bottom: 1px solid #4d7fb3; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
+    .nr-sidebar .nr-titulo, .nr-sidebar .nr-subtitulo { font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+    .nr-sidebar .nr-subtitulo { margin-top: 4px; }
+    .nr-sidebar a, .nr-sidebar .nr-item-desabilitado { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #e8f0f7; text-decoration: none; font-size: 14px; }
+    .nr-sidebar a:hover { background: #4d7fb3; color: #fff; }
+    .nr-sidebar a.nr-ativo { background: #244d70; color: #fff; font-weight: bold; border-left: 4px solid #8D0333; padding-left: 16px; }
+    .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
+    .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
+    .nr-app { flex: 1; min-width: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
   </style>
 </head>
 <body>
+  <div class="nr-sidebar">
+    <a href="index.html" class="nr-logo">
+      <div class="nr-titulo">HORUS</div>
+      <div class="nr-subtitulo">NEWSROOM</div>
+    </a>
+    <a href="sugestoes.html">📋 Sugestões de Pauta</a>
+    <a href="pautas.html">📝 Pautas</a>
+    <div class="nr-item-desabilitado">🗺 Mapa de Produções <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">🎬 Reportagens <span class="nr-badge">em breve</span></div>
+    <a href="espelhos.html" class="nr-ativo">📽️ Espelhos</a>
+    <div class="nr-item-desabilitado">🔍 Busca Geral <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📅 Calendário <span class="nr-badge">em breve</span></div>
+    <a href="agenda.html">🗓 Agenda</a>
+    <div class="nr-item-desabilitado">👥 Escala de Equipes <span class="nr-badge">em breve</span></div>
+    <a href="teleprompter.html">🎙 Teleprompter</a>
+    <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📊 Gráficos Gerenciais <span class="nr-badge">em breve</span></div>
+    <a href="relatorios.html">📄 Relatórios</a>
+    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+  </div>
+  <div class="nr-app">
+
 
   <div class="topo">
-    <h1>NEWSROOM TV UFMA — Espelho do Telejornal</h1>
+    <h1>HORUS NEWSROOM — Espelho do Telejornal</h1>
     <div class="sub" id="sub-espelho">Carregando...</div>
     <div class="stats-tempo" id="stats-tempo"></div>
   </div>
 
   <div class="barra-acoes-espelho">
+    <button class="btn-secundario" id="btn-ver-espelhos">📋 Ver todos os Espelhos</button>
     <button id="btn-novo-item">➕ Novo Item</button>
     <button id="btn-novo-bloco">📌 Novo Bloco</button>
     <div class="separador-acoes"></div>
@@ -109,7 +175,7 @@
 
   <div class="overlay-modal" id="modal-item">
     <div class="modal-item">
-      <h2>Novo Item do Espelho</h2>
+      <h2 id="mi-titulo-modal">Novo Item do Espelho</h2>
 
       <label>Vincular a uma Pauta (opcional)</label>
       <select id="mi-pauta"><option value="">Nenhuma — item manual</option></select>
@@ -137,123 +203,87 @@
   </div>
 
   <script>
-    const espelhoId = 1; // por enquanto fixo — seleção de espelho vem em etapa futura
+    const espelhoId = Number(new URLSearchParams(location.search).get('espelho_id')) || 1;
 
     let pautasCache = [];
-
-    async function carregarPautasParaModal() {
-      const resp = await fetch('/pautas');
-      pautasCache = await resp.json();
-      const select = document.getElementById('mi-pauta');
-      select.innerHTML = '<option value="">Nenhuma — item manual</option>' +
-        pautasCache.map(p => `<option value="${p.id}">#P-${p.id} — ${p.titulo}</option>`).join('');
-    }
-
-    function preencherSelectTipo() {
-      const select = document.getElementById('mi-tipo');
-      select.innerHTML = Object.keys(labelTipo).map(t => `<option value="${t}">${labelTipo[t]}</option>`).join('');
-    }
-
-    function paraSegundos(mmss) {
-      if (!mmss) return 0;
-      const partes = mmss.split(':');
-      if (partes.length !== 2) return 0;
-      return (Number(partes[0]) || 0) * 60 + (Number(partes[1]) || 0);
-    }
-
-    function abrirModalItem() {
-      document.getElementById('mi-pauta').value = '';
-      document.getElementById('mi-bloco').value = 1;
-      document.getElementById('mi-tipo').value = 'reportagem';
-      document.getElementById('mi-titulo').value = '';
-      document.getElementById('mi-reporter').value = '';
-      document.getElementById('mi-duracao').value = '';
-      document.getElementById('modal-item').classList.add('aberto');
-    }
-
-    document.getElementById('btn-novo-item').addEventListener('click', abrirModalItem);
-
-    document.getElementById('btn-novo-bloco').addEventListener('click', async () => {
-      const respBlocos = await fetch('/blocos?espelho_id=' + espelhoId);
-      const blocosAtuais = await respBlocos.json();
-      const maiorBloco = blocosAtuais.reduce((max, b) => Math.max(max, b.bloco || 1), 0);
-      abrirModalItem();
-      document.getElementById('mi-bloco').value = maiorBloco + 1;
-    });
-
-    document.getElementById('mi-cancelar').addEventListener('click', () => {
-      document.getElementById('modal-item').classList.remove('aberto');
-    });
-
-    document.getElementById('mi-pauta').addEventListener('change', (e) => {
-      const pauta = pautasCache.find(p => String(p.id) === e.target.value);
-      if (pauta) {
-        document.getElementById('mi-titulo').value = pauta.titulo || '';
-        document.getElementById('mi-reporter').value = pauta.reporter || '';
-      }
-    });
-
-    document.getElementById('mi-confirmar').addEventListener('click', async () => {
-      const titulo = document.getElementById('mi-titulo').value.trim();
-      if (!titulo) { alert('Preencha o título.'); return; }
-
-      await fetch('/blocos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          espelho_id: espelhoId,
-          pauta_id: document.getElementById('mi-pauta').value || null,
-          bloco: Number(document.getElementById('mi-bloco').value) || 1,
-          tipo: document.getElementById('mi-tipo').value,
-          titulo: titulo,
-          responsavel: document.getElementById('mi-reporter').value.trim(),
-          reporter: document.getElementById('mi-reporter').value.trim(),
-          duracao_estimada: paraSegundos(document.getElementById('mi-duracao').value)
-        })
-      });
-
-      document.getElementById('modal-item').classList.remove('aberto');
-      carregarEspelho();
-    });
-
-    document.getElementById('btn-teleprompter').addEventListener('click', () => {
-      window.open('teleprompter.html?espelho_id=' + espelhoId, '_blank');
-    });
-
-    document.getElementById('btn-imprimir').addEventListener('click', () => {
-      window.print();
-    });
+    let blocosCache = [];
+    let itemEditandoId = null; // null = criando; com id = editando
 
     const labelStatus = {
-      producao: 'Em Produção', chefia: 'Aguardo Chefia', externa: 'Liberada Externa',
-      produzindo_vt: 'Produzindo VT', edicao: 'Em Edição', revisao: 'Aguardo Revisão', pronto: 'Pronto'
+      produzindo_vt: 'Produzindo VT',
+      edicao: 'Em Edição',
+      revisao: 'Aguardando Revisão',
+      pronto: 'Pronto'
     };
+    const ordemStatus = ['produzindo_vt', 'edicao', 'revisao', 'pronto'];
+
     const labelTipo = {
       reportagem: 'Reportagem', standup: 'Standup', nota_coberta: 'Nota Coberta', vt: 'VT',
       nota_seca: 'Nota Seca', vivo: 'Vivo', escalada: 'Escalada', teaser: 'Teaser',
       nota_pe: 'Nota-pé', link: 'Link', net: 'NET', vinheta: 'Vinheta',
       passagem_bloco: 'Passagem de Bloco', vht_abertura: 'VHT Abertura', encerramento: 'Encerramento'
     };
-    const ordemStatus = ['producao', 'chefia', 'externa', 'produzindo_vt', 'edicao', 'revisao', 'pronto'];
+
+    // ---- Conversões de tempo ----
+    function paraSegundos(mmss) {
+      if (!mmss) return 0;
+      const partes = String(mmss).split(':');
+      if (partes.length !== 2) return 0;
+      return (Number(partes[0]) || 0) * 60 + (Number(partes[1]) || 0);
+    }
+
+    function paraMMSS(segundosTotais) {
+      const s = Number(segundosTotais) || 0;
+      return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+    }
 
     function formatarTempo(segundosTotais) {
-      if (!segundosTotais) return '00\'00"';
-      const minutos = Math.floor(segundosTotais / 60);
-      const segundos = segundosTotais % 60;
-      return `${String(minutos).padStart(2, '0')}'${String(segundos).padStart(2, '0')}"`;
+      const s = Number(segundosTotais) || 0;
+      return String(Math.floor(s / 60)).padStart(2, '0') + "'" + String(s % 60).padStart(2, '0') + '"';
+    }
+
+    function escaparHtml(texto) {
+      return String(texto == null ? '' : texto)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // ---- Carregamento ----
+    async function carregarPautasParaModal() {
+      const resp = await fetch('/pautas');
+      pautasCache = await resp.json();
+      const select = document.getElementById('mi-pauta');
+      select.innerHTML = '<option value="">Nenhuma — item manual</option>' +
+        pautasCache.map(p => `<option value="${p.id}">#P-${p.id} — ${escaparHtml(p.titulo)}</option>`).join('');
+    }
+
+    function preencherSelectTipo() {
+      document.getElementById('mi-tipo').innerHTML =
+        Object.keys(labelTipo).map(t => `<option value="${t}">${labelTipo[t]}</option>`).join('');
     }
 
     async function carregarEspelho() {
       const respEspelho = await fetch('/espelhos/' + espelhoId);
+
+      if (!respEspelho.ok) {
+        document.getElementById('sub-espelho').textContent = 'Espelho não encontrado';
+        document.getElementById('stats-tempo').innerHTML = '';
+        document.querySelector('.barra-acoes-espelho').style.display = 'none';
+        document.getElementById('conteudo').innerHTML =
+          '<p style="text-align:center; color:#999; padding:40px;">Este espelho não existe ou foi removido. ' +
+          '<a href="espelhos.html" style="color:#336699;">Voltar para a lista de Espelhos</a>.</p>';
+        return;
+      }
+
       const espelho = await respEspelho.json();
       document.getElementById('sub-espelho').textContent =
         (espelho.programa || 'Sem programa') + ' — ' + (espelho.data || 'sem data');
 
       const respBlocos = await fetch('/blocos?espelho_id=' + espelhoId);
-      const blocos = await respBlocos.json();
+      blocosCache = await respBlocos.json();
 
-      renderStatsTempo(espelho, blocos);
-      renderRundown(blocos);
+      renderStatsTempo(espelho, blocosCache);
+      renderRundown(blocosCache);
     }
 
     function renderStatsTempo(espelho, blocos) {
@@ -278,6 +308,106 @@
       `;
     }
 
+    // ---- Modal de item (cria e edita) ----
+    function abrirModalNovoItem(blocoSugerido) {
+      itemEditandoId = null;
+      document.getElementById('mi-titulo-modal').textContent = 'Novo Item do Espelho';
+      document.getElementById('mi-pauta').value = '';
+      document.getElementById('mi-bloco').value = blocoSugerido || 1;
+      document.getElementById('mi-tipo').value = 'reportagem';
+      document.getElementById('mi-titulo').value = '';
+      document.getElementById('mi-reporter').value = '';
+      document.getElementById('mi-duracao').value = '';
+      document.getElementById('modal-item').classList.add('aberto');
+    }
+
+    function abrirModalEditarItem(id) {
+      const item = blocosCache.find(b => b.id === id);
+      if (!item) return;
+
+      itemEditandoId = id;
+      document.getElementById('mi-titulo-modal').textContent = 'Editar Item do Espelho';
+      document.getElementById('mi-pauta').value = item.pauta_id || '';
+      document.getElementById('mi-bloco').value = item.bloco || 1;
+      document.getElementById('mi-tipo').value = item.tipo || 'reportagem';
+      document.getElementById('mi-titulo').value = item.titulo || '';
+      document.getElementById('mi-reporter').value = item.reporter || item.responsavel || '';
+      document.getElementById('mi-duracao').value = paraMMSS(item.duracao_estimada);
+      document.getElementById('modal-item').classList.add('aberto');
+    }
+
+    document.getElementById('btn-novo-item').addEventListener('click', () => abrirModalNovoItem(1));
+
+    document.getElementById('btn-novo-bloco').addEventListener('click', () => {
+      const maiorBloco = blocosCache.reduce((max, b) => Math.max(max, b.bloco || 1), 0);
+      abrirModalNovoItem(maiorBloco + 1);
+    });
+
+    document.getElementById('mi-cancelar').addEventListener('click', () => {
+      document.getElementById('modal-item').classList.remove('aberto');
+    });
+
+    document.getElementById('mi-pauta').addEventListener('change', (e) => {
+      const pauta = pautasCache.find(p => String(p.id) === e.target.value);
+      if (pauta) {
+        document.getElementById('mi-titulo').value = pauta.titulo || '';
+        document.getElementById('mi-reporter').value = pauta.reporter || '';
+      }
+    });
+
+    document.getElementById('mi-confirmar').addEventListener('click', async () => {
+      const titulo = document.getElementById('mi-titulo').value.trim();
+      if (!titulo) { alert('Preencha o título.'); return; }
+
+      const reporter = document.getElementById('mi-reporter').value.trim();
+      const bloco = Number(document.getElementById('mi-bloco').value) || 1;
+      const dados = {
+        pauta_id: document.getElementById('mi-pauta').value || null,
+        tipo: document.getElementById('mi-tipo').value,
+        titulo: titulo,
+        responsavel: reporter,
+        reporter: reporter,
+        duracao_estimada: paraSegundos(document.getElementById('mi-duracao').value)
+      };
+
+      if (itemEditandoId === null) {
+        await fetch('/blocos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.assign({ espelho_id: espelhoId, bloco: bloco }, dados))
+        });
+      } else {
+        const original = blocosCache.find(b => b.id === itemEditandoId);
+        await fetch('/blocos/' + itemEditandoId, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dados)
+        });
+        // Mudar o número do bloco no formulário move o item de bloco
+        if (original && bloco !== original.bloco) {
+          await fetch(`/blocos/${itemEditandoId}/mover`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bloco: bloco })
+          });
+        }
+      }
+
+      document.getElementById('modal-item').classList.remove('aberto');
+      carregarEspelho();
+    });
+
+    document.getElementById('btn-ver-espelhos').addEventListener('click', () => {
+      window.location.href = 'espelhos.html';
+    });
+
+    document.getElementById('btn-teleprompter').addEventListener('click', () => {
+      window.open('teleprompter.html?espelho_id=' + espelhoId, '_blank');
+    });
+
+    document.getElementById('btn-imprimir').addEventListener('click', () => window.print());
+
+    // ---- Rundown ----
     function renderRundown(blocos) {
       const container = document.getElementById('conteudo');
 
@@ -296,32 +426,37 @@
       const numerosBlocos = Object.keys(grupos).sort((a, b) => Number(a) - Number(b));
 
       container.innerHTML = numerosBlocos.map(num => `
-        <div class="bloco-grupo">
-          <div class="bloco-grupo-titulo"><span>📌 BLOCO ${num}</span><span class="tempo-bloco">Tempo Bloco: ${formatarTempo(grupos[num].reduce((s, b) => s + (b.duracao_estimada || 0), 0))}</span></div>
+        <div class="bloco-grupo" data-bloco="${num}">
+          <div class="bloco-grupo-titulo">
+            <span>📌 BLOCO ${num}</span>
+            <span class="tempo-bloco">Tempo Bloco: ${formatarTempo(grupos[num].reduce((s, b) => s + (b.duracao_estimada || 0), 0))}</span>
+          </div>
           <table class="rundown">
             <thead>
               <tr>
                 <th style="width:40px;">Ord</th>
                 <th style="width:130px;">Tipo</th>
                 <th>Título</th>
-                <th style="width:240px;">Repórter</th>
+                <th style="width:200px;">Repórter</th>
                 <th style="width:110px;">Lauda</th>
-                <th style="width:140px;">Status</th>
+                <th style="width:150px;">Status</th>
                 <th style="width:80px;">Tempo</th>
-                <th style="width:80px;">Ações</th>
+                <th class="acoes-rundown" style="width:130px;">Ações</th>
               </tr>
             </thead>
             <tbody>
               ${grupos[num].map(b => `
-                <tr data-id="${b.id}" draggable="true">
+                <tr data-id="${b.id}" data-bloco="${num}" draggable="true">
                   <td>${b.ordem}</td>
                   <td><span class="tipo-badge tipo-${b.tipo}">${labelTipo[b.tipo] || b.tipo}</span></td>
-                  <td>${b.titulo}</td>
-                  <td>${b.reporter || b.responsavel || '—'}</td>
+                  <td class="titulo-item" title="${escaparHtml(b.titulo)}">${escaparHtml(b.titulo)}</td>
+                  <td>${escaparHtml(b.reporter || b.responsavel || '—')}</td>
                   <td>${b.lauda_status ? `<span class="lauda-badge lauda-${b.lauda_status}">${b.lauda_status === 'pronta' ? '🟢 Pronta' : b.lauda_status === 'redacao' ? '🟡 Redação' : '🔴 Pendente'}</span>` : '—'}</td>
                   <td draggable="false"><button class="status-badge status-${b.status}" data-id="${b.id}" data-status="${b.status}">${labelStatus[b.status] || b.status}</button></td>
                   <td class="dur">${formatarTempo(b.duracao_estimada)}</td>
                   <td class="acoes-rundown" draggable="false">
+                    ${b.cabeca_desatualizada ? `<button class="btn-sincronizar aviso-cabeca" data-id="${b.id}" title="A Cabeça da Lauda mudou depois — clique para atualizar o texto do teleprompter">🔄</button>` : ''}
+                    <button class="btn-editar-item" data-id="${b.id}" title="Editar item">✏️</button>
                     ${b.pauta_id ? `<button class="btn-abrir-lauda" data-pauta="${b.pauta_id}" title="Abrir Lauda">📝</button>` : ''}
                     <button class="btn-remover-bloco" data-id="${b.id}" title="Remover">🗑️</button>
                   </td>
@@ -329,21 +464,34 @@
               `).join('')}
             </tbody>
           </table>
+          <div class="zona-fim-bloco" data-bloco="${num}">solte aqui para jogar o item para o fim do Bloco ${num}</div>
         </div>
       `).join('');
 
+      ligarAcoesDaTabela();
+      ligarArrastarSoltar();
+    }
+
+    function ligarAcoesDaTabela() {
       document.querySelectorAll('.status-badge').forEach(btn => {
         btn.addEventListener('click', async () => {
-          const id = btn.dataset.id;
-          const atual = btn.dataset.status;
-          const proximoIndex = (ordemStatus.indexOf(atual) + 1) % ordemStatus.length;
-          const novoStatus = ordemStatus[proximoIndex];
-
-          await fetch(`/blocos/${id}/status`, {
+          const proximo = ordemStatus[(ordemStatus.indexOf(btn.dataset.status) + 1) % ordemStatus.length];
+          await fetch(`/blocos/${btn.dataset.id}/status`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ novo_status: novoStatus, perfil: 'chefe_redacao' })
+            body: JSON.stringify({ novo_status: proximo, perfil: 'chefe_redacao' })
           });
+          carregarEspelho();
+        });
+      });
+
+      document.querySelectorAll('.btn-editar-item').forEach(btn => {
+        btn.addEventListener('click', () => abrirModalEditarItem(Number(btn.dataset.id)));
+      });
+
+      document.querySelectorAll('.btn-sincronizar').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          await fetch(`/blocos/${btn.dataset.id}/sincronizar-cabeca`, { method: 'PATCH' });
           carregarEspelho();
         });
       });
@@ -361,50 +509,101 @@
           carregarEspelho();
         });
       });
+    }
 
+    // ---- Arrastar e soltar (dentro do bloco e entre blocos) ----
+    function ligarArrastarSoltar() {
       let linhaArrastada = null;
 
+      function limparMarcas() {
+        document.querySelectorAll('.linha-alvo').forEach(el => el.classList.remove('linha-alvo'));
+        document.querySelectorAll('.zona-fim-bloco.ativa').forEach(el => el.classList.remove('ativa'));
+        document.querySelectorAll('.bloco-grupo.bloco-alvo').forEach(el => el.classList.remove('bloco-alvo'));
+      }
+
+      async function mover(id, bloco, novaOrdem) {
+        const corpo = { bloco: bloco };
+        if (novaOrdem !== null) corpo.nova_ordem = novaOrdem;
+
+        const resp = await fetch(`/blocos/${id}/mover`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(corpo)
+        });
+
+        if (!resp.ok) {
+          const erro = await resp.json().catch(() => ({}));
+          alert('Não foi possível mover o item. ' + (erro.erro || ''));
+        }
+        carregarEspelho();
+      }
+
       document.querySelectorAll('table.rundown tbody tr').forEach(linha => {
-        linha.addEventListener('dragstart', () => {
+        linha.addEventListener('dragstart', (e) => {
           linhaArrastada = linha;
           linha.classList.add('arrastando');
+          e.dataTransfer.effectAllowed = 'move';
+          // Firefox só inicia o arrasto se houver dado no dataTransfer
+          e.dataTransfer.setData('text/plain', linha.dataset.id);
         });
 
         linha.addEventListener('dragend', () => {
           linha.classList.remove('arrastando');
-          document.querySelectorAll('.linha-alvo').forEach(el => el.classList.remove('linha-alvo'));
+          limparMarcas();
+          linhaArrastada = null;
         });
 
         linha.addEventListener('dragover', (e) => {
           e.preventDefault();
-          const tabelaAtual = linha.closest('table');
-          const tabelaOrigem = linhaArrastada ? linhaArrastada.closest('table') : null;
-          if (tabelaAtual !== tabelaOrigem) return;
-          document.querySelectorAll('.linha-alvo').forEach(el => el.classList.remove('linha-alvo'));
-          if (linha !== linhaArrastada) linha.classList.add('linha-alvo');
+          e.dataTransfer.dropEffect = 'move';
+          if (!linhaArrastada || linha === linhaArrastada) return;
+          limparMarcas();
+          linha.classList.add('linha-alvo');
+          linha.closest('.bloco-grupo').classList.add('bloco-alvo');
         });
 
         linha.addEventListener('drop', async (e) => {
           e.preventDefault();
-          linha.classList.remove('linha-alvo');
+          e.stopPropagation();
+          limparMarcas();
           if (!linhaArrastada || linha === linhaArrastada) return;
 
-          const tabelaAtual = linha.closest('table');
-          const tabelaOrigem = linhaArrastada.closest('table');
-          if (tabelaAtual !== tabelaOrigem) return;
+          const idArrastado = Number(linhaArrastada.dataset.id);
+          const alvo = blocosCache.find(b => b.id === Number(linha.dataset.id));
+          if (!alvo) return;
 
-          const idArrastado = linhaArrastada.dataset.id;
-          const bloco = blocos.find(b => String(b.id) === idArrastado);
-          const blocoAlvo = blocos.find(b => String(b.id) === linha.dataset.id);
-          if (!bloco || !blocoAlvo) return;
+          await mover(idArrastado, alvo.bloco, alvo.ordem);
+        });
+      });
 
-          await fetch(`/blocos/${idArrastado}/ordem`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nova_ordem: blocoAlvo.ordem })
-          });
+      // Soltar na faixa do fim do bloco = mandar o item para a última posição daquele bloco
+      document.querySelectorAll('.zona-fim-bloco').forEach(zona => {
+        zona.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          if (!linhaArrastada) return;
+          limparMarcas();
+          zona.classList.add('ativa');
+          zona.closest('.bloco-grupo').classList.add('bloco-alvo');
+        });
 
-          carregarEspelho();
+        zona.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          limparMarcas();
+          if (!linhaArrastada) return;
+
+          const idArrastado = Number(linhaArrastada.dataset.id);
+          const item = blocosCache.find(b => b.id === idArrastado);
+          const blocoDestino = Number(zona.dataset.bloco);
+          if (!item) return;
+
+          if (item.bloco === blocoDestino) {
+            const ultimaOrdem = blocosCache.filter(b => b.bloco === blocoDestino).length;
+            if (item.ordem === ultimaOrdem) return; // já está no fim
+            await mover(idArrastado, blocoDestino, ultimaOrdem);
+          } else {
+            await mover(idArrastado, blocoDestino, null); // sem ordem = vai para o fim
+          }
         });
       });
     }
@@ -413,5 +612,6 @@
     carregarPautasParaModal();
     carregarEspelho();
   </script>
+  </div>
 </body>
 </html>

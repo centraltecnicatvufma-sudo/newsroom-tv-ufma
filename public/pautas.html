@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Pautas — Newsroom TV UFMA</title>
+  <title>Pautas — HORUS Newsroom</title>
   <style>
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
@@ -57,12 +57,48 @@
     .btn-agenda { background: #336699; color: #fff; }
     .btn-lauda-modal { background: #C98A1F; color: #fff; }
     .btn-confirmar { background: #8D0333; color: #fff; }
+  
+    /* ---- Navegação lateral (unificada em todas as telas) ---- */
+    body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
+    .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+    .nr-sidebar .nr-logo { padding: 0 20px 20px; border-bottom: 1px solid #4d7fb3; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
+    .nr-sidebar .nr-titulo, .nr-sidebar .nr-subtitulo { font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+    .nr-sidebar .nr-subtitulo { margin-top: 4px; }
+    .nr-sidebar a, .nr-sidebar .nr-item-desabilitado { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #e8f0f7; text-decoration: none; font-size: 14px; }
+    .nr-sidebar a:hover { background: #4d7fb3; color: #fff; }
+    .nr-sidebar a.nr-ativo { background: #244d70; color: #fff; font-weight: bold; border-left: 4px solid #8D0333; padding-left: 16px; }
+    .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
+    .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
+    .nr-app { flex: 1; min-width: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
   </style>
 </head>
 <body>
+  <div class="nr-sidebar">
+    <a href="index.html" class="nr-logo">
+      <div class="nr-titulo">HORUS</div>
+      <div class="nr-subtitulo">NEWSROOM</div>
+    </a>
+    <a href="sugestoes.html">📋 Sugestões de Pauta</a>
+    <a href="pautas.html" class="nr-ativo">📝 Pautas</a>
+    <div class="nr-item-desabilitado">🗺 Mapa de Produções <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">🎬 Reportagens <span class="nr-badge">em breve</span></div>
+    <a href="espelhos.html">📽️ Espelhos</a>
+    <div class="nr-item-desabilitado">🔍 Busca Geral <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📅 Calendário <span class="nr-badge">em breve</span></div>
+    <a href="agenda.html">🗓 Agenda</a>
+    <div class="nr-item-desabilitado">👥 Escala de Equipes <span class="nr-badge">em breve</span></div>
+    <a href="teleprompter.html">🎙 Teleprompter</a>
+    <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📊 Gráficos Gerenciais <span class="nr-badge">em breve</span></div>
+    <a href="relatorios.html">📄 Relatórios</a>
+    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+  </div>
+  <div class="nr-app">
+
 
   <div class="topo">
-    <h1>NEWSROOM TV UFMA — Pautas</h1>
+    <h1>HORUS NEWSROOM — Pautas</h1>
     <input type="text" id="busca-pauta" placeholder="🔍 Buscar pauta...">
     <button id="btn-nova-pauta">+ Nova Pauta</button>
   </div>
@@ -136,6 +172,9 @@
       <label>Cinegrafista</label>
       <select id="p-cinegrafista"></select>
 
+      <label>Editor de Imagens</label>
+      <select id="p-editor-imagens"></select>
+
       <label>Motorista / Transporte</label>
       <input type="text" id="p-motorista" placeholder="Opcional">
 
@@ -203,6 +242,7 @@
       document.getElementById('p-produtor').innerHTML = opcoes;
       document.getElementById('p-reporter').innerHTML = opcoes;
       document.getElementById('p-cinegrafista').innerHTML = opcoes;
+      document.getElementById('p-editor-imagens').innerHTML = opcoes;
     }
 
     function nomePrograma(id) {
@@ -252,6 +292,7 @@
                   ${p.produtor ? `<span class="tag-equipe">🗂️ ${p.produtor}</span>` : ''}
                   ${p.reporter ? `<span class="tag-equipe">🎤 ${p.reporter}</span>` : ''}
                   ${p.cinegrafista ? `<span class="tag-equipe">🎥 ${p.cinegrafista}</span>` : ''}
+                  ${p.editor_imagens ? `<span class="tag-equipe">✂️ ${p.editor_imagens}</span>` : ''}
                 </td>
                 <td><span class="status-badge status-${p.status}">${rotulosStatus[p.status] || p.status}</span></td>
                 <td class="acoes-lista">
@@ -354,6 +395,7 @@
       document.getElementById('p-produtor').value = '';
       document.getElementById('p-reporter').value = '';
       document.getElementById('p-cinegrafista').value = '';
+      document.getElementById('p-editor-imagens').value = '';
       document.getElementById('p-motorista').value = '';
       document.getElementById('p-lapela').checked = false;
       document.getElementById('p-iluminacao').checked = false;
@@ -388,6 +430,7 @@
         document.getElementById('p-produtor').value = p.produtor || '';
         document.getElementById('p-reporter').value = p.reporter || '';
         document.getElementById('p-cinegrafista').value = p.cinegrafista || '';
+        document.getElementById('p-editor-imagens').value = p.editor_imagens || '';
         document.getElementById('p-motorista').value = p.motorista || '';
         document.getElementById('p-lapela').checked = !!p.equip_lapela;
         document.getElementById('p-iluminacao').checked = !!p.equip_iluminacao;
@@ -422,6 +465,7 @@
         produtor: document.getElementById('p-produtor').value,
         reporter: document.getElementById('p-reporter').value,
         cinegrafista: document.getElementById('p-cinegrafista').value,
+        editor_imagens: document.getElementById('p-editor-imagens').value,
         motorista: document.getElementById('p-motorista').value.trim(),
         equip_lapela: document.getElementById('p-lapela').checked,
         equip_iluminacao: document.getElementById('p-iluminacao').checked,
@@ -435,7 +479,7 @@
     async function sincronizarAgenda(pauta) {
       if (!pauta.data_fato || !pauta.hora_fato || !pauta.programa_id) return pauta.agenda_id || null;
 
-      const equipeTexto = [pauta.produtor, pauta.reporter, pauta.cinegrafista, pauta.motorista].filter(Boolean).join(', ');
+      const equipeTexto = [pauta.produtor, pauta.reporter, pauta.cinegrafista, pauta.editor_imagens, pauta.motorista].filter(Boolean).join(', ');
       const corpoAgenda = {
         programa_quadro_id: pauta.programa_id,
         data: pauta.data_fato,
@@ -523,5 +567,6 @@
       await carregarPautas();
     })();
   </script>
+  </div>
 </body>
 </html>

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Espelhos — HORUS Newsroom</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+
+    .topo { background: #336699; color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .topo h1 { font-size: 18px; margin: 0; }
+    .topo button { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 9px 16px; cursor: pointer; font-size: 13px; }
+    .topo button:hover { background: #a10440; }
+
+    .conteudo { flex: 1; overflow-y: auto; padding: 24px; }
+    .grade-espelhos { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; max-width: 1400px; margin: 0 auto; }
+
+    .cartao-espelho { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); padding: 18px 20px; border-left: 6px solid #336699; cursor: pointer; position: relative; }
+    .cartao-espelho:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
+    .cartao-espelho .programa { font-size: 17px; font-weight: bold; color: #1b2430; padding-right: 60px; }
+    .cartao-espelho .data { font-size: 13px; color: #5b6472; margin-top: 4px; }
+    .cartao-espelho .metricas { display: flex; gap: 14px; margin-top: 12px; font-size: 12px; color: #5b6472; }
+    .cartao-espelho .status-badge { position: absolute; top: 18px; right: 20px; font-size: 10px; font-weight: bold; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; color: #fff; }
+    .status-em_montagem { background: #C98A1F; }
+    .status-no_ar { background: #8D0333; }
+    .status-finalizado { background: #2e8b57; }
+
+    .acoes-cartao { display: flex; gap: 6px; margin-top: 14px; }
+    .acoes-cartao button { font-size: 12px; padding: 6px 10px; border-radius: 6px; border: none; cursor: pointer; }
+    .btn-abrir-espelho { background: #336699; color: #fff; flex: 1; }
+    .btn-editar-espelho { background: #eee; color: #333; }
+    .btn-excluir-espelho { background: #fbe4ea; color: #8D0333; }
+
+    .estado-vazio { text-align: center; color: #999; padding: 60px 20px; max-width: 1400px; margin: 0 auto; }
+
+    .overlay-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 10; }
+    .overlay-modal.aberto { display: flex; }
+    .modal-espelho { background: #fff; border-radius: 10px; padding: 24px; width: 380px; }
+    .modal-espelho h2 { font-size: 16px; margin: 0 0 4px; }
+    .modal-espelho label { font-size: 12px; color: #5b6472; display: block; margin: 12px 0 4px; }
+    .modal-espelho input, .modal-espelho select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+    .botoes-modal-espelho { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+    .botoes-modal-espelho button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .botoes-modal-espelho button:first-child { background: #eee; color: #333; }
+    .botoes-modal-espelho button:last-child { background: #8D0333; color: #fff; }
+
+    /* ---- Navegação lateral (unificada em todas as telas) ---- */
+    body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
+    .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+    .nr-sidebar .nr-logo { padding: 0 20px 20px; border-bottom: 1px solid #4d7fb3; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
+    .nr-sidebar .nr-titulo, .nr-sidebar .nr-subtitulo { font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+    .nr-sidebar .nr-subtitulo { margin-top: 4px; }
+    .nr-sidebar a, .nr-sidebar .nr-item-desabilitado { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #e8f0f7; text-decoration: none; font-size: 14px; }
+    .nr-sidebar a:hover { background: #4d7fb3; color: #fff; }
+    .nr-sidebar a.nr-ativo { background: #244d70; color: #fff; font-weight: bold; border-left: 4px solid #8D0333; padding-left: 16px; }
+    .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
+    .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
+    .nr-app { flex: 1; min-width: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+  </style>
+</head>
+<body>
+  <div class="nr-sidebar">
+    <a href="index.html" class="nr-logo">
+      <div class="nr-titulo">HORUS</div>
+      <div class="nr-subtitulo">NEWSROOM</div>
+    </a>
+    <a href="sugestoes.html">📋 Sugestões de Pauta</a>
+    <a href="pautas.html">📝 Pautas</a>
+    <div class="nr-item-desabilitado">🗺 Mapa de Produções <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">🎬 Reportagens <span class="nr-badge">em breve</span></div>
+    <a href="espelhos.html" class="nr-ativo">📽️ Espelhos</a>
+    <div class="nr-item-desabilitado">🔍 Busca Geral <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📅 Calendário <span class="nr-badge">em breve</span></div>
+    <a href="agenda.html">🗓 Agenda</a>
+    <div class="nr-item-desabilitado">👥 Escala de Equipes <span class="nr-badge">em breve</span></div>
+    <a href="teleprompter.html">🎙 Teleprompter</a>
+    <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📊 Gráficos Gerenciais <span class="nr-badge">em breve</span></div>
+    <a href="relatorios.html">📄 Relatórios</a>
+    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+  </div>
+  <div class="nr-app">
+
+  <div class="topo">
+    <h1>HORUS NEWSROOM — Espelhos</h1>
+    <button id="btn-novo-espelho">➕ Novo Espelho</button>
+  </div>
+
+  <div class="conteudo">
+    <div class="grade-espelhos" id="grade-espelhos">Carregando...</div>
+  </div>
+
+  <div class="overlay-modal" id="modal-espelho">
+    <div class="modal-espelho">
+      <h2 id="modal-espelho-titulo">Novo Espelho</h2>
+
+      <label>Programa</label>
+      <input type="text" id="me-programa" list="lista-programas-jornal" placeholder="Ex.: JTVUFMA">
+      <datalist id="lista-programas-jornal"></datalist>
+
+      <label>Data</label>
+      <input type="date" id="me-data">
+
+      <label>Duração Total Prevista (mm:ss)</label>
+      <input type="text" id="me-duracao" placeholder="25:00">
+
+      <label>Status</label>
+      <select id="me-status">
+        <option value="em_montagem">Em Montagem</option>
+        <option value="no_ar">No Ar</option>
+        <option value="finalizado">Finalizado</option>
+      </select>
+
+      <div class="botoes-modal-espelho">
+        <button id="me-cancelar">Cancelar</button>
+        <button id="me-confirmar">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let espelhosCache = [];
+    let editandoId = null; // null = criando; com id = editando
+
+    const labelStatus = { em_montagem: 'Em Montagem', no_ar: 'No Ar', finalizado: 'Finalizado' };
+
+    function paraSegundos(mmss) {
+      if (!mmss) return 0;
+      const partes = String(mmss).split(':');
+      if (partes.length !== 2) return 0;
+      return (Number(partes[0]) || 0) * 60 + (Number(partes[1]) || 0);
+    }
+
+    function paraMMSS(segundosTotais) {
+      const s = Number(segundosTotais) || 0;
+      return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+    }
+
+    function formatarTempo(segundosTotais) {
+      const s = Number(segundosTotais) || 0;
+      return String(Math.floor(s / 60)).padStart(2, '0') + "'" + String(s % 60).padStart(2, '0') + '"';
+    }
+
+    function escaparHtml(texto) {
+      return String(texto == null ? '' : texto)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function formatarData(iso) {
+      if (!iso) return 'sem data';
+      const [ano, mes, dia] = iso.split('-');
+      return (dia && mes && ano) ? `${dia}/${mes}/${ano}` : iso;
+    }
+
+    async function carregarProgramasJornal() {
+      const resp = await fetch('/agenda/programas');
+      const lista = await resp.json();
+      const datalist = document.getElementById('lista-programas-jornal');
+      datalist.innerHTML = lista
+        .filter(p => p.tipo === 'jornal')
+        .map(p => `<option value="${escaparHtml(p.nome)}">`)
+        .join('');
+    }
+
+    async function carregarEspelhos() {
+      const resp = await fetch('/espelhos');
+      espelhosCache = await resp.json();
+
+      // Mais recentes primeiro (por data; sem data, fica no fim)
+      espelhosCache.sort((a, b) => (b.data || '').localeCompare(a.data || '') || (b.id - a.id));
+
+      const contagens = await Promise.all(espelhosCache.map(async e => {
+        const r = await fetch('/blocos?espelho_id=' + e.id);
+        const blocos = await r.json();
+        return {
+          id: e.id,
+          itens: blocos.length,
+          tempoAtual: blocos.reduce((soma, b) => soma + (b.duracao_estimada || 0), 0)
+        };
+      }));
+      const mapaContagens = {};
+      contagens.forEach(c => { mapaContagens[c.id] = c; });
+
+      renderGrade(mapaContagens);
+    }
+
+    function renderGrade(mapaContagens) {
+      const container = document.getElementById('grade-espelhos');
+
+      if (espelhosCache.length === 0) {
+        container.innerHTML = '<div class="estado-vazio">Nenhum espelho cadastrado ainda. Clique em "➕ Novo Espelho" pra criar o primeiro.</div>';
+        return;
+      }
+
+      container.innerHTML = espelhosCache.map(e => {
+        const c = mapaContagens[e.id] || { itens: 0, tempoAtual: 0 };
+        const status = e.status_espelho || 'em_montagem';
+        return `
+          <div class="cartao-espelho" data-id="${e.id}">
+            <span class="status-badge status-${status}">${labelStatus[status] || status}</span>
+            <div class="programa">${escaparHtml(e.programa) || 'Sem programa'}</div>
+            <div class="data">📅 ${formatarData(e.data)}</div>
+            <div class="metricas">
+              <span>📌 ${c.itens} ${c.itens === 1 ? 'item' : 'itens'}</span>
+              <span>⏱ ${formatarTempo(c.tempoAtual)} / ${formatarTempo(e.duracao_total_prevista)}</span>
+            </div>
+            <div class="acoes-cartao">
+              <button class="btn-abrir-espelho" data-id="${e.id}">Abrir Espelho</button>
+              <button class="btn-editar-espelho" data-id="${e.id}" title="Editar">✏️</button>
+              <button class="btn-excluir-espelho" data-id="${e.id}" title="Excluir">🗑️</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.btn-abrir-espelho').forEach(btn => {
+        btn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          window.location.href = 'espelho.html?espelho_id=' + btn.dataset.id;
+        });
+      });
+
+      document.querySelectorAll('.cartao-espelho').forEach(cartao => {
+        cartao.addEventListener('click', () => {
+          window.location.href = 'espelho.html?espelho_id=' + cartao.dataset.id;
+        });
+      });
+
+      document.querySelectorAll('.btn-editar-espelho').forEach(btn => {
+        btn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          abrirModalEditar(Number(btn.dataset.id));
+        });
+      });
+
+      document.querySelectorAll('.btn-excluir-espelho').forEach(btn => {
+        btn.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
+          const espelho = espelhosCache.find(e => e.id === Number(btn.dataset.id));
+          const nome = espelho ? (espelho.programa || 'este espelho') + ' — ' + formatarData(espelho.data) : 'este espelho';
+          if (!confirm(`Excluir "${nome}"? Isso apaga também todos os itens do rundown. Não pode ser desfeito.`)) return;
+          await fetch('/espelhos/' + btn.dataset.id, { method: 'DELETE' });
+          carregarEspelhos();
+        });
+      });
+    }
+
+    function abrirModalNovo() {
+      editandoId = null;
+      document.getElementById('modal-espelho-titulo').textContent = 'Novo Espelho';
+      document.getElementById('me-programa').value = '';
+      document.getElementById('me-data').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('me-duracao').value = '25:00';
+      document.getElementById('me-status').value = 'em_montagem';
+      document.getElementById('modal-espelho').classList.add('aberto');
+    }
+
+    function abrirModalEditar(id) {
+      const e = espelhosCache.find(x => x.id === id);
+      if (!e) return;
+      editandoId = id;
+      document.getElementById('modal-espelho-titulo').textContent = 'Editar Espelho';
+      document.getElementById('me-programa').value = e.programa || '';
+      document.getElementById('me-data').value = e.data || '';
+      document.getElementById('me-duracao').value = paraMMSS(e.duracao_total_prevista);
+      document.getElementById('me-status').value = e.status_espelho || 'em_montagem';
+      document.getElementById('modal-espelho').classList.add('aberto');
+    }
+
+    document.getElementById('btn-novo-espelho').addEventListener('click', abrirModalNovo);
+    document.getElementById('me-cancelar').addEventListener('click', () => {
+      document.getElementById('modal-espelho').classList.remove('aberto');
+    });
+
+    document.getElementById('me-confirmar').addEventListener('click', async () => {
+      const programa = document.getElementById('me-programa').value.trim();
+      if (!programa) { alert('Preencha o programa.'); return; }
+
+      const dados = {
+        programa,
+        data: document.getElementById('me-data').value,
+        duracao_total_prevista: paraSegundos(document.getElementById('me-duracao').value),
+        status_espelho: document.getElementById('me-status').value
+      };
+
+      if (editandoId === null) {
+        const resp = await fetch('/espelhos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dados)
+        });
+        const novo = await resp.json();
+        document.getElementById('modal-espelho').classList.remove('aberto');
+        window.location.href = 'espelho.html?espelho_id=' + novo.id;
+        return;
+      }
+
+      await fetch('/espelhos/' + editandoId, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados)
+      });
+      document.getElementById('modal-espelho').classList.remove('aberto');
+      carregarEspelhos();
+    });
+
+    carregarProgramasJornal();
+    carregarEspelhos();
+  </script>
+  </div>
+</body>
+</html>

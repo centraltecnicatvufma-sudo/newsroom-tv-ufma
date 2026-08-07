@@ -22,12 +22,12 @@ router.get('/:id', (req, res) => {
 
 // POST /espelhos -> cria um novo espelho
 router.post('/', (req, res) => {
-  const { programa, data, duracao_total_prevista } = req.body;
+  const { programa, data, duracao_total_prevista, status_espelho } = req.body;
 
   const resultado = db.prepare(`
     INSERT INTO espelhos (programa, data, duracao_total_prevista, status_espelho)
-    VALUES (?, ?, ?, 'em_montagem')
-  `).run(programa, data, duracao_total_prevista);
+    VALUES (?, ?, ?, ?)
+  `).run(programa, data, duracao_total_prevista, status_espelho || 'em_montagem');
 
   const novoEspelho = db.prepare('SELECT * FROM espelhos WHERE id = ?').get(resultado.lastInsertRowid);
   res.status(201).json(novoEspelho);
@@ -58,10 +58,16 @@ router.patch('/:id', (req, res) => {
   res.json(espelhoAtualizado);
 });
 
-// DELETE /espelhos/:id -> remove um espelho
+// DELETE /espelhos/:id -> remove um espelho e todos os blocos (itens do rundown) vinculados
 router.delete('/:id', (req, res) => {
   const id = Number(req.params.id);
-  const resultado = db.prepare('DELETE FROM espelhos WHERE id = ?').run(id);
+
+  const apagar = db.transaction((id) => {
+    db.prepare('DELETE FROM blocos WHERE espelho_id = ?').run(id);
+    return db.prepare('DELETE FROM espelhos WHERE id = ?').run(id);
+  });
+
+  const resultado = apagar(id);
 
   if (resultado.changes === 0) {
     return res.status(404).json({ erro: "Espelho não encontrado" });

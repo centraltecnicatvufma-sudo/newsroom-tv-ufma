@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Lauda — Newsroom TV UFMA</title>
+  <title>Lauda — HORUS Newsroom</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.css" rel="stylesheet">
   <style>
     * { box-sizing: border-box; }
@@ -36,17 +36,113 @@
 
     .barra-acoes { position: sticky; bottom: 0; background: #fff; border-top: 1px solid #eee; padding: 14px 20px; display: flex; justify-content: flex-end; gap: 8px; }
     .btn-salvar { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 10px 20px; font-size: 14px; cursor: pointer; }
+    .btn-imprimir { background: #eee; color: #333; border: none; border-radius: 6px; padding: 10px 20px; font-size: 14px; cursor: pointer; }
+    .btn-imprimir:hover { background: #ddd; }
     .status-salvo { font-size: 13px; color: #2e8b57; align-self: center; margin-right: auto; }
+
+    /* Cabeçalho de impressão: mesma pauta, mas com todo o contexto que a
+       tela compacta não mostra (local, data do fato, produtor, destinos,
+       orientação, fontes) — só aparece no papel, nunca na tela */
+    .somente-impressao { display: none; }
+    .info-impressao .linha-info { margin-bottom: 6px; }
+    .info-impressao .linha-info strong { color: #5b6472; font-weight: bold; margin-right: 4px; }
+    .info-impressao .destinos-impressao span { display: inline-block; margin-right: 14px; }
+    .info-impressao table.fontes-impressao { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
+    .info-impressao table.fontes-impressao th, .info-impressao table.fontes-impressao td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; }
+
+    /* ---- Navegação lateral (unificada em todas as telas) ---- */
+    body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
+    .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+    .nr-sidebar .nr-logo { padding: 0 20px 20px; border-bottom: 1px solid #4d7fb3; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
+    .nr-sidebar .nr-titulo, .nr-sidebar .nr-subtitulo { font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+    .nr-sidebar .nr-subtitulo { margin-top: 4px; }
+    .nr-sidebar a, .nr-sidebar .nr-item-desabilitado { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #e8f0f7; text-decoration: none; font-size: 14px; }
+    .nr-sidebar a:hover { background: #4d7fb3; color: #fff; }
+    .nr-sidebar a.nr-ativo { background: #244d70; color: #fff; font-weight: bold; border-left: 4px solid #8D0333; padding-left: 16px; }
+    .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
+    .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
+    .nr-app { flex: 1; min-width: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+
+    @media print {
+      @page { size: A4; margin: 15mm 16mm; }
+
+      .nr-sidebar, .barra-acoes, #btn-ouvir-cabeca, .btn-ouvir-item,
+      .btn-remover-item, .add-itens, #btn-add-gc, .btn-remover-gc { display: none !important; }
+
+      body { background: #fff; }
+      .nr-app { height: auto !important; overflow: visible !important; }
+      .conteudo { max-width: 100%; margin: 0; padding: 0; }
+
+      .topo { background: #fff !important; color: #000 !important; padding: 0 0 10px; border-bottom: 2px solid #000; }
+      .topo h1 { font-size: 15px; }
+
+      /* A versão compacta (tela) some; a versão completa (impressão) some
+         no navegador e aparece só no papel — nenhuma das duas duplica a
+         outra */
+      .info-pauta { display: none; }
+      .somente-impressao { display: block; padding: 10px 0 14px; border-bottom: 1px solid #ccc; margin-bottom: 14px; }
+
+      .bloco { box-shadow: none; border: 1px solid #ccc; border-radius: 0; padding: 10px 0; margin-bottom: 14px; break-inside: avoid-page; }
+      .bloco h2 { font-size: 13px; padding: 0 10px; border-bottom: 1px solid #eee; padding-bottom: 8px; page-break-after: avoid; }
+
+      /* "Corpo do VT" pode ter muitos itens — o bloco em si não trava numa
+         página só (senão sobraria página em branco), mas cada item
+         individual sim, pra não cortar um OFF/SONORA no meio */
+      #lista-itens { break-inside: auto; }
+      .item-vt { break-inside: avoid-page; border: 1px solid #ccc; margin: 0 10px 10px; }
+      .item-vt-cabecalho { background: #eee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .tipo-badge { background: none !important; color: #000 !important; border: 1px solid #999; }
+
+      /* Editor Quill: tira toda a moldura de edição, deixa só o texto */
+      .ql-toolbar { display: none !important; }
+      .ql-container.ql-snow { border: none !important; }
+      .editor-caixa { border: none !important; min-height: 0 !important; margin: 0 10px; }
+      .ql-editor { padding: 4px 0 !important; min-height: 0 !important; max-height: none !important; overflow: visible !important; }
+
+      /* Tabela de GCs: os campos são <input>, então tira a aparência de
+         campo de formulário e deixa só o valor, como texto de tabela comum */
+      #tabela-gcs { margin: 0 10px; width: calc(100% - 20px); }
+      #tabela-gcs th, #tabela-gcs td { border: 1px solid #ccc; }
+      #tabela-gcs input { border: none !important; background: transparent !important; padding: 2px !important; font-size: 12px; width: 100%; }
+      #tabela-gcs tr { break-inside: avoid; }
+      #tabela-gcs th:last-child, #tabela-gcs td:last-child { display: none; } /* era a coluna do botão ✕ remover */
+
+      .status-salvo { display: none; }
+    }
   </style>
 </head>
 <body>
+  <div class="nr-sidebar">
+    <a href="index.html" class="nr-logo">
+      <div class="nr-titulo">HORUS</div>
+      <div class="nr-subtitulo">NEWSROOM</div>
+    </a>
+    <a href="sugestoes.html">📋 Sugestões de Pauta</a>
+    <a href="pautas.html">📝 Pautas</a>
+    <div class="nr-item-desabilitado">🗺 Mapa de Produções <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">🎬 Reportagens <span class="nr-badge">em breve</span></div>
+    <a href="espelhos.html">📽️ Espelhos</a>
+    <div class="nr-item-desabilitado">🔍 Busca Geral <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📅 Calendário <span class="nr-badge">em breve</span></div>
+    <a href="agenda.html">🗓 Agenda</a>
+    <div class="nr-item-desabilitado">👥 Escala de Equipes <span class="nr-badge">em breve</span></div>
+    <a href="teleprompter.html">🎙 Teleprompter</a>
+    <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📊 Gráficos Gerenciais <span class="nr-badge">em breve</span></div>
+    <a href="relatorios.html">📄 Relatórios</a>
+    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+  </div>
+  <div class="nr-app">
+
 
   <div class="topo">
-    <h1>NEWSROOM TV UFMA — Lauda de Reportagem</h1>
+    <h1>HORUS NEWSROOM — Lauda de Reportagem</h1>
     <div class="sub" id="sub-pauta">Carregando...</div>
   </div>
 
   <div class="info-pauta" id="info-pauta"></div>
+  <div class="info-impressao somente-impressao" id="info-impressao"></div>
 
   <div class="conteudo">
     <div class="bloco">
@@ -88,6 +184,7 @@
 
   <div class="barra-acoes">
     <span class="status-salvo" id="status-salvo"></span>
+    <button class="btn-imprimir" id="btn-imprimir">🖨️ Imprimir Lauda</button>
     <button class="btn-salvar" id="btn-salvar">💾 Salvar Lauda</button>
   </div>
 
@@ -114,9 +211,91 @@
       throw new Error('sem pauta_id');
     }
 
+    const labelStatus = {
+      em_producao: 'Em Produção', em_gravacao: 'Em Gravação',
+      em_edicao: 'Gravado / Em Edição', concluida: 'Concluída / Pronta'
+    };
+
+    function escaparHtml(texto) {
+      return String(texto == null ? '' : texto)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function formatarData(iso) {
+      if (!iso) return '—';
+      const [ano, mes, dia] = iso.split('-');
+      return (dia && mes && ano) ? `${dia}/${mes}/${ano}` : iso;
+    }
+
+    // Monta o cabeçalho completo que só aparece na impressão — usa dados que
+    // já existem na pauta (local, data do fato, produtor, destinos,
+    // orientação, fontes) mas que a tela compacta não mostra
+    function montarInfoImpressao(p, nomePrograma) {
+      const destinos = [
+        p.destino_tv ? '📺 TV' : null,
+        p.destino_instagram ? '📷 Instagram' : null,
+        p.destino_youtube ? '▶️ YouTube' : null,
+        p.destino_site ? '🌐 Site' : null,
+      ].filter(Boolean);
+
+      const equipamentos = [
+        p.equip_lapela ? 'Lapela' : null,
+        p.equip_iluminacao ? 'Iluminação' : null,
+        p.equip_mochilink ? 'Mochilink' : null,
+      ].filter(Boolean);
+
+      const fontes = Array.isArray(p.fontes) ? p.fontes : [];
+
+      document.getElementById('info-impressao').innerHTML = `
+        <div class="linha-info"><strong>Título:</strong>${escaparHtml(p.titulo) || '—'}</div>
+        <div class="linha-info">
+          <strong>Programa:</strong>${escaparHtml(nomePrograma) || '—'}
+          &nbsp;&nbsp;<strong>Status:</strong>${labelStatus[p.status] || p.status || '—'}
+        </div>
+        <div class="linha-info">
+          <strong>Repórter:</strong>${escaparHtml(p.reporter) || '—'}
+          &nbsp;&nbsp;<strong>Cinegrafista:</strong>${escaparHtml(p.cinegrafista) || '—'}
+          &nbsp;&nbsp;<strong>Motorista:</strong>${escaparHtml(p.motorista) || '—'}
+          &nbsp;&nbsp;<strong>Produtor:</strong>${escaparHtml(p.produtor) || '—'}
+        </div>
+        <div class="linha-info">
+          <strong>Local:</strong>${escaparHtml(p.local) || '—'}
+          &nbsp;&nbsp;<strong>Data do Fato:</strong>${formatarData(p.data_fato)}
+          &nbsp;&nbsp;<strong>Hora do Fato:</strong>${escaparHtml(p.hora_fato) || '—'}
+        </div>
+        <div class="linha-info destinos-impressao">
+          <strong>Destinos:</strong> ${destinos.length ? destinos.map(d => `<span>${d}</span>`).join('') : '—'}
+        </div>
+        ${equipamentos.length ? `<div class="linha-info"><strong>Equipamentos:</strong> ${equipamentos.join(', ')}</div>` : ''}
+        ${p.orientacao ? `<div class="linha-info"><strong>Orientação:</strong> ${escaparHtml(p.orientacao)}</div>` : ''}
+        ${p.roteiro ? `<div class="linha-info"><strong>Roteiro:</strong> ${escaparHtml(p.roteiro)}</div>` : ''}
+        ${fontes.length ? `
+          <div class="linha-info"><strong>Fontes</strong></div>
+          <table class="fontes-impressao">
+            <thead><tr><th>Nome</th><th>Cargo</th><th>Contato</th><th>Horário Confirmado</th></tr></thead>
+            <tbody>
+              ${fontes.map(f => `
+                <tr>
+                  <td>${escaparHtml(f.nome) || '—'}</td>
+                  <td>${escaparHtml(f.cargo) || '—'}</td>
+                  <td>${escaparHtml(f.contato) || '—'}</td>
+                  <td>${escaparHtml(f.horario_confirmado) || '—'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        ` : ''}
+      `;
+    }
+
     async function carregarPauta() {
-      const resp = await fetch('/pautas/' + pautaId);
-      const p = await resp.json();
+      const [respPauta, respProgramas] = await Promise.all([
+        fetch('/pautas/' + pautaId),
+        fetch('/agenda/programas')
+      ]);
+      const p = await respPauta.json();
+      const programas = await respProgramas.json();
+      const nomePrograma = (programas.find(pr => pr.id === p.programa_id) || {}).nome;
 
       document.getElementById('sub-pauta').textContent = 'Pauta #P-' + p.id;
       document.getElementById('info-pauta').innerHTML = `
@@ -125,6 +304,7 @@
         <div><strong>Cinegrafista:</strong>${p.cinegrafista || '—'}</div>
         <div><strong>Status:</strong>${p.status || '—'}</div>
       `;
+      montarInfoImpressao(p, nomePrograma);
 
       quillCabeca = new Quill('#editor-cabeca', { theme: 'snow' });
       quillCabeca.root.setAttribute('spellcheck', 'true');
@@ -264,11 +444,14 @@
       setTimeout(() => status.textContent = '', 2000);
     });
 
+    document.getElementById('btn-imprimir').addEventListener('click', () => window.print());
+
     (async function init() {
       await carregarPauta();
       await carregarItens();
       await carregarGcs();
     })();
   </script>
+  </div>
 </body>
 </html>

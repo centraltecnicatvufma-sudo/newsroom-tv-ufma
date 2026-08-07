@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Relatórios — HORUS Newsroom</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+
+    .topo { background: #336699; color: #fff; padding: 14px 20px; }
+    .topo h1 { font-size: 18px; margin: 0 0 4px; }
+    .topo .sub { font-size: 12px; opacity: 0.9; }
+
+    .abas-relatorio { display: flex; background: #fff; border-bottom: 1px solid #eee; }
+    .abas-relatorio button {
+      padding: 12px 20px; background: transparent; border: none; border-bottom: 3px solid transparent;
+      font-size: 13px; color: #5b6472; cursor: pointer;
+    }
+    .abas-relatorio button.ativa { color: #336699; font-weight: bold; border-bottom-color: #336699; }
+    .abas-relatorio button:hover { background: #f9fafb; }
+
+    .filtros { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; padding: 14px 20px; background: #fff; border-bottom: 1px solid #eee; }
+    .filtros label { display: block; font-size: 11px; color: #5b6472; margin-bottom: 4px; }
+    .filtros select, .filtros input { padding: 7px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
+    .filtros .btn-limpar { background: #eee; color: #333; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; height: 34px; }
+
+    .conteudo { flex: 1; overflow-y: auto; padding: 20px; }
+    .largura-maxima { max-width: 1200px; margin: 0 auto; }
+
+    .aviso-dados { background: #fdf3e3; border: 1px solid #C98A1F; color: #7a5410; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; }
+
+    .cartoes-resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .cartao-resumo { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 16px 18px; border-left: 5px solid #336699; }
+    .cartao-resumo .valor { font-size: 26px; font-weight: bold; color: #1b2430; }
+    .cartao-resumo .rotulo { font-size: 12px; color: #5b6472; margin-top: 2px; }
+    .cartao-resumo.destaque { border-left-color: #2e8b57; }
+    .cartao-resumo.alerta { border-left-color: #C98A1F; }
+
+    table.tabela-relatorio { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    table.tabela-relatorio th { background: #eef1f5; text-align: left; padding: 10px 12px; font-size: 11px; color: #5b6472; text-transform: uppercase; }
+    table.tabela-relatorio td { padding: 10px 12px; font-size: 13px; border-top: 1px solid #f0f0f0; vertical-align: middle; }
+    table.tabela-relatorio tbody tr.clicavel { cursor: pointer; }
+    table.tabela-relatorio tbody tr.clicavel:hover { background: #f9fafb; }
+    table.tabela-relatorio .nome-linha { font-weight: bold; }
+    table.tabela-relatorio .contagem-status { font-size: 12px; color: #5b6472; }
+
+    .barra-progresso { background: #eef1f5; border-radius: 6px; height: 8px; width: 100%; overflow: hidden; }
+    .barra-progresso .preenchimento { background: #2e8b57; height: 100%; border-radius: 6px; }
+    .celula-progresso { display: flex; align-items: center; gap: 8px; min-width: 140px; }
+    .celula-progresso .porcentagem { font-size: 12px; color: #5b6472; white-space: nowrap; }
+
+    .linha-detalhe td { background: #fafbfc; padding: 0; }
+    .linha-detalhe .lista-itens-detalhe { padding: 10px 16px; }
+    .linha-detalhe .item-detalhe { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid #eee; font-size: 13px; }
+    .linha-detalhe .item-detalhe:last-child { border-bottom: none; }
+    .linha-detalhe .titulo-item-detalhe { color: #336699; }
+    .status-mini { font-size: 10px; padding: 2px 7px; border-radius: 4px; color: #fff; text-transform: uppercase; white-space: nowrap; }
+    .status-mini-em_producao, .status-mini-nova { background: #C98A1F; }
+    .status-mini-em_gravacao, .status-mini-em_analise { background: #075B91; }
+    .status-mini-em_edicao { background: #6b3fa0; }
+    .status-mini-concluida, .status-mini-aprovada { background: #2e8b57; }
+    .status-mini-arquivada { background: #5A021F; }
+
+    .funil { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .funil-etapa { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 14px 18px; }
+    .funil-etapa .cabecalho-etapa { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; }
+    .funil-etapa .cabecalho-etapa strong { font-size: 20px; margin-left: 6px; }
+    .funil-barra { background: #eef1f5; border-radius: 6px; height: 14px; overflow: hidden; }
+    .funil-barra .preenchimento { height: 100%; border-radius: 6px; }
+    .funil-etapa.nova .preenchimento { background: #C98A1F; }
+    .funil-etapa.em_analise .preenchimento { background: #075B91; }
+    .funil-etapa.aprovada .preenchimento { background: #2e8b57; }
+    .funil-etapa.arquivada .preenchimento { background: #8D0333; }
+
+    .estado-vazio { text-align: center; color: #999; padding: 60px 20px; }
+
+    /* ---- Navegação lateral (unificada em todas as telas) ---- */
+    body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
+    .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+    .nr-sidebar .nr-logo { padding: 0 20px 20px; border-bottom: 1px solid #4d7fb3; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
+    .nr-sidebar .nr-titulo, .nr-sidebar .nr-subtitulo { font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+    .nr-sidebar .nr-subtitulo { margin-top: 4px; }
+    .nr-sidebar a, .nr-sidebar .nr-item-desabilitado { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #e8f0f7; text-decoration: none; font-size: 14px; }
+    .nr-sidebar a:hover { background: #4d7fb3; color: #fff; }
+    .nr-sidebar a.nr-ativo { background: #244d70; color: #fff; font-weight: bold; border-left: 4px solid #8D0333; padding-left: 16px; }
+    .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
+    .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
+    .nr-app { flex: 1; min-width: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+  </style>
+</head>
+<body>
+  <div class="nr-sidebar">
+    <a href="index.html" class="nr-logo">
+      <div class="nr-titulo">HORUS</div>
+      <div class="nr-subtitulo">NEWSROOM</div>
+    </a>
+    <a href="sugestoes.html">📋 Sugestões de Pauta</a>
+    <a href="pautas.html">📝 Pautas</a>
+    <div class="nr-item-desabilitado">🗺 Mapa de Produções <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">🎬 Reportagens <span class="nr-badge">em breve</span></div>
+    <a href="espelhos.html">📽️ Espelhos</a>
+    <div class="nr-item-desabilitado">🔍 Busca Geral <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📅 Calendário <span class="nr-badge">em breve</span></div>
+    <a href="agenda.html">🗓 Agenda</a>
+    <div class="nr-item-desabilitado">👥 Escala de Equipes <span class="nr-badge">em breve</span></div>
+    <a href="teleprompter.html">🎙 Teleprompter</a>
+    <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📊 Gráficos Gerenciais <span class="nr-badge">em breve</span></div>
+    <a href="relatorios.html" class="nr-ativo">📄 Relatórios</a>
+    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+  </div>
+  <div class="nr-app">
+
+  <div class="topo">
+    <h1 id="titulo-relatorio">HORUS NEWSROOM — Relatório de Produtividade</h1>
+    <div class="sub" id="subtitulo-relatorio">Quantas pautas cada pessoa produziu, por papel e por período</div>
+  </div>
+
+  <div class="abas-relatorio">
+    <button id="aba-produtividade" class="ativa">📊 Produtividade por Papel</button>
+    <button id="aba-funil">🗂️ Funil de Sugestões</button>
+  </div>
+
+  <!-- ═══════════ PRODUTIVIDADE ═══════════ -->
+  <div id="painel-produtividade">
+    <div class="filtros">
+      <div>
+        <label>Papel</label>
+        <select id="filtro-papel">
+          <option value="reporter">Repórter</option>
+          <option value="cinegrafista">Cinegrafista</option>
+          <option value="editor_imagens">Editor de Imagens</option>
+          <option value="produtor">Produtor</option>
+          <option value="motorista">Motorista</option>
+        </select>
+      </div>
+      <div>
+        <label>Data do fato — de</label>
+        <input type="date" id="filtro-data-de">
+      </div>
+      <div>
+        <label>até</label>
+        <input type="date" id="filtro-data-ate">
+      </div>
+      <div>
+        <label>Programa</label>
+        <select id="filtro-programa"><option value="">Todos</option></select>
+      </div>
+      <button class="btn-limpar" id="btn-limpar-filtros">Limpar filtros</button>
+    </div>
+
+    <div class="conteudo">
+      <div class="largura-maxima">
+        <div class="cartoes-resumo" id="cartoes-resumo"></div>
+        <div id="area-tabela">Carregando...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ FUNIL DE SUGESTÕES ═══════════ -->
+  <div id="painel-funil" style="display:none;">
+    <div class="filtros">
+      <div>
+        <label>Criada — de</label>
+        <input type="date" id="funil-data-de">
+      </div>
+      <div>
+        <label>até</label>
+        <input type="date" id="funil-data-ate">
+      </div>
+      <div>
+        <label>Editoria</label>
+        <select id="funil-editoria"><option value="">Todas</option></select>
+      </div>
+      <button class="btn-limpar" id="btn-limpar-funil">Limpar filtros</button>
+    </div>
+
+    <div class="conteudo">
+      <div class="largura-maxima">
+        <div id="aviso-funil"></div>
+        <div class="cartoes-resumo" id="cartoes-funil"></div>
+        <div id="funil-visual"></div>
+        <div id="tabela-editorias"></div>
+        <div id="tabela-remetentes"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function escaparHtml(texto) {
+      return String(texto == null ? '' : texto)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function formatarData(iso) {
+      if (!iso) return '—';
+      const [ano, mes, dia] = (iso.includes('T') ? iso.slice(0, 10) : iso).split('-');
+      return (dia && mes && ano) ? `${dia}/${mes}/${ano}` : iso;
+    }
+
+    // ───────────────────── Abas ─────────────────────
+    document.getElementById('aba-produtividade').addEventListener('click', () => mudarAba('produtividade'));
+    document.getElementById('aba-funil').addEventListener('click', () => mudarAba('funil'));
+
+    function mudarAba(aba) {
+      const ehProdutividade = aba === 'produtividade';
+      document.getElementById('aba-produtividade').classList.toggle('ativa', ehProdutividade);
+      document.getElementById('aba-funil').classList.toggle('ativa', !ehProdutividade);
+      document.getElementById('painel-produtividade').style.display = ehProdutividade ? '' : 'none';
+      document.getElementById('painel-funil').style.display = ehProdutividade ? 'none' : '';
+      document.getElementById('titulo-relatorio').textContent = ehProdutividade
+        ? 'HORUS NEWSROOM — Relatório de Produtividade'
+        : 'HORUS NEWSROOM — Funil de Sugestões';
+      document.getElementById('subtitulo-relatorio').textContent = ehProdutividade
+        ? 'Quantas pautas cada pessoa produziu, por papel e por período'
+        : 'Do envio à decisão: quantas sugestões avançam, quem envia, quanto tempo leva';
+    }
+
+    // ═══════════════════════ PRODUTIVIDADE ═══════════════════════
+    const labelStatusPauta = {
+      em_producao: 'Em Produção', em_gravacao: 'Em Gravação',
+      em_edicao: 'Gravado / Em Edição', concluida: 'Concluída'
+    };
+    const ordemStatusPauta = ['em_producao', 'em_gravacao', 'em_edicao', 'concluida'];
+    const SEM_RESPONSAVEL = '— (sem responsável definido) —';
+
+    let pautasCache = [];
+
+    async function carregarProgramas() {
+      const resp = await fetch('/agenda/programas');
+      const lista = await resp.json();
+      const select = document.getElementById('filtro-programa');
+      select.innerHTML = '<option value="">Todos</option>' +
+        lista.map(p => `<option value="${p.id}">${escaparHtml(p.nome)}</option>`).join('');
+    }
+
+    async function carregarPautas() {
+      const resp = await fetch('/pautas');
+      pautasCache = await resp.json();
+    }
+
+    function pautasFiltradas() {
+      const dataDe = document.getElementById('filtro-data-de').value;
+      const dataAte = document.getElementById('filtro-data-ate').value;
+      const programaId = document.getElementById('filtro-programa').value;
+
+      return pautasCache.filter(p => {
+        if (dataDe && (!p.data_fato || p.data_fato < dataDe)) return false;
+        if (dataAte && (!p.data_fato || p.data_fato > dataAte)) return false;
+        if (programaId && String(p.programa_id) !== programaId) return false;
+        return true;
+      });
+    }
+
+    function agruparPautasPorPessoa(pautas, campoPapel) {
+      const grupos = {};
+      pautas.forEach(p => {
+        const nome = (p[campoPapel] || '').trim() || SEM_RESPONSAVEL;
+        if (!grupos[nome]) {
+          grupos[nome] = { nome, total: 0, porStatus: { em_producao: 0, em_gravacao: 0, em_edicao: 0, concluida: 0 }, itens: [] };
+        }
+        grupos[nome].total++;
+        const status = ordemStatusPauta.includes(p.status) ? p.status : 'em_producao';
+        grupos[nome].porStatus[status]++;
+        grupos[nome].itens.push(p);
+      });
+      return Object.values(grupos).sort((a, b) => b.total - a.total);
+    }
+
+    function renderResumoProdutividade(pautas) {
+      const total = pautas.length;
+      const concluidas = pautas.filter(p => p.status === 'concluida').length;
+      const pct = total ? Math.round((concluidas / total) * 100) : 0;
+      const pessoasAtivas = new Set(
+        pautas.map(p => (p[document.getElementById('filtro-papel').value] || '').trim()).filter(Boolean)
+      ).size;
+
+      document.getElementById('cartoes-resumo').innerHTML = `
+        <div class="cartao-resumo">
+          <div class="valor">${total}</div>
+          <div class="rotulo">Pautas no período</div>
+        </div>
+        <div class="cartao-resumo destaque">
+          <div class="valor">${concluidas}</div>
+          <div class="rotulo">Concluídas (${pct}%)</div>
+        </div>
+        <div class="cartao-resumo">
+          <div class="valor">${pessoasAtivas}</div>
+          <div class="rotulo">Pessoas com pautas no papel selecionado</div>
+        </div>
+      `;
+    }
+
+    function renderTabelaProdutividade(grupos) {
+      const area = document.getElementById('area-tabela');
+
+      if (grupos.length === 0) {
+        area.innerHTML = '<div class="estado-vazio">Nenhuma pauta encontrada para esse período/filtro.</div>';
+        return;
+      }
+
+      area.innerHTML = `
+        <table class="tabela-relatorio">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th style="width:70px;">Total</th>
+              <th style="width:220px;">Por status</th>
+              <th style="width:170px;">% Concluída</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${grupos.map((g, i) => `
+              <tr class="clicavel" data-indice="${i}">
+                <td class="nome-linha">${escaparHtml(g.nome)}</td>
+                <td>${g.total}</td>
+                <td class="contagem-status">
+                  ${ordemStatusPauta.map(s => g.porStatus[s] ? `${labelStatusPauta[s]}: ${g.porStatus[s]}` : null).filter(Boolean).join(' · ') || '—'}
+                </td>
+                <td>
+                  <div class="celula-progresso">
+                    <div class="barra-progresso"><div class="preenchimento" style="width:${g.total ? Math.round((g.porStatus.concluida / g.total) * 100) : 0}%"></div></div>
+                    <span class="porcentagem">${g.total ? Math.round((g.porStatus.concluida / g.total) * 100) : 0}%</span>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+
+      ligarExpansaoDetalhe(area, grupos, (item) => `
+        <span class="titulo-item-detalhe">#P-${item.id} — ${escaparHtml(item.titulo)}</span>
+        <span>
+          ${formatarData(item.data_fato)}
+          <span class="status-mini status-mini-${item.status}">${labelStatusPauta[item.status] || item.status}</span>
+        </span>
+      `, (item) => item.data_fato, 4);
+    }
+
+    // Função compartilhada: expande/recolhe uma linha de detalhe com a lista de
+    // itens do grupo clicado — usada tanto na Produtividade quanto no Funil
+    function ligarExpansaoDetalhe(area, grupos, montarLinhaHtml, campoOrdenacao, colspan) {
+      area.querySelectorAll('tr.clicavel').forEach(linha => {
+        linha.addEventListener('click', () => {
+          const existente = linha.nextElementSibling;
+          if (existente && existente.classList.contains('linha-detalhe')) {
+            existente.remove();
+            return;
+          }
+          area.querySelectorAll('.linha-detalhe').forEach(el => el.remove());
+
+          const grupo = grupos[Number(linha.dataset.indice)];
+          const detalhe = document.createElement('tr');
+          detalhe.className = 'linha-detalhe';
+          detalhe.innerHTML = `
+            <td colspan="${colspan}">
+              <div class="lista-itens-detalhe">
+                ${grupo.itens
+                  .slice()
+                  .sort((a, b) => (campoOrdenacao(b) || '').localeCompare(campoOrdenacao(a) || ''))
+                  .map(item => `<div class="item-detalhe">${montarLinhaHtml(item)}</div>`).join('')}
+              </div>
+            </td>
+          `;
+          linha.after(detalhe);
+        });
+      });
+    }
+
+    function atualizarProdutividade() {
+      const filtradas = pautasFiltradas();
+      const campoPapel = document.getElementById('filtro-papel').value;
+      renderResumoProdutividade(filtradas);
+      renderTabelaProdutividade(agruparPautasPorPessoa(filtradas, campoPapel));
+    }
+
+    document.getElementById('filtro-papel').addEventListener('change', atualizarProdutividade);
+    document.getElementById('filtro-data-de').addEventListener('change', atualizarProdutividade);
+    document.getElementById('filtro-data-ate').addEventListener('change', atualizarProdutividade);
+    document.getElementById('filtro-programa').addEventListener('change', atualizarProdutividade);
+    document.getElementById('btn-limpar-filtros').addEventListener('click', () => {
+      document.getElementById('filtro-data-de').value = '';
+      document.getElementById('filtro-data-ate').value = '';
+      document.getElementById('filtro-programa').value = '';
+      atualizarProdutividade();
+    });
+
+    // ═══════════════════════ FUNIL DE SUGESTÕES ═══════════════════════
+    const labelStatusSugestao = { nova: 'Nova', em_analise: 'Em Análise', aprovada: 'Aprovada', arquivada: 'Arquivada' };
+    const SEM_EDITORIA = '— (sem editoria) —';
+    const SEM_REMETENTE = '— (sem remetente identificado) —';
+
+    let sugestoesCache = [];
+
+    // Construída a partir dos dados reais, não de uma lista fixa — o texto
+    // livre em "Editoria" já divergiu do dropdown padrão em uso real
+    // (existem sugestões com "UFMA", "Cultura", "Acadêmico" fora da lista
+    // original), então um filtro fixo deixaria essas de fora silenciosamente.
+    function preencherFiltroEditoria() {
+      const editorias = [...new Set(sugestoesCache.map(s => (s.editoria || '').trim()).filter(Boolean))].sort();
+      const select = document.getElementById('funil-editoria');
+      select.innerHTML = '<option value="">Todas</option>' + editorias.map(e => `<option value="${escaparHtml(e)}">${escaparHtml(e)}</option>`).join('');
+    }
+
+    async function carregarSugestoes() {
+      const resp = await fetch('/sugestoes');
+      sugestoesCache = await resp.json();
+    }
+
+    // O filtro de período só se aplica a quem tem criado_em preenchido —
+    // sugestões anteriores a essa coluna existir não podem ser posicionadas
+    // no tempo, então ficam de fora quando um período é escolhido (mas
+    // continuam contando na visão geral, sem filtro).
+    function sugestoesFiltradas() {
+      const dataDe = document.getElementById('funil-data-de').value;
+      const dataAte = document.getElementById('funil-data-ate').value;
+      const editoria = document.getElementById('funil-editoria').value;
+      const usaFiltroPeriodo = !!(dataDe || dataAte);
+
+      return sugestoesCache.filter(s => {
+        if (usaFiltroPeriodo) {
+          if (!s.criado_em) return false;
+          const dataCriacao = s.criado_em.slice(0, 10);
+          if (dataDe && dataCriacao < dataDe) return false;
+          if (dataAte && dataCriacao > dataAte) return false;
+        }
+        if (editoria && s.editoria !== editoria) return false;
+        return true;
+      });
+    }
+
+    function diasEntre(inicioIso, fimIso) {
+      const ms = new Date(fimIso).getTime() - new Date(inicioIso).getTime();
+      return ms / (1000 * 60 * 60 * 24);
+    }
+
+    function formatarDuracao(dias) {
+      if (dias < 1) return Math.round(dias * 24) + 'h';
+      return dias.toFixed(1).replace('.0', '') + ' dia' + (dias >= 2 ? 's' : '');
+    }
+
+    function renderAvisoFunil(sugestoes) {
+      const semData = sugestoes.filter(s => !s.criado_em).length;
+      const aviso = document.getElementById('aviso-funil');
+      if (semData === 0) { aviso.innerHTML = ''; return; }
+      aviso.innerHTML = `<div class="aviso-dados">⚠️ ${semData} sugestõe${semData > 1 ? 's' : ''} sem data de criação registrada
+        (enviadas antes desta versão do sistema) — aparecem nas contagens gerais, mas não entram no filtro de período
+        nem no cálculo de tempo médio até decisão.</div>`;
+    }
+
+    function renderResumoFunil(sugestoes) {
+      const decididas = sugestoes.filter(s => s.status === 'aprovada' || s.status === 'arquivada');
+      const aprovadas = sugestoes.filter(s => s.status === 'aprovada');
+      const taxaAprovacao = decididas.length ? Math.round((aprovadas.length / decididas.length) * 100) : null;
+
+      const comAmbasDatas = sugestoes.filter(s => s.criado_em && s.decidido_em);
+      const tempoMedio = comAmbasDatas.length
+        ? comAmbasDatas.reduce((soma, s) => soma + diasEntre(s.criado_em, s.decidido_em), 0) / comAmbasDatas.length
+        : null;
+
+      document.getElementById('cartoes-funil').innerHTML = `
+        <div class="cartao-resumo">
+          <div class="valor">${sugestoes.length}</div>
+          <div class="rotulo">Sugestões no filtro</div>
+        </div>
+        <div class="cartao-resumo destaque">
+          <div class="valor">${taxaAprovacao === null ? '—' : taxaAprovacao + '%'}</div>
+          <div class="rotulo">Taxa de aprovação (${decididas.length} decidida${decididas.length === 1 ? '' : 's'})</div>
+        </div>
+        <div class="cartao-resumo ${tempoMedio === null ? 'alerta' : ''}">
+          <div class="valor">${tempoMedio === null ? 'sem dados' : formatarDuracao(tempoMedio)}</div>
+          <div class="rotulo">Tempo médio até a decisão${comAmbasDatas.length ? ' (' + comAmbasDatas.length + ')' : ''}</div>
+        </div>
+      `;
+    }
+
+    function renderFunilVisual(sugestoes) {
+      const contagem = { nova: 0, em_analise: 0, aprovada: 0, arquivada: 0 };
+      sugestoes.forEach(s => { if (contagem[s.status] !== undefined) contagem[s.status]++; });
+      const maior = Math.max(1, ...Object.values(contagem));
+
+      document.getElementById('funil-visual').innerHTML = `
+        <div class="funil">
+          ${['nova', 'em_analise', 'aprovada', 'arquivada'].map(status => `
+            <div class="funil-etapa ${status}">
+              <div class="cabecalho-etapa">
+                <span>${labelStatusSugestao[status]}</span>
+                <strong>${contagem[status]}</strong>
+              </div>
+              <div class="funil-barra"><div class="preenchimento" style="width:${Math.round((contagem[status] / maior) * 100)}%"></div></div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function agruparSugestoesPor(sugestoes, campo, valorPadrao) {
+      const grupos = {};
+      sugestoes.forEach(s => {
+        const chave = (s[campo] || '').trim() || valorPadrao;
+        if (!grupos[chave]) grupos[chave] = { nome: chave, total: 0, aprovada: 0, arquivada: 0, decididas: 0, itens: [] };
+        grupos[chave].total++;
+        if (s.status === 'aprovada') { grupos[chave].aprovada++; grupos[chave].decididas++; }
+        if (s.status === 'arquivada') { grupos[chave].arquivada++; grupos[chave].decididas++; }
+        grupos[chave].itens.push(s);
+      });
+      return Object.values(grupos).sort((a, b) => b.total - a.total);
+    }
+
+    function renderTabelaAgrupada(containerId, titulo, grupos) {
+      const container = document.getElementById(containerId);
+      if (grupos.length === 0) { container.innerHTML = ''; return; }
+
+      container.innerHTML = `
+        <h3 style="font-size:14px; color:#336699; margin: 4px 0 8px;">${titulo}</h3>
+        <table class="tabela-relatorio">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th style="width:70px;">Total</th>
+              <th style="width:150px;">Decididas</th>
+              <th style="width:170px;">Taxa de aprovação</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${grupos.map((g, i) => `
+              <tr class="clicavel" data-indice="${i}">
+                <td class="nome-linha">${escaparHtml(g.nome)}</td>
+                <td>${g.total}</td>
+                <td class="contagem-status">${g.aprovada} aprovada${g.aprovada === 1 ? '' : 's'} · ${g.arquivada} arquivada${g.arquivada === 1 ? '' : 's'}</td>
+                <td>
+                  <div class="celula-progresso">
+                    <div class="barra-progresso"><div class="preenchimento" style="width:${g.decididas ? Math.round((g.aprovada / g.decididas) * 100) : 0}%"></div></div>
+                    <span class="porcentagem">${g.decididas ? Math.round((g.aprovada / g.decididas) * 100) + '%' : '— (nenhuma decidida)'}</span>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+
+      ligarExpansaoDetalhe(container, grupos, (item) => `
+        <span class="titulo-item-detalhe">${escaparHtml(item.titulo)}</span>
+        <span>
+          ${formatarData(item.criado_em) === '—' ? '' : formatarData(item.criado_em)}
+          <span class="status-mini status-mini-${item.status}">${labelStatusSugestao[item.status] || item.status}</span>
+        </span>
+      `, (item) => item.criado_em || '', 4);
+    }
+
+    function atualizarFunil() {
+      const filtradas = sugestoesFiltradas();
+      renderAvisoFunil(filtradas);
+      renderResumoFunil(filtradas);
+      renderFunilVisual(filtradas);
+      renderTabelaAgrupada('tabela-editorias', '📂 Por Editoria', agruparSugestoesPor(filtradas, 'editoria', SEM_EDITORIA));
+      renderTabelaAgrupada('tabela-remetentes', '✍️ Por Quem Enviou', agruparSugestoesPor(filtradas, 'enviado_por', SEM_REMETENTE));
+    }
+
+    document.getElementById('funil-data-de').addEventListener('change', atualizarFunil);
+    document.getElementById('funil-data-ate').addEventListener('change', atualizarFunil);
+    document.getElementById('funil-editoria').addEventListener('change', atualizarFunil);
+    document.getElementById('btn-limpar-funil').addEventListener('click', () => {
+      document.getElementById('funil-data-de').value = '';
+      document.getElementById('funil-data-ate').value = '';
+      document.getElementById('funil-editoria').value = '';
+      atualizarFunil();
+    });
+
+    (async function init() {
+      await Promise.all([carregarProgramas(), carregarPautas(), carregarSugestoes()]);
+      preencherFiltroEditoria();
+      atualizarProdutividade();
+      atualizarFunil();
+    })();
+  </script>
+  </div>
+</body>
+</html>

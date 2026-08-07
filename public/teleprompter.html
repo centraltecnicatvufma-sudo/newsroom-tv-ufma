@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Teleprompter — Newsroom TV UFMA</title>
+<title>Teleprompter — HORUS Newsroom</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; }
@@ -15,9 +15,13 @@
   .toolbar input#campo-buscar { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; padding: 6px 8px; font-size: 13px; width: 200px; }
   .toolbar input#campo-buscar::placeholder { color: rgba(255,255,255,0.7); }
 
-  .corpo { flex: 1; display: flex; min-height: 0; }
+  /* row-reverse: a lista de itens (.coluna-textos) fica à DIREITA do editor,
+     é a "barra com a lista de itens a serem rodados no teleprompter" que
+     deve ficar desse lado — não a navegação principal, que é igual em toda
+     tela. Só inverte a ordem VISUAL dos dois filhos, DOM e JS inalterados. */
+  .corpo { flex: 1; display: flex; flex-direction: row-reverse; min-height: 0; }
 
-  .coluna-textos { width: 260px; flex-shrink: 0; background: #fff; border-right: 1px solid #eee; overflow-y: auto; }
+  .coluna-textos { width: 260px; flex-shrink: 0; background: #fff; border-left: 1px solid #eee; overflow-y: auto; }
   .coluna-textos .item { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; cursor: pointer; font-size: 13px; }
   .coluna-textos .item:hover { background: #f4f5f7; }
   .coluna-textos .item.ativo { background: #e7eef6; color: #336699; font-weight: bold; }
@@ -29,16 +33,58 @@
   .painel-editar textarea { flex: 1; background: #fafbfc; color: #1b2430; border: 1px solid #ddd; border-radius: 6px; padding: 10px; font-size: 14px; resize: none; }
 
   .painel-rolagem { flex: 1; overflow: hidden; position: relative; background: #000; }
-  .texto-rolagem { position: absolute; width: 100%; padding: 0 40px; font-weight: bold; line-height: 1.5; text-align: center; color: #FFD400; white-space: pre-wrap; }
+  /* .escala-rolagem tem largura fixa (a resolução de referência) e é escalada
+     via transform pra caber neste painel — assim o texto SEMPRE quebra do
+     mesmo jeito, e só o zoom visual muda de tela pra tela */
+  .escala-rolagem { position: absolute; top: 0; left: 50%; transform-origin: top center; }
+  .texto-rolagem { width: 100%; padding: 0 40px; font-weight: bold; line-height: 1.5; text-align: center; color: #FFD400; white-space: pre-wrap; text-transform: uppercase; }
 
   .toolbar-inferior { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #eef1f5; border-top: 1px solid #ddd; }
   .toolbar-inferior button { background: #fff; color: #336699; border: 1px solid #ddd; border-radius: 6px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
   .toolbar-inferior button:hover { background: #e7eef6; }
   .toolbar-inferior .destaque { background: #8D0333; color: #fff; border-color: #8D0333; }
   .toolbar-inferior .destaque:hover { background: #a10440; }
+  .toolbar-inferior .separador { width: 1px; height: 22px; background: #ddd; margin: 0 4px; }
+  .toolbar-inferior .ativo-auto-next { background: #336699; color: #fff; border-color: #336699; }
+  .toolbar-inferior .ativo-auto-next:hover { background: #2a5580; }
+
+  /* ---- Navegação lateral (unificada em todas as telas) ---- */
+  body { height: 100vh; margin: 0; padding: 0; display: flex; flex-direction: row; overflow: hidden; }
+  .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+  .nr-sidebar .nr-logo { padding: 0 20px 20px; border-bottom: 1px solid #4d7fb3; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
+  .nr-sidebar .nr-titulo, .nr-sidebar .nr-subtitulo { font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+  .nr-sidebar .nr-subtitulo { margin-top: 4px; }
+  .nr-sidebar a, .nr-sidebar .nr-item-desabilitado { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #e8f0f7; text-decoration: none; font-size: 14px; }
+  .nr-sidebar a:hover { background: #4d7fb3; color: #fff; }
+  .nr-sidebar a.nr-ativo { background: #244d70; color: #fff; font-weight: bold; border-left: 4px solid #8D0333; padding-left: 16px; }
+  .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
+  .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
+  .nr-app { flex: 1; min-width: 0; height: 100%; overflow: hidden; display: flex; flex-direction: column; }
 </style>
 </head>
 <body>
+  <div class="nr-sidebar">
+    <a href="index.html" class="nr-logo">
+      <div class="nr-titulo">HORUS</div>
+      <div class="nr-subtitulo">NEWSROOM</div>
+    </a>
+    <a href="sugestoes.html">📋 Sugestões de Pauta</a>
+    <a href="pautas.html">📝 Pautas</a>
+    <div class="nr-item-desabilitado">🗺 Mapa de Produções <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">🎬 Reportagens <span class="nr-badge">em breve</span></div>
+    <a href="espelhos.html">📽️ Espelhos</a>
+    <div class="nr-item-desabilitado">🔍 Busca Geral <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📅 Calendário <span class="nr-badge">em breve</span></div>
+    <a href="agenda.html">🗓 Agenda</a>
+    <div class="nr-item-desabilitado">👥 Escala de Equipes <span class="nr-badge">em breve</span></div>
+    <a href="teleprompter.html" class="nr-ativo">🎙 Teleprompter</a>
+    <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📊 Gráficos Gerenciais <span class="nr-badge">em breve</span></div>
+    <a href="relatorios.html">📄 Relatórios</a>
+    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+  </div>
+  <div class="nr-app">
 
   <div class="toolbar">
     <button id="btn-abrir">📂 Abrir</button>
@@ -65,7 +111,9 @@
         <textarea id="texto-editar" placeholder="Cole, digite ou selecione um item da lista..."></textarea>
       </div>
       <div class="painel-rolagem" id="painel-rolagem">
-        <div class="texto-rolagem" id="texto-rolagem"></div>
+        <div class="escala-rolagem" id="escala-rolagem">
+          <div class="texto-rolagem" id="texto-rolagem"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -77,6 +125,8 @@
     <button id="btn-reverso">◀ Reverso</button>
     <button id="btn-menos">➖ Velocidade</button>
     <button id="btn-mais">➕ Velocidade</button>
+    <div class="separador"></div>
+    <button id="btn-auto-next">⏭ Auto-Next: Desligado</button>
   </div>
 
   <input type="file" id="input-arquivo" accept=".txt" style="display:none">
@@ -90,21 +140,33 @@
     let rodando = false;
     let direcao = 1;
     let posicaoY = 0;
+    let autoAvancar = false;
     let animacaoId = null;
     let janelaApresentador = null;
 
+    // Largura/altura de referência usadas para quebrar o texto e calcular
+    // início/fim da rolagem. Enquanto o 2º monitor não foi aberto, cada janela
+    // usa o próprio tamanho; depois de abrir, as duas passam a usar a
+    // resolução REAL do monitor do apresentador — assim a quebra de linha e a
+    // posição da rolagem ficam idênticas nas duas telas, sempre.
+    let referenciaLargura = null;
+    let referenciaAltura = null;
+
     const canal = new BroadcastChannel('teleprompter-tv-ufma');
 
+    const espelhoId = Number(new URLSearchParams(location.search).get('espelho_id')) || 1;
+
     async function carregarBlocosDoEspelho() {
-      const resposta = await fetch('/blocos?espelho_id=1');
+      const resposta = await fetch('/blocos?espelho_id=' + espelhoId);
       const blocos = await resposta.json();
 
       itens = blocos.map(b => ({
         origem: 'bloco',
         id: b.id,
         titulo: b.titulo,
-        tipo: b.tipo,
-        texto: b.texto_script || ''
+        tipo: 'Bloco ' + (b.bloco || 1) + ' · ' + (b.tipo || ''),
+        // O texto que vai ao ar é sempre caixa alta, não importa como foi escrito na Lauda
+        texto: (b.texto_script || '').toUpperCase()
       }));
 
       renderListaTextos();
@@ -221,7 +283,18 @@
     }
 
     document.getElementById('texto-editar').addEventListener('input', (e) => {
-      const texto = e.target.value;
+      const campo = e.target;
+      const texto = campo.value.toUpperCase();
+
+      // Força caixa alta ignorando o estado do Caps Lock: se o valor mudou ao
+      // maiusculizar, reescreve o campo preservando onde o cursor estava
+      if (campo.value !== texto) {
+        const inicio = campo.selectionStart;
+        const fim = campo.selectionEnd;
+        campo.value = texto;
+        campo.setSelectionRange(inicio, fim);
+      }
+
       document.getElementById('texto-rolagem').textContent = texto;
       if (itemAtivoIndex !== null) itens[itemAtivoIndex].texto = texto;
       enviarParaApresentador();
@@ -257,7 +330,7 @@
       if (!arquivo) return;
       const leitor = new FileReader();
       leitor.onload = (evento) => {
-        const texto = evento.target.result;
+        const texto = evento.target.result.toUpperCase();
         itens.push({ origem: 'manual', id: null, titulo: arquivo.name, tipo: 'arquivo', texto: texto });
         renderListaTextos();
         selecionarItem(itens.length - 1);
@@ -286,8 +359,30 @@
       document.getElementById('valor-velocidade').textContent = velocidade;
     }
 
+    function referenciaAtual() {
+      if (referenciaLargura && referenciaAltura) {
+        return { largura: referenciaLargura, altura: referenciaAltura };
+      }
+      const painel = document.getElementById('painel-rolagem');
+      return { largura: painel.clientWidth, altura: painel.clientHeight };
+    }
+
+    // Escala o texto (largura fixa de referência) pra caber no painel de
+    // pré-visualização local, sem afetar onde as linhas quebram
+    function aplicarEscala() {
+      const { largura } = referenciaAtual();
+      const painel = document.getElementById('painel-rolagem');
+      const escala = document.getElementById('escala-rolagem');
+      const fator = painel.clientWidth / largura;
+
+      escala.style.width = largura + 'px';
+      escala.style.marginLeft = (-largura / 2) + 'px';
+      escala.style.transform = 'scale(' + fator + ')';
+    }
+    window.addEventListener('resize', aplicarEscala);
+
     function posicaoInicial() {
-      return document.getElementById('painel-rolagem').clientHeight;
+      return referenciaAtual().altura;
     }
 
     function passoAnimacao() {
@@ -313,8 +408,68 @@
 
       textoEl.style.transform = 'translateY(' + posicaoY + 'px)';
       enviarParaApresentador();
+      acompanharItemAtivoDuranteLeitura();
 
       if (rodando) animacaoId = requestAnimationFrame(passoAnimacao);
+    }
+
+    // Monta a fila de leitura a partir do item ativo: com o Auto-Next ligado,
+    // encadeia os itens seguintes (enquanto nenhum deles estiver em loop) num
+    // ÚNICO texto contínuo — como se fossem uma cabeça só. A rolagem passa de
+    // um item pro outro sem parar, sem pular e sem reaparecer lá embaixo.
+    function construirFilaDeLeitura() {
+      const fila = [itemAtivoIndex];
+      if (autoAvancar && itens[itemAtivoIndex] && !itens[itemAtivoIndex].loop) {
+        let i = itemAtivoIndex + 1;
+        while (i < itens.length && !itens[i].loop) {
+          fila.push(i);
+          i++;
+        }
+      }
+      return fila;
+    }
+
+    function escaparHtml(texto) {
+      return String(texto == null ? '' : texto)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Prepara o texto que vai rolar: um item só (fluxo normal) ou vários
+    // encadeados em sequência (Auto-Next ligado). Chamado sempre que a
+    // rolagem parte do zero — nunca no meio de uma rolagem já em andamento.
+    // Cada item vira um <span data-index> — é essa marcação que permite saber,
+    // durante a rolagem contínua, qual item está passando no centro da tela.
+    function prepararTextoParaRolagem() {
+      const fila = construirFilaDeLeitura();
+      document.getElementById('texto-rolagem').innerHTML = fila
+        .map(i => `<span class="segmento-item" data-index="${i}">${escaparHtml(itens[i].texto)}</span>`)
+        .join('\n\n\n');
+    }
+
+    // Enquanto a rolagem passa por um texto encadeado (Auto-Next), a seleção
+    // no painel esquerdo acompanha qual item está no centro da tela — o
+    // operador sempre vê destacado o que está sendo lido no momento.
+    function itemNoCentroDaTela() {
+      const painel = document.getElementById('painel-rolagem');
+      const centroY = painel.getBoundingClientRect().top + painel.clientHeight / 2;
+      const segmentos = document.querySelectorAll('#texto-rolagem .segmento-item');
+
+      for (const segmento of segmentos) {
+        const retangulo = segmento.getBoundingClientRect();
+        if (retangulo.top <= centroY && retangulo.bottom >= centroY) {
+          return Number(segmento.dataset.index);
+        }
+      }
+      return null; // nenhum segmento cobre o centro agora (ainda abaixo ou já passou)
+    }
+
+    function acompanharItemAtivoDuranteLeitura() {
+      const indice = itemNoCentroDaTela();
+      if (indice === null || indice === itemAtivoIndex) return;
+
+      itemAtivoIndex = indice;
+      document.getElementById('texto-editar').value = itens[indice].texto;
+      renderListaTextos();
     }
 
     function play() {
@@ -343,6 +498,7 @@
 
     document.getElementById('btn-play').addEventListener('click', function() {
       if (!rodando && posicaoY === 0) {
+        prepararTextoParaRolagem();
         posicaoY = posicaoInicial();
         document.getElementById('texto-rolagem').style.transform = 'translateY(' + posicaoY + 'px)';
       }
@@ -360,6 +516,18 @@
       velocidade = Math.max(velocidade - 1, 1);
       atualizarVelocidadeNaTela();
     });
+
+    // ---- Auto-Next: ao terminar um item, já passa pro próximo e continua rolando ----
+    function atualizarBotaoAutoAvancar() {
+      const btn = document.getElementById('btn-auto-next');
+      btn.textContent = autoAvancar ? '⏭ Auto-Next: Ligado' : '⏭ Auto-Next: Desligado';
+      btn.classList.toggle('ativo-auto-next', autoAvancar);
+    }
+    document.getElementById('btn-auto-next').addEventListener('click', () => {
+      autoAvancar = !autoAvancar;
+      atualizarBotaoAutoAvancar();
+    });
+    atualizarBotaoAutoAvancar();
 
     document.addEventListener('keydown', function(e) {
       const digitando = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
@@ -380,6 +548,7 @@
           pause();
         } else {
           if (posicaoY === 0) {
+            prepararTextoParaRolagem();
             posicaoY = posicaoInicial();
             document.getElementById('texto-rolagem').style.transform = 'translateY(' + posicaoY + 'px)';
           }
@@ -397,9 +566,24 @@
       canal.postMessage({
         texto: document.getElementById('texto-rolagem').textContent,
         posicaoY: posicaoY,
-        fontSize: fontSize
+        fontSize: fontSize,
+        referenciaLargura: referenciaAtual().largura
       });
     }
+
+    // O apresentador avisa aqui o próprio tamanho já em tela cheia — o
+    // getScreenDetails() só dá uma estimativa (availWidth/availHeight, sem
+    // contar que o fullscreen recupera o espaço da barra de menu/dock), e é
+    // essa diferença que fazia o texto já nascer visível no 2º monitor.
+    // Assim que a medida real chega, ela vira a referência oficial.
+    canal.onmessage = (ev) => {
+      const d = ev.data;
+      if (d.tipo === 'dimensoes-apresentador') {
+        referenciaLargura = d.largura;
+        referenciaAltura = d.altura;
+        aplicarEscala();
+      }
+    };
 
     document.getElementById('btn-2monitor').addEventListener('click', abrirSegundoMonitor);
 
@@ -417,6 +601,14 @@
           alert('Não encontrei um segundo monitor conectado. Conecte o monitor do apresentador e tente de novo.');
           return;
         }
+
+        // A partir daqui, a quebra de linha e o início/fim da rolagem passam a
+        // usar a resolução REAL do monitor do apresentador como referência —
+        // as duas telas mostram o mesmo texto, na mesma posição, ao mesmo
+        // tempo, não importa o tamanho de cada uma.
+        referenciaLargura = outraTela.availWidth;
+        referenciaAltura = outraTela.availHeight;
+        aplicarEscala();
 
         const features = `left=${outraTela.availLeft},top=${outraTela.availTop},width=${outraTela.availWidth},height=${outraTela.availHeight}`;
         janelaApresentador = window.open('', 'janela-apresentador-tvufma', features);
@@ -439,12 +631,13 @@
         <html>
         <head>
           <meta charset="UTF-8">
-          <title>TV UFMA — Apresentador</title>
+          <title>HORUS Newsroom — Apresentador</title>
           <style>
             html, body { margin:0; padding:0; background:#000; height:100%; overflow:hidden; }
             #palco { position:relative; width:100%; height:100%; overflow:hidden; }
+            #escala { position:absolute; top:0; left:50%; transform-origin: top center; }
             #texto {
-              position:absolute; width:100%; padding:0 40px; box-sizing:border-box;
+              width:100%; padding:0 40px; box-sizing:border-box;
               text-align:center; color:#FFD400; font-family:Arial, sans-serif;
               font-weight:bold; text-transform:uppercase; white-space:pre-wrap;
               line-height:1.5;
@@ -452,12 +645,45 @@
           </style>
         </head>
         <body>
-          <div id="palco"><div id="texto"></div></div>
+          <div id="palco"><div id="escala"><div id="texto"></div></div></div>
           <script>
             const canal = new BroadcastChannel('teleprompter-tv-ufma');
+            const palco = document.getElementById('palco');
+            const escala = document.getElementById('escala');
             const textoEl = document.getElementById('texto');
+
+            // Mesma largura de referência recebida do operador — garante que
+            // a quebra de linha aqui seja idêntica à da tela do operador
+            let larguraReferencia = palco.clientWidth;
+
+            function aplicarEscala() {
+              const fator = palco.clientWidth / larguraReferencia;
+              escala.style.width = larguraReferencia + 'px';
+              escala.style.marginLeft = (-larguraReferencia / 2) + 'px';
+              escala.style.transform = 'scale(' + fator + ')';
+            }
+            aplicarEscala();
+            window.addEventListener('resize', aplicarEscala);
+
+            // Avisa o operador o tamanho REAL desta tela — o valor que veio do
+            // getScreenDetails() (availWidth/availHeight) é só uma estimativa de
+            // antes de entrar em tela cheia, e não conta com o espaço que o
+            // fullscreen recupera (barra de menu, dock). Sem essa correção, o
+            // início da rolagem não descia o suficiente e o texto já nascia
+            // visível na tela do apresentador.
+            function avisarDimensoesReais() {
+              canal.postMessage({ tipo: 'dimensoes-apresentador', largura: palco.clientWidth, altura: palco.clientHeight });
+            }
+            document.addEventListener('fullscreenchange', () => setTimeout(avisarDimensoesReais, 50));
+            setTimeout(avisarDimensoesReais, 600);
+
             canal.onmessage = (ev) => {
               const d = ev.data;
+              if (d.tipo === 'dimensoes-apresentador') return;
+              if (d.referenciaLargura && d.referenciaLargura !== larguraReferencia) {
+                larguraReferencia = d.referenciaLargura;
+                aplicarEscala();
+              }
               textoEl.textContent = d.texto || '';
               textoEl.style.fontSize = d.fontSize + 'px';
               textoEl.style.transform = 'scaleX(-1) translateY(' + d.posicaoY + 'px)';
@@ -469,7 +695,9 @@
       win.document.close();
     }
 
+    aplicarEscala();
     carregarBlocosDoEspelho();
   </script>
+  </div>
 </body>
 </html>

@@ -31,6 +31,7 @@ db.exec(`
 
 try { db.exec(`ALTER TABLE pautas ADD COLUMN agenda_id INTEGER`); } catch (e) {}
 try { db.exec(`ALTER TABLE pautas ADD COLUMN produtor TEXT`); } catch (e) {}
+try { db.exec(`ALTER TABLE pautas ADD COLUMN editor_imagens TEXT`); } catch (e) {}
 
 try { db.exec(`ALTER TABLE pautas ADD COLUMN cabeca_texto TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE pautas ADD COLUMN texto_web TEXT`); } catch (e) {}
@@ -96,6 +97,31 @@ try {
   // Coluna já existe — tudo bem, ignora o erro
 }
 
+// Migração: o fluxo de status do espelho foi reduzido para 4 etapas.
+// Tudo que era 'producao', 'chefia' ou 'externa' vira 'produzindo_vt'.
+db.exec(`
+  UPDATE blocos SET status = 'produzindo_vt'
+  WHERE status IS NULL OR status NOT IN ('produzindo_vt', 'edicao', 'revisao', 'pronto')
+`);
+
+// Item sem bloco definido pertence ao Bloco 1
+db.exec(`UPDATE blocos SET bloco = 1 WHERE bloco IS NULL OR bloco < 1`);
+
+// Migração: a ordem dos itens passou a ser relativa ao bloco (antes era única
+// no espelho inteiro). Renumera cada bloco de 1 em diante, preservando a
+// sequência atual. É idempotente — rodar de novo não muda nada.
+const gruposDeBlocos = db.prepare('SELECT DISTINCT espelho_id, bloco FROM blocos').all();
+const itensDoGrupo = db.prepare(
+  'SELECT id FROM blocos WHERE espelho_id = ? AND bloco = ? ORDER BY ordem ASC, id ASC'
+);
+const gravarOrdem = db.prepare('UPDATE blocos SET ordem = ? WHERE id = ?');
+
+gruposDeBlocos.forEach(grupo => {
+  itensDoGrupo.all(grupo.espelho_id, grupo.bloco).forEach((item, indice) => {
+    gravarOrdem.run(indice + 1, item.id);
+  });
+});
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS materia_itens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -158,5 +184,12 @@ db.exec(`
     FOREIGN KEY (pauta_id) REFERENCES pautas(id)
   )
 `);
+
+// Data de criação e de decisão (aprovada/arquivada) — sem isso não dá pra medir
+// tempo até decisão no Funil de Sugestões. Sugestões criadas antes desta
+// migração ficam com essas colunas em branco (histórico não pode ser
+// reconstruído), o relatório trata esse caso como "sem dado", não como zero.
+try { db.exec(`ALTER TABLE sugestoes ADD COLUMN criado_em TEXT`); } catch (e) {}
+try { db.exec(`ALTER TABLE sugestoes ADD COLUMN decidido_em TEXT`); } catch (e) {}
 
 module.exports = db;
