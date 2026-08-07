@@ -17,10 +17,6 @@
 
     .conteudo { flex: 1; overflow-y: auto; padding: 20px; }
 
-    table.lista-sugestoes { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-    table.lista-sugestoes th { background: #eef1f5; text-align: left; padding: 10px 12px; font-size: 12px; color: #5b6472; text-transform: uppercase; }
-    table.lista-sugestoes td { padding: 10px 12px; font-size: 13px; border-top: 1px solid #f0f0f0; vertical-align: top; }
-
     .tag { font-size: 11px; padding: 3px 8px; border-radius: 4px; color: #fff; text-transform: uppercase; font-weight: bold; white-space: nowrap; }
     .tag-urgente { background: #8D0333; }
     .tag-relevante { background: #C98A1F; }
@@ -32,12 +28,39 @@
     .status-aprovada { background: #2e8b57; }
     .status-arquivada { background: #5A021F; }
 
-    .acoes-lista { white-space: nowrap; }
-    .acoes-lista button { font-size: 14px; padding: 6px 10px; line-height: 1; border-radius: 6px; border: none; cursor: pointer; margin-right: 4px; }
-    .btn-ver { background: #eee; color: #333; }
-    .btn-excluir { background: #8D0333; color: #fff; }
-
     .estado-vazio { text-align: center; color: #999; padding: 60px 20px; }
+
+    /* ---- Quadro (kanban) da Capa — mesmo padrão visual de Reportagens,
+       mas os cards abrem inline (clique) em vez de arrastar entre colunas,
+       já que mudar pra "aprovada" depende de dados extras (modal) ---- */
+    .quadro-kanban { display: flex; gap: 14px; align-items: flex-start; }
+    .coluna-kanban { flex: 1; min-width: 0; background: #eef1f5; border-radius: 10px; padding: 12px; border-top: 4px solid #ccc; }
+    .coluna-kanban[data-status="nova"] { border-top-color: #C98A1F; }
+    .coluna-kanban[data-status="em_analise"] { border-top-color: #075B91; }
+    .coluna-kanban[data-status="aprovada"] { border-top-color: #2e8b57; }
+    .coluna-kanban[data-status="arquivada"] { border-top-color: #5A021F; }
+    .coluna-kanban h3 { font-size: 12px; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; color: #333; }
+    .coluna-kanban .contagem { background: #fff; border-radius: 10px; padding: 1px 8px; font-size: 11px; color: #5b6472; }
+    .cards-coluna { display: flex; flex-direction: column; gap: 10px; min-height: 60px; max-height: calc(100vh - 220px); overflow-y: auto; }
+
+    .card-kanban { background: #fff; border-radius: 8px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); cursor: pointer; }
+    .card-kanban.expandido { cursor: default; }
+    .card-kanban .titulo-card { font-size: 13px; font-weight: bold; margin-bottom: 6px; }
+    .card-kanban .meta-card { font-size: 11px; color: #5b6472; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+
+    .form-card-campo { display: flex; flex-direction: column; gap: 3px; margin-top: 10px; }
+    .form-card-campo:first-of-type { margin-top: 12px; }
+    .form-card-campo label { font-size: 10px; color: #5b6472; text-transform: uppercase; }
+    .form-card-campo input, .form-card-campo select, .form-card-campo textarea {
+      padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; width: 100%;
+    }
+    .form-card-campo textarea { min-height: 56px; resize: vertical; }
+    .form-card-linha { display: flex; gap: 8px; margin-top: 10px; }
+    .form-card-linha .form-card-campo { margin-top: 0; flex: 1; }
+    .card-kanban .linha-checkboxes { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 11px; margin-top: 4px; }
+    .card-kanban .linha-checkboxes label { display: inline-flex; align-items: center; gap: 4px; margin: 0; }
+    .form-card-botoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .form-card-botoes button { flex: 1; min-width: 90px; padding: 7px 8px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; white-space: nowrap; }
 
     /* ---- Barra de abas de documentos (só aparece com sugestões abertas) ---- */
     .barra-abas-doc { display: none; align-items: center; background: #eef1f5; border-bottom: 1px solid #ddd; flex-shrink: 0; overflow-x: auto; }
@@ -164,8 +187,8 @@
       </select>
     </div>
 
-    <div class="conteudo" id="conteudo">
-      <!-- tabela entra aqui -->
+    <div class="conteudo">
+      <div class="quadro-kanban" id="quadro-kanban"></div>
     </div>
   </div>
 
@@ -201,7 +224,7 @@
     let abas = {}; // idAba -> { id, sugestaoId, tituloAba, status }
     let abaAtivaId = 'capa';
     let sugestoesCache = [];
-    let aprovandoIdAba = null;
+    let aprovandoContexto = null; // { tipo: 'aba', idAba } ou { tipo: 'card', sugestaoId }
 
     const rotulosUrgencia = { rotina: 'Rotina', relevante: 'Relevante', urgente: 'Fato do Dia / Urgente' };
     const rotulosStatus = { nova: 'Nova Sugestão', em_analise: 'Em Análise', aprovada: 'Aprovada', arquivada: 'Arquivada' };
@@ -241,60 +264,200 @@
         .sort((a, b) => b.id - a.id);
     }
 
-    function renderListaCapa() {
-      const filtradas = sugestoesFiltradas();
-      const area = document.getElementById('conteudo');
+    const ordemStatusQuadro = ['nova', 'em_analise', 'aprovada', 'arquivada'];
+    let cardExpandidoId = null;
 
-      if (filtradas.length === 0) {
-        area.innerHTML = '<div class="estado-vazio">Nenhuma sugestão encontrada para esse filtro.</div>';
-        return;
-      }
-
-      area.innerHTML = `
-        <table class="lista-sugestoes">
-          <thead>
-            <tr>
-              <th>Título</th><th>Editoria</th><th>Data Prevista</th>
-              <th>Urgência</th><th>Status</th><th>Enviado por</th><th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filtradas.map(s => `
-              <tr>
-                <td>${escaparHtml(s.titulo)}</td>
-                <td>${escaparHtml(s.editoria) || '—'}</td>
-                <td>${formatarData(s.data_prevista)}${s.hora_prevista ? ' · ' + s.hora_prevista : ''}</td>
-                <td><span class="tag tag-${s.urgencia}">${rotulosUrgencia[s.urgencia] || s.urgencia}</span></td>
-                <td><span class="status-badge status-${s.status}">${rotulosStatus[s.status] || s.status}</span></td>
-                <td>${escaparHtml(s.enviado_por) || '—'}</td>
-                <td class="acoes-lista">
-                  <button class="btn-ver" data-id="${s.id}" title="Ver/Editar">👁️</button>
-                  <button class="btn-excluir" data-id="${s.id}" title="Excluir">🗑️</button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+    function htmlFormularioCard() {
+      return `
+        <div class="form-card-campo">
+          <label>Título</label>
+          <input type="text" data-campo="titulo">
+        </div>
+        <div class="form-card-campo">
+          <label>Editoria</label>
+          <select data-campo="editoria">
+            <option value="Arte e Cultura">Arte e Cultura</option>
+            <option value="Cidade">Cidade</option>
+            <option value="Ciência e Tecnologia">Ciência e Tecnologia</option>
+            <option value="Comportamento e Sociedade">Comportamento e Sociedade</option>
+            <option value="Direitos Humanos e Inclusão">Direitos Humanos e Inclusão</option>
+            <option value="Economia e Trabalho">Economia e Trabalho</option>
+            <option value="Esporte e Lazer">Esporte e Lazer</option>
+            <option value="Educação">Educação</option>
+            <option value="Meio Ambiente">Meio Ambiente</option>
+            <option value="Política">Política</option>
+            <option value="Saúde">Saúde</option>
+            <option value="Segurança e Justiça">Segurança e Justiça</option>
+            <option value="Especial">Especial</option>
+            <option value="UFMA">UFMA</option>
+            <option value="Outra">Outra</option>
+          </select>
+        </div>
+        <div class="form-card-linha">
+          <div class="form-card-campo">
+            <label>Data Prevista</label>
+            <input type="date" data-campo="data-prevista">
+          </div>
+          <div class="form-card-campo">
+            <label>Hora Prevista</label>
+            <input type="time" data-campo="hora-prevista">
+          </div>
+        </div>
+        <div class="form-card-campo">
+          <label>Urgência</label>
+          <select data-campo="urgencia">
+            <option value="rotina">Rotina</option>
+            <option value="relevante">Relevante</option>
+            <option value="urgente">Fato do Dia / Urgente</option>
+          </select>
+        </div>
+        <div class="form-card-campo">
+          <label>Resumo</label>
+          <textarea data-campo="resumo"></textarea>
+        </div>
+        <div class="form-card-campo">
+          <label>Local</label>
+          <input type="text" data-campo="local">
+        </div>
+        <div class="form-card-campo">
+          <label>Fontes e Contatos</label>
+          <textarea data-campo="fontes"></textarea>
+        </div>
+        <div class="form-card-campo">
+          <label>Destino Multiplataforma</label>
+          <div class="linha-checkboxes">
+            <label><input type="checkbox" data-campo="tv"> TV</label>
+            <label><input type="checkbox" data-campo="insta"> Insta</label>
+            <label><input type="checkbox" data-campo="youtube"> YouTube</label>
+            <label><input type="checkbox" data-campo="site"> Site</label>
+          </div>
+        </div>
+        <div class="form-card-campo">
+          <label>Enviado por</label>
+          <input type="text" data-campo="enviado-por">
+        </div>
+        <div class="form-card-botoes" data-campo="botoes"></div>
       `;
+    }
 
-      area.querySelectorAll('.btn-ver').forEach(btn => {
-        btn.addEventListener('click', () => abrirAbaSugestao(Number(btn.dataset.id)));
-      });
-      area.querySelectorAll('.btn-excluir').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          if (!confirm('Tem certeza que deseja excluir esta sugestão? Essa ação não pode ser desfeita.')) return;
-          await fetch('/sugestoes/' + btn.dataset.id, { method: 'DELETE' });
-          await carregarSugestoes();
-          renderListaCapa();
-        });
+    function renderQuadro() {
+      const filtradas = sugestoesFiltradas();
+      const container = document.getElementById('quadro-kanban');
+
+      container.innerHTML = ordemStatusQuadro.map(status => {
+        const itens = filtradas.filter(s => s.status === status);
+        return `
+          <div class="coluna-kanban" data-status="${status}">
+            <h3>${rotulosStatus[status]} <span class="contagem">${itens.length}</span></h3>
+            <div class="cards-coluna">
+              ${itens.map(s => `
+                <div class="card-kanban ${cardExpandidoId === s.id ? 'expandido' : ''}" data-id="${s.id}">
+                  <div class="titulo-card">${escaparHtml(s.titulo)}</div>
+                  <div class="meta-card">
+                    <span class="tag tag-${s.urgencia}">${rotulosUrgencia[s.urgencia] || s.urgencia}</span>
+                    <span>🏷️ ${escaparHtml(s.editoria) || '—'}</span>
+                    <span>📅 ${formatarData(s.data_prevista)}${s.hora_prevista ? ' · ' + s.hora_prevista : ''}</span>
+                    <span>✍️ ${escaparHtml(s.enviado_por) || '—'}</span>
+                  </div>
+                  ${cardExpandidoId === s.id ? htmlFormularioCard() : ''}
+                </div>
+              `).join('') || '<div class="estado-vazio" style="padding:20px 8px;">Nenhuma sugestão</div>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      ligarEventosQuadro();
+    }
+
+    function ligarEventosQuadro() {
+      document.querySelectorAll('.card-kanban').forEach(card => {
+        const id = Number(card.dataset.id);
+        if (cardExpandidoId === id) {
+          const s = sugestoesCache.find(item => item.id === id);
+          preencherCampos(card, s);
+          renderBotoesCard(card, s);
+        } else {
+          card.addEventListener('click', () => {
+            cardExpandidoId = id;
+            renderQuadro();
+          });
+        }
       });
     }
 
-    document.getElementById('filtro-status').addEventListener('change', renderListaCapa);
-    document.getElementById('filtro-editoria').addEventListener('change', renderListaCapa);
+    // Botões do card mudam conforme o status atual — mesma lógica condicional
+    // usada nas abas (renderCabecalhoAba), só que direto no card do Quadro
+    function renderBotoesCard(card, s) {
+      const botoesEl = card.querySelector('[data-campo="botoes"]');
+      const botoes = [];
+      if (s.status !== 'em_analise') botoes.push('<button class="btn-agenda" data-acao="em-analise">🔎 Em Análise</button>');
+      if (s.status !== 'aprovada') botoes.push('<button class="btn-lauda-modal" data-acao="aprovar">✅ Aprovar e Gerar Pauta</button>');
+      if (s.status !== 'arquivada') botoes.push('<button class="btn-cancelar" data-acao="arquivar">❌ Arquivar</button>');
+      botoes.push('<button class="btn-excluir-sugestao" data-acao="excluir">🗑️ Excluir</button>');
+      botoes.push('<button class="btn-confirmar" data-acao="salvar">💾 Salvar</button>');
+      botoes.push('<button class="btn-cancelar" data-acao="fechar">Fechar</button>');
+      botoesEl.innerHTML = botoes.join('');
+
+      const ligarSe = (acao, fn) => {
+        const el = botoesEl.querySelector(`[data-acao="${acao}"]`);
+        if (el) el.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
+      };
+      ligarSe('em-analise', () => mudarStatusCard(s.id, 'em_analise'));
+      ligarSe('aprovar', () => abrirModalAprovarCard(s.id));
+      ligarSe('arquivar', () => mudarStatusCard(s.id, 'arquivada'));
+      ligarSe('excluir', () => excluirCard(s.id));
+      ligarSe('salvar', () => salvarCard(s.id));
+      ligarSe('fechar', () => { cardExpandidoId = null; renderQuadro(); });
+
+      // clique nos campos não deve borbulhar pro card e mexer em nada
+      card.querySelectorAll('input, select, textarea').forEach(el => {
+        el.addEventListener('click', (e) => e.stopPropagation());
+      });
+    }
+
+    async function salvarCard(id) {
+      const card = document.querySelector(`.card-kanban[data-id="${id}"]`);
+      const dados = coletarDadosDoContainer(card);
+      if (!dados.titulo || !dados.resumo) { alert('Preencha ao menos o título e o resumo.'); return null; }
+
+      const resp = await fetch('/sugestoes/' + id, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados)
+      });
+      const salva = await resp.json();
+
+      await carregarSugestoes();
+      cardExpandidoId = id;
+      renderQuadro();
+      return salva;
+    }
+
+    async function mudarStatusCard(id, novoStatus) {
+      const card = document.querySelector(`.card-kanban[data-id="${id}"]`);
+      const dados = coletarDadosDoContainer(card);
+      dados.status = novoStatus;
+
+      await fetch('/sugestoes/' + id, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados)
+      });
+      await carregarSugestoes();
+      cardExpandidoId = id;
+      renderQuadro();
+    }
+
+    async function excluirCard(id) {
+      if (!confirm('Tem certeza que deseja excluir esta sugestão? Essa ação não pode ser desfeita.')) return;
+      await fetch('/sugestoes/' + id, { method: 'DELETE' });
+      if (cardExpandidoId === id) cardExpandidoId = null;
+      await carregarSugestoes();
+      renderQuadro();
+    }
+
+    document.getElementById('filtro-status').addEventListener('change', renderQuadro);
+    document.getElementById('filtro-editoria').addEventListener('change', renderQuadro);
     document.getElementById('busca-sugestao').addEventListener('input', () => {
       clearTimeout(window._buscaTimeout);
-      window._buscaTimeout = setTimeout(renderListaCapa, 300);
+      window._buscaTimeout = setTimeout(renderQuadro, 300);
     });
 
     // ═══════════════════════ Abas de sugestão (tela cheia) ═══════════════════════
@@ -390,10 +553,25 @@
       elCampo(container, 'enviado-por').value = '';
     }
 
-    function preencherPainel(idAba, s) {
-      const container = document.getElementById('painel-' + idAba);
+    // Generalizadas sobre um container qualquer (painel de aba OU card do
+    // Quadro) porque os dois usam exatamente os mesmos data-campo
+    // Se o valor salvo não bater com nenhuma <option> da lista fixa (dado
+    // antigo/livre, ex.: editoria digitada antes de virar campo fechado),
+    // injeta uma opção extra em vez de deixar o select em branco silenciosamente
+    function selecionarComFallback(select, valor) {
+      select.value = valor;
+      if (select.value !== valor && valor) {
+        const opt = document.createElement('option');
+        opt.value = valor;
+        opt.textContent = valor + ' (fora da lista padrão)';
+        select.appendChild(opt);
+        select.value = valor;
+      }
+    }
+
+    function preencherCampos(container, s) {
       elCampo(container, 'titulo').value = s.titulo || '';
-      elCampo(container, 'editoria').value = s.editoria || 'Cidade';
+      selecionarComFallback(elCampo(container, 'editoria'), s.editoria || 'Cidade');
       elCampo(container, 'data-prevista').value = s.data_prevista || '';
       elCampo(container, 'hora-prevista').value = s.hora_prevista || '';
       elCampo(container, 'urgencia').value = s.urgencia || 'rotina';
@@ -407,8 +585,7 @@
       elCampo(container, 'enviado-por').value = s.enviado_por || '';
     }
 
-    function coletarDadosFormulario(idAba) {
-      const container = document.getElementById('painel-' + idAba);
+    function coletarDadosDoContainer(container) {
       return {
         titulo: elCampo(container, 'titulo').value.trim(),
         editoria: elCampo(container, 'editoria').value,
@@ -424,6 +601,14 @@
         destino_site: elCampo(container, 'site').checked,
         enviado_por: elCampo(container, 'enviado-por').value.trim()
       };
+    }
+
+    function preencherPainel(idAba, s) {
+      preencherCampos(document.getElementById('painel-' + idAba), s);
+    }
+
+    function coletarDadosFormulario(idAba) {
+      return coletarDadosDoContainer(document.getElementById('painel-' + idAba));
     }
 
     // Abre uma sugestão existente numa aba (reaproveitando se já estiver
@@ -515,7 +700,7 @@
       await carregarSugestoes();
       renderBarraAbas();
       renderCabecalhoAba(idAba);
-      renderListaCapa();
+      renderQuadro();
 
       return salva;
     }
@@ -530,7 +715,7 @@
       await fetch('/sugestoes/' + aba.sugestaoId, { method: 'DELETE' });
       fecharAba(idAba);
       await carregarSugestoes();
-      renderListaCapa();
+      renderQuadro();
     }
 
     function fecharAba(idAba) {
@@ -595,8 +780,44 @@
     async function abrirModalAprovar(idAba) {
       const salva = await salvarSugestao(idAba); // preserva o que estiver digitado antes de aprovar
       if (!salva) return;
-      aprovandoIdAba = idAba;
+      aprovandoContexto = { tipo: 'aba', idAba };
+      await popularEAbrirModalAprovar();
+    }
 
+    async function abrirModalAprovarCard(sugestaoId) {
+      const salva = await salvarCard(sugestaoId); // preserva o que estiver digitado antes de aprovar
+      if (!salva) return;
+      aprovandoContexto = { tipo: 'card', sugestaoId };
+      await popularEAbrirModalAprovar();
+    }
+
+    // A "função" na Agenda é texto livre (não um select fixo), então o
+    // cadastro real tem grafias variadas pra a mesma função ("REPORTER",
+    // "Repórter", "PRODUÇÃO", "Produtor"...). Por isso o filtro compara por
+    // palavra-chave, sem acento e sem diferenciar maiúscula/minúscula, em vez
+    // de exigir o texto exato — mesmo critério usado em pautas.html.
+    function normalizarTexto(txt) {
+      return String(txt || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+    }
+
+    function funcaoCorresponde(funcao, papel) {
+      const f = normalizarTexto(funcao);
+      if (papel === 'produtor') return f.includes('produt') || f.includes('producao');
+      if (papel === 'reporter') return f.includes('reporter');
+      if (papel === 'cinegrafista') return f.includes('cinegrafista');
+      return false;
+    }
+
+    function opcoesPorPapel(papel, equipeLista) {
+      const vistos = new Set();
+      const membros = equipeLista
+        .filter(m => funcaoCorresponde(m.funcao, papel))
+        .filter(m => (vistos.has(m.nome) ? false : (vistos.add(m.nome), true)))
+        .sort((a, b) => a.nome.localeCompare(b.nome));
+      return membros.map(m => `<option value="${escaparHtml(m.nome)}">${escaparHtml(m.nome)} (${escaparHtml(m.funcao)})</option>`).join('');
+    }
+
+    async function popularEAbrirModalAprovar() {
       const [respProgramas, respEquipe] = await Promise.all([
         fetch('/agenda/programas'),
         fetch('/agenda/equipe')
@@ -608,28 +829,28 @@
         `<option value="${p.id}">${escaparHtml(p.nome)}</option>`
       ).join('');
 
-      const opcoesPessoas = equipeLista.map(m =>
+      const opcoesTodos = equipeLista.map(m =>
         `<option value="${escaparHtml(m.nome)}">${escaparHtml(m.nome)} (${escaparHtml(m.funcao)})</option>`
       ).join('');
 
-      document.getElementById('ap-produtor').innerHTML = opcoesPessoas;
-      document.getElementById('ap-reporter').innerHTML = opcoesPessoas;
-      document.getElementById('ap-cinegrafista').innerHTML = opcoesPessoas;
-      document.getElementById('ap-equipe').innerHTML = opcoesPessoas;
+      document.getElementById('ap-produtor').innerHTML = opcoesPorPapel('produtor', equipeLista);
+      document.getElementById('ap-reporter').innerHTML = opcoesPorPapel('reporter', equipeLista);
+      document.getElementById('ap-cinegrafista').innerHTML = opcoesPorPapel('cinegrafista', equipeLista);
+      document.getElementById('ap-equipe').innerHTML = opcoesTodos; // equipe adicional continua com todo mundo
 
       document.getElementById('modal-aprovar').classList.add('aberto');
     }
 
     document.getElementById('cancelar-aprovar').addEventListener('click', () => {
       document.getElementById('modal-aprovar').classList.remove('aberto');
-      aprovandoIdAba = null;
+      aprovandoContexto = null;
     });
 
     document.getElementById('confirmar-aprovar').addEventListener('click', async () => {
-      const idAba = aprovandoIdAba;
-      const aba = idAba ? abas[idAba] : null;
-      if (!aba) return;
-      const s = sugestoesCache.find(item => item.id === aba.sugestaoId);
+      const ctx = aprovandoContexto;
+      if (!ctx) return;
+      const sugestaoId = ctx.tipo === 'aba' ? abas[ctx.idAba]?.sugestaoId : ctx.sugestaoId;
+      const s = sugestaoId ? sugestoesCache.find(item => item.id === sugestaoId) : null;
       if (!s) return;
 
       const programaId = Number(document.getElementById('ap-programa').value);
@@ -694,19 +915,24 @@
         body: JSON.stringify({ status: 'aprovada', pauta_id: novaPauta.id })
       });
 
-      aba.status = 'aprovada';
       await carregarSugestoes();
-      renderCabecalhoAba(idAba);
-      renderListaCapa();
+      if (ctx.tipo === 'aba') {
+        if (abas[ctx.idAba]) abas[ctx.idAba].status = 'aprovada';
+        renderCabecalhoAba(ctx.idAba);
+        renderQuadro();
+      } else {
+        cardExpandidoId = ctx.sugestaoId;
+        renderQuadro();
+      }
 
       document.getElementById('modal-aprovar').classList.remove('aberto');
-      aprovandoIdAba = null;
+      aprovandoContexto = null;
       alert('Pauta e Agendamento criados com sucesso!');
     });
 
     (async function init() {
       await carregarSugestoes();
-      renderListaCapa();
+      renderQuadro();
       renderBarraAbas();
     })();
   </script>
