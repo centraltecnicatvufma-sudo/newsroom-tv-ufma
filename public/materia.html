@@ -74,7 +74,16 @@
     .btn-salvar { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 10px 20px; font-size: 14px; cursor: pointer; }
     .btn-imprimir { background: #eee; color: #333; border: none; border-radius: 6px; padding: 10px 20px; font-size: 14px; cursor: pointer; }
     .btn-imprimir:hover { background: #ddd; }
+    #layout-impressao { padding: 9px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; background: #fff; cursor: pointer; }
     .status-salvo { font-size: 13px; color: #2e8b57; align-self: center; margin-right: auto; }
+
+    /* Corpo do VT impresso: tabela simples (sem as caixas da tela), gerada à
+       parte a partir dos mesmos itens — "Padrão" flui Indicações e Texto em
+       duas colunas independentes (25%/75%, sem alinhar linha a linha, igual
+       à referência); "Uma coluna" empilha, por item, o texto primeiro e as
+       indicações logo abaixo. Só aparece no papel, nunca na tela. */
+    .impressao-vt .entrada-impressao { margin-bottom: 12px; font-size: 12px; }
+    .impressao-vt .entrada-impressao strong { display: block; font-size: 11px; margin-bottom: 3px; }
 
     /* GCs e Texto Adaptado ficam recolhidos por padrão — só uma barra com
        seta; clicar revela o conteúdo */
@@ -128,23 +137,25 @@
       .bloco { box-shadow: none; border: 1px solid #ccc; border-radius: 0; padding: 10px 0; margin-bottom: 14px; break-inside: avoid-page; }
       .bloco h2 { font-size: 13px; padding: 0 10px; border-bottom: 1px solid #eee; padding-bottom: 8px; page-break-after: avoid; }
 
-      /* "Corpo do VT" pode ter muitos itens — o bloco em si não trava numa
-         página só (senão sobraria página em branco), mas cada item
-         individual sim, pra não cortar um OFF/SONORA no meio */
+      /* A tela de edição (com as caixas por item) não vai pro papel — dá
+         lugar às duas versões pré-montadas em texto simples logo abaixo,
+         só uma delas visível por vez (conforme o seletor de layout) */
+      #lista-itens { display: none !important; }
       #bloco-corpo-vt { break-inside: auto; }
-      #lista-itens { break-inside: auto; }
-      .item-vt { break-inside: avoid; border: 1px solid #ccc; margin: 0 10px 10px; }
-      .item-vt-cabecalho { background: #eee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .tipo-badge { background: none !important; color: #000 !important; border: 1px solid #999; }
-      .campo-duracao { border: none !important; background: transparent !important; font-weight: bold; text-align: left; padding: 0; }
 
-      /* Indicações (esquerda, 25%) e Texto (direita, 75%) lado a lado —
-         cada item é pequeno e já não quebra entre páginas (break-inside
-         acima), então o flex não sofre o mesmo problema que grid/colunas
-         tinham pra fragmentar uma lista inteira */
-      .item-vt-corpo { display: flex !important; gap: 10px; padding: 8px 10px; }
-      .campo-indicacoes { flex: 0 0 25%; }
-      .campo-indicacoes textarea { border: none !important; background: transparent !important; padding: 0 !important; resize: none; }
+      .impressao-vt { display: none; }
+      body:not(.impressao-uma-coluna) #impressao-vt-padrao { display: block; }
+      body.impressao-uma-coluna #impressao-vt-uma-coluna { display: block; }
+
+      /* Padrão: Indicações (25%) e Texto (75%) fluem cada um na sua coluna,
+         independentes — não são pares alinhados linha a linha, é o mesmo
+         comportamento da referência (colunas com float, não grid/tabela,
+         porque isso é o que se divide corretamente entre páginas) */
+      #impressao-vt-padrao::after { content: ''; display: table; clear: both; }
+      .col-impressao-esquerda { float: left; width: 25%; padding-right: 10px; box-sizing: border-box; }
+      .col-impressao-direita { float: left; width: 75%; padding-left: 10px; border-left: 1px solid #999; box-sizing: border-box; }
+      .impressao-vt .entrada-impressao { break-inside: avoid; }
+
       #corpo-gcs { display: block !important; }
 
       /* Editor Quill: tira toda a moldura de edição, deixa só o texto */
@@ -217,6 +228,12 @@
         <div class="total-vt">⏱️ Total: <strong id="total-vt">00:00</strong></div>
       </div>
       <div id="lista-itens"></div>
+
+      <div id="impressao-vt-padrao" class="somente-impressao impressao-vt">
+        <div class="col-impressao-esquerda" id="impressao-col-esquerda"></div>
+        <div class="col-impressao-direita" id="impressao-col-direita"></div>
+      </div>
+      <div id="impressao-vt-uma-coluna" class="somente-impressao impressao-vt"></div>
     </div>
 
     <div class="bloco" id="bloco-gcs">
@@ -247,6 +264,10 @@
 
   <div class="barra-acoes">
     <span class="status-salvo" id="status-salvo"></span>
+    <select id="layout-impressao" title="Layout da impressão">
+      <option value="padrao">🖨️ Impressão: Padrão (2 colunas)</option>
+      <option value="uma-coluna">🖨️ Impressão: Uma coluna</option>
+    </select>
     <button class="btn-imprimir" id="btn-imprimir">🖨️ Imprimir Lauda</button>
     <button class="btn-salvar" id="btn-salvar">💾 Salvar Lauda</button>
   </div>
@@ -263,6 +284,13 @@
     let gcsCache = [];
 
     const labelTipo = { OFF: 'OFF', SONORA: 'SONORA', PASSAGEM: 'PASSAGEM', ARTE: 'ARTE', SOBE_SOM: 'SOBE SOM' };
+
+    // Rótulos da impressão, no padrão "[Off 1 - Indicações]" / "[Off 1]" —
+    // cada tipo numerado à parte (1º Off, 2º Off... 1ª Sonora, 2ª Sonora...),
+    // não pela posição geral na lista
+    const rotuloTipoImpressao = { OFF: 'Off', SONORA: 'Sonora', PASSAGEM: 'Passagem', ARTE: 'Arte', SOBE_SOM: 'Sobe Som' };
+    const sublabelIndicacoesImpressao = { OFF: 'Indicações', SONORA: 'Entrevistado', PASSAGEM: 'Local', ARTE: 'Indicações', SOBE_SOM: 'Indicações' };
+    const sublabelTextoImpressao = { SONORA: 'Citação' };
 
     // Estimativa de tempo de leitura pra quem não quer cronometrar na mão:
     // ~150 palavras por minuto é uma referência comum de ritmo de locução em
@@ -628,7 +656,62 @@
 
     document.getElementById('btn-salvar').addEventListener('click', () => salvarTudo('✔️ Salvo!'));
 
-    document.getElementById('btn-imprimir').addEventListener('click', () => window.print());
+    // Numera cada item dentro do próprio tipo (1º Off, 2º Off... 1ª Sonora...),
+    // não pela posição geral na lista — é assim que a referência numera
+    function contarPorTipo(itens) {
+      const contadores = {};
+      return itens.map(item => {
+        contadores[item.tipo] = (contadores[item.tipo] || 0) + 1;
+        return Object.assign({}, item, { numeroDoTipo: contadores[item.tipo] });
+      });
+    }
+
+    function rotuloTextoImpressao(item) {
+      const base = `${rotuloTipoImpressao[item.tipo] || item.tipo} ${item.numeroDoTipo}`;
+      const sub = sublabelTextoImpressao[item.tipo];
+      return sub ? `${base} - ${sub}` : base;
+    }
+
+    function rotuloIndicacoesImpressao(item) {
+      const base = `${rotuloTipoImpressao[item.tipo] || item.tipo} ${item.numeroDoTipo}`;
+      return `${base} - ${sublabelIndicacoesImpressao[item.tipo] || 'Indicações'}`;
+    }
+
+    // Monta as duas versões de impressão (padrão em colunas e uma coluna) a
+    // partir do que está na tela AGORA (mesmo texto ainda não salvo), pra
+    // imprimir sempre bater com o que o repórter está vendo
+    function montarImpressaoCorpoVt() {
+      const itensNumerados = contarPorTipo(itensCache);
+
+      const entradaTexto = item => `
+        <div class="entrada-impressao">
+          <strong>[${rotuloTextoImpressao(item)}]</strong>
+          <div>${quillItens[item.id] ? quillItens[item.id].root.innerHTML : ''}</div>
+        </div>
+      `;
+      const entradaIndicacoes = item => {
+        const campo = document.querySelector(`.campo-indicacoes-texto[data-id="${item.id}"]`);
+        const texto = campo ? campo.value : (item.indicacoes || '');
+        return `
+          <div class="entrada-impressao">
+            <strong>[${rotuloIndicacoesImpressao(item)}]</strong>
+            <div>${escaparHtml(texto).replace(/\n/g, '<br>')}</div>
+          </div>
+        `;
+      };
+
+      document.getElementById('impressao-col-esquerda').innerHTML = itensNumerados.map(entradaIndicacoes).join('');
+      document.getElementById('impressao-col-direita').innerHTML = itensNumerados.map(entradaTexto).join('');
+      document.getElementById('impressao-vt-uma-coluna').innerHTML =
+        itensNumerados.map(item => entradaTexto(item) + entradaIndicacoes(item)).join('');
+    }
+
+    document.getElementById('btn-imprimir').addEventListener('click', () => {
+      montarImpressaoCorpoVt();
+      const layout = document.getElementById('layout-impressao').value;
+      document.body.classList.toggle('impressao-uma-coluna', layout === 'uma-coluna');
+      window.print();
+    });
 
     // GCs e Texto Adaptado começam recolhidos — clicar na barra revela
     document.querySelectorAll('.cabecalho-recolhivel').forEach(cabecalho => {
