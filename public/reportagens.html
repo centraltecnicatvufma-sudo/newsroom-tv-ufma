@@ -11,13 +11,18 @@
     .topo h1 { font-size: 18px; margin: 0; }
 
     .filtros { display: flex; align-items: flex-end; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; flex-wrap: wrap; }
-    .filtros > div { display: flex; flex-direction: column; gap: 4px; }
+    /* :not(.alternador-visao) — sem isso, essa regra genérica (pensada só
+       pros grupos label+campo) também pegava o alternador de Lista/Quadro,
+       que é outro <div> filho direto de .filtros, e empilhava os botões */
+    .filtros > div:not(.alternador-visao):not(.grupo-busca-visao) { display: flex; flex-direction: column; gap: 4px; }
     .filtros label { font-size: 11px; color: #5b6472; }
     .filtros select, .filtros input { padding: 7px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
-    .filtros .campo-busca { min-width: 220px; flex: 1; }
+    .filtros .campo-busca { display: flex; flex-direction: column; gap: 4px; min-width: 220px; flex: 1; }
 
-    .alternador-visao { display: flex; gap: 6px; margin-left: auto; }
-    .alternador-visao button { padding: 8px 14px; border-radius: 6px; border: 1px solid #ddd; background: #fff; color: #5b6472; font-size: 13px; cursor: pointer; }
+    .grupo-busca-visao { display: flex; align-items: flex-end; gap: 12px; flex: 1; min-width: 300px; }
+
+    .alternador-visao { display: flex; flex-direction: row; flex-shrink: 0; gap: 6px; }
+    .alternador-visao button { padding: 8px 14px; border-radius: 6px; border: 1px solid #ddd; background: #fff; color: #5b6472; font-size: 13px; cursor: pointer; white-space: nowrap; }
     .alternador-visao button.ativo { background: #336699; border-color: #336699; color: #fff; font-weight: bold; }
     .alternador-visao button:disabled { color: #bbb; cursor: default; background: #f4f5f7; }
 
@@ -104,13 +109,15 @@
         <option value="concluida">🟢 Concluída / Pronta</option>
       </select>
     </div>
-    <div class="campo-busca">
-      <label>Buscar por título</label>
-      <input type="text" id="filtro-busca" placeholder="🔍 Filtrar por título...">
-    </div>
-    <div class="alternador-visao">
-      <button class="ativo" id="btn-visao-lista">🗂️ Lista</button>
-      <button disabled title="Em breve">▦ Quadro</button>
+    <div class="grupo-busca-visao">
+      <div class="campo-busca">
+        <label>Buscar por título</label>
+        <input type="text" id="filtro-busca" placeholder="🔍 Filtrar por título...">
+      </div>
+      <div class="alternador-visao">
+        <button class="ativo" id="btn-visao-lista">🗂️ Lista</button>
+        <button disabled title="Em breve">▦ Quadro</button>
+      </div>
     </div>
   </div>
 
