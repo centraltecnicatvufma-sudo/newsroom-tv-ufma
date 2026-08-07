@@ -48,6 +48,26 @@
     .paginacao button { padding: 6px 12px; border-radius: 6px; border: 1px solid #ddd; background: #fff; cursor: pointer; font-size: 13px; }
     .paginacao button:disabled { color: #ccc; cursor: default; }
 
+    /* Quadro — uma coluna por status, cards arrastáveis entre colunas pra
+       mudar o status da pauta (solta = PATCH /pautas/:id) */
+    .quadro-kanban { display: none; gap: 14px; align-items: flex-start; }
+    .quadro-kanban.ativo { display: flex; }
+    .coluna-kanban { flex: 1; min-width: 0; background: #eef1f5; border-radius: 10px; padding: 12px; border-top: 4px solid #ccc; }
+    .coluna-kanban[data-status="em_producao"] { border-top-color: #C98A1F; }
+    .coluna-kanban[data-status="em_gravacao"] { border-top-color: #336699; }
+    .coluna-kanban[data-status="em_edicao"] { border-top-color: #6b3fa0; }
+    .coluna-kanban[data-status="concluida"] { border-top-color: #2e8b57; }
+    .coluna-kanban.arrastando-sobre { background: #dbe6f0; }
+    .coluna-kanban h3 { font-size: 12px; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; color: #333; }
+    .coluna-kanban .contagem { background: #fff; border-radius: 10px; padding: 1px 8px; font-size: 11px; color: #5b6472; }
+    .cards-coluna { display: flex; flex-direction: column; gap: 10px; min-height: 60px; max-height: calc(100vh - 260px); overflow-y: auto; }
+    .card-kanban { background: #fff; border-radius: 8px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); cursor: grab; }
+    .card-kanban:active { cursor: grabbing; }
+    .card-kanban.arrastando { opacity: 0.35; }
+    .card-kanban .titulo-card { font-size: 13px; font-weight: bold; margin-bottom: 6px; }
+    .card-kanban .meta-card { font-size: 11px; color: #5b6472; display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+    .card-kanban .btn-lauda { width: 100%; }
+
     /* ---- Navegação lateral (unificada em todas as telas) ---- */
     body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
     .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
@@ -116,16 +136,17 @@
       </div>
       <div class="alternador-visao">
         <button class="ativo" id="btn-visao-lista">🗂️ Lista</button>
-        <button disabled title="Em breve">▦ Quadro</button>
+        <button id="btn-visao-quadro">▦ Quadro</button>
       </div>
     </div>
   </div>
 
   <div class="conteudo">
     <div id="area-tabela">Carregando...</div>
+    <div class="quadro-kanban" id="quadro-kanban"></div>
   </div>
 
-  <div class="paginacao">
+  <div class="paginacao" id="paginacao">
     <span id="info-paginacao"></span>
     <div class="navegar">
       <button id="btn-pagina-anterior">◀ Anterior</button>
@@ -140,6 +161,7 @@
     let pautasCache = [];
     let programasCache = [];
     let paginaAtual = 1;
+    let visaoAtual = 'lista'; // 'lista' | 'quadro'
 
     const rotulosStatus = {
       em_producao: '🟡 Em Produção',
@@ -147,6 +169,7 @@
       em_edicao: '🟣 Gravado / Em Edição',
       concluida: '🟢 Concluída / Pronta'
     };
+    const ordemStatusQuadro = ['em_producao', 'em_gravacao', 'em_edicao', 'concluida'];
 
     function escaparHtml(texto) {
       return String(texto == null ? '' : texto)
@@ -174,10 +197,13 @@
       pautasCache = await resp.json();
     }
 
-    function pautasFiltradas() {
+    // No Quadro o status não filtra (é ele quem organiza os cards em
+    // colunas) — ignorarStatus evita que um valor deixado no select antes
+    // de trocar de visão esconda colunas inteiras sem motivo aparente
+    function pautasFiltradas(ignorarStatus) {
       const dataIni = document.getElementById('filtro-data-inicial').value;
       const dataFim = document.getElementById('filtro-data-final').value;
-      const status = document.getElementById('filtro-status').value;
+      const status = ignorarStatus ? '' : document.getElementById('filtro-status').value;
       const busca = document.getElementById('filtro-busca').value.trim().toLowerCase();
 
       return pautasCache
@@ -250,9 +276,105 @@
       document.getElementById('btn-pagina-seguinte').disabled = paginaAtual >= totalPaginas;
     }
 
+    function renderQuadro() {
+      const filtradas = pautasFiltradas(true);
+      const container = document.getElementById('quadro-kanban');
+
+      container.innerHTML = ordemStatusQuadro.map(status => {
+        const itens = filtradas.filter(p => p.status === status);
+        return `
+          <div class="coluna-kanban" data-status="${status}">
+            <h3>${rotulosStatus[status]} <span class="contagem">${itens.length}</span></h3>
+            <div class="cards-coluna">
+              ${itens.map(p => `
+                <div class="card-kanban" draggable="true" data-id="${p.id}">
+                  <div class="titulo-card">${escaparHtml(p.titulo)}</div>
+                  <div class="meta-card">
+                    <span>📅 ${formatarData(p.data_fato)}</span>
+                    <span>🎤 ${escaparHtml(p.reporter) || '—'}</span>
+                    <span>📺 ${escaparHtml(nomePrograma(p.programa_id))}</span>
+                  </div>
+                  <button class="btn-lauda" data-id="${p.id}">📝 Lauda</button>
+                </div>
+              `).join('') || '<div class="estado-vazio" style="padding:20px 8px;">Nenhuma reportagem</div>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      ligarEventosQuadro();
+    }
+
+    function ligarEventosQuadro() {
+      document.querySelectorAll('#quadro-kanban .btn-lauda').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const p = pautasCache.find(item => item.id === Number(btn.dataset.id));
+          if (p) abrirLauda(p);
+        });
+      });
+
+      document.querySelectorAll('.card-kanban').forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+          card.classList.add('arrastando');
+          e.dataTransfer.setData('text/plain', card.dataset.id);
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        card.addEventListener('dragend', () => card.classList.remove('arrastando'));
+      });
+
+      document.querySelectorAll('.coluna-kanban').forEach(coluna => {
+        coluna.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          coluna.classList.add('arrastando-sobre');
+        });
+        coluna.addEventListener('dragleave', () => coluna.classList.remove('arrastando-sobre'));
+        coluna.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          coluna.classList.remove('arrastando-sobre');
+          const id = e.dataTransfer.getData('text/plain');
+          const novoStatus = coluna.dataset.status;
+          const pauta = pautasCache.find(p => String(p.id) === id);
+          if (!pauta || pauta.status === novoStatus) return;
+
+          await fetch('/pautas/' + id, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: novoStatus })
+          });
+          await carregarPautas();
+          renderQuadro();
+        });
+      });
+    }
+
+    function renderConteudo() {
+      if (visaoAtual === 'quadro') renderQuadro();
+      else renderTabela();
+    }
+
+    function mudarVisao(visao) {
+      visaoAtual = visao;
+      document.getElementById('btn-visao-lista').classList.toggle('ativo', visao === 'lista');
+      document.getElementById('btn-visao-quadro').classList.toggle('ativo', visao === 'quadro');
+      document.getElementById('area-tabela').style.display = visao === 'lista' ? '' : 'none';
+      document.getElementById('quadro-kanban').classList.toggle('ativo', visao === 'quadro');
+      document.getElementById('paginacao').style.display = visao === 'lista' ? 'flex' : 'none';
+
+      // status não se aplica dentro do Quadro (ele já organiza por status)
+      const filtroStatus = document.getElementById('filtro-status');
+      filtroStatus.disabled = visao === 'quadro';
+      if (visao === 'quadro') filtroStatus.value = '';
+
+      renderConteudo();
+    }
+
+    document.getElementById('btn-visao-lista').addEventListener('click', () => mudarVisao('lista'));
+    document.getElementById('btn-visao-quadro').addEventListener('click', () => mudarVisao('quadro'));
+
     function atualizar() {
       paginaAtual = 1;
-      renderTabela();
+      renderConteudo();
     }
 
     document.getElementById('filtro-data-inicial').addEventListener('change', atualizar);
@@ -272,7 +394,7 @@
 
     (async function init() {
       await Promise.all([carregarProgramas(), carregarPautas()]);
-      renderTabela();
+      renderConteudo();
     })();
   </script>
   </div>
