@@ -61,6 +61,12 @@
     .status-mini-concluida, .status-mini-aprovada { background: #2e8b57; }
     .status-mini-arquivada { background: #5A021F; }
 
+    .status-tempo-badge { display: inline-block; font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 6px; white-space: nowrap; }
+    .status-tempo-ok { background: #2e8b57; color: #fff; }
+    .status-tempo-estourado { background: #5A021F; color: #fff; }
+    .status-tempo-buraco { background: #C98A1F; color: #1b2430; }
+    .status-tempo-sem-meta { background: #8a94a3; color: #fff; }
+
     .funil { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
     .funil-etapa { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 14px 18px; }
     .funil-etapa .cabecalho-etapa { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; }
@@ -120,6 +126,7 @@
   <div class="abas-relatorio">
     <button id="aba-produtividade" class="ativa">📊 Produtividade por Papel</button>
     <button id="aba-funil">🗂️ Funil de Sugestões</button>
+    <button id="aba-pontualidade">⏱️ Pontualidade do Espelho</button>
   </div>
 
   <!-- ═══════════ PRODUTIVIDADE ═══════════ -->
@@ -187,6 +194,33 @@
     </div>
   </div>
 
+  <!-- ═══════════ PONTUALIDADE DO ESPELHO ═══════════ -->
+  <div id="painel-pontualidade" style="display:none;">
+    <div class="filtros">
+      <div>
+        <label>Data — de</label>
+        <input type="date" id="pontualidade-data-de">
+      </div>
+      <div>
+        <label>até</label>
+        <input type="date" id="pontualidade-data-ate">
+      </div>
+      <div>
+        <label>Programa</label>
+        <select id="pontualidade-programa"><option value="">Todos</option></select>
+      </div>
+      <button class="btn-limpar" id="btn-limpar-pontualidade">Limpar filtros</button>
+    </div>
+
+    <div class="conteudo">
+      <div class="largura-maxima">
+        <div id="aviso-pontualidade"></div>
+        <div class="cartoes-resumo" id="cartoes-pontualidade"></div>
+        <div id="area-tabela-pontualidade">Carregando...</div>
+      </div>
+    </div>
+  </div>
+
   <script>
     function escaparHtml(texto) {
       return String(texto == null ? '' : texto)
@@ -199,22 +233,31 @@
       return (dia && mes && ano) ? `${dia}/${mes}/${ano}` : iso;
     }
 
+    function formatarTempo(segundosTotais) {
+      const s = Number(segundosTotais) || 0;
+      return String(Math.floor(s / 60)).padStart(2, '0') + "'" + String(s % 60).padStart(2, '0') + '"';
+    }
+
     // ───────────────────── Abas ─────────────────────
+    const TITULOS_ABA = {
+      produtividade: { titulo: 'HORUS NEWSROOM — Relatório de Produtividade', sub: 'Quantas pautas cada pessoa produziu, por papel e por período' },
+      funil: { titulo: 'HORUS NEWSROOM — Funil de Sugestões', sub: 'Do envio à decisão: quantas sugestões avançam, quem envia, quanto tempo leva' },
+      pontualidade: { titulo: 'HORUS NEWSROOM — Pontualidade do Espelho', sub: 'Quantas edições fecharam no tempo, estouraram ou sobrou buraco' },
+    };
+
     document.getElementById('aba-produtividade').addEventListener('click', () => mudarAba('produtividade'));
     document.getElementById('aba-funil').addEventListener('click', () => mudarAba('funil'));
+    document.getElementById('aba-pontualidade').addEventListener('click', () => mudarAba('pontualidade'));
 
     function mudarAba(aba) {
-      const ehProdutividade = aba === 'produtividade';
-      document.getElementById('aba-produtividade').classList.toggle('ativa', ehProdutividade);
-      document.getElementById('aba-funil').classList.toggle('ativa', !ehProdutividade);
-      document.getElementById('painel-produtividade').style.display = ehProdutividade ? '' : 'none';
-      document.getElementById('painel-funil').style.display = ehProdutividade ? 'none' : '';
-      document.getElementById('titulo-relatorio').textContent = ehProdutividade
-        ? 'HORUS NEWSROOM — Relatório de Produtividade'
-        : 'HORUS NEWSROOM — Funil de Sugestões';
-      document.getElementById('subtitulo-relatorio').textContent = ehProdutividade
-        ? 'Quantas pautas cada pessoa produziu, por papel e por período'
-        : 'Do envio à decisão: quantas sugestões avançam, quem envia, quanto tempo leva';
+      document.getElementById('aba-produtividade').classList.toggle('ativa', aba === 'produtividade');
+      document.getElementById('aba-funil').classList.toggle('ativa', aba === 'funil');
+      document.getElementById('aba-pontualidade').classList.toggle('ativa', aba === 'pontualidade');
+      document.getElementById('painel-produtividade').style.display = aba === 'produtividade' ? '' : 'none';
+      document.getElementById('painel-funil').style.display = aba === 'funil' ? '' : 'none';
+      document.getElementById('painel-pontualidade').style.display = aba === 'pontualidade' ? '' : 'none';
+      document.getElementById('titulo-relatorio').textContent = TITULOS_ABA[aba].titulo;
+      document.getElementById('subtitulo-relatorio').textContent = TITULOS_ABA[aba].sub;
     }
 
     // ═══════════════════════ PRODUTIVIDADE ═══════════════════════
@@ -570,11 +613,160 @@
       atualizarFunil();
     });
 
+    // ═══════════════════════ PONTUALIDADE DO ESPELHO ═══════════════════════
+    // Mesma regra de OK/Estourado/Buraco usada ao vivo em espelho.html
+    // (renderStatsTempo): tolerância de 30s comparando duracao_total_prevista
+    // com a soma de duracao_estimada dos blocos. Espelhos sem meta definida
+    // não entram no cálculo de % — ficariam falsamente "OK" (0 contra 0) ou
+    // "estourado" (qualquer tempo contra 0).
+    const TOLERANCIA_PONTUALIDADE = 30;
+    const labelStatusPontualidade = { ok: '🟢 OK', estourado: '🔴 Estourado', buraco: '🟡 Buraco', sem_meta: '— Sem meta' };
+
+    let espelhosCache = [];
+
+    async function carregarEspelhos() {
+      const resp = await fetch('/espelhos');
+      const espelhos = await resp.json();
+
+      espelhosCache = await Promise.all(espelhos.map(async (e) => {
+        const respBlocos = await fetch('/blocos?espelho_id=' + e.id);
+        const blocos = await respBlocos.json();
+        const tempoAtual = blocos.reduce((soma, b) => soma + (b.duracao_estimada || 0), 0);
+        const temMeta = !!e.duracao_total_prevista;
+        const diferenca = (e.duracao_total_prevista || 0) - tempoAtual;
+
+        let status;
+        if (!temMeta) status = 'sem_meta';
+        else if (Math.abs(diferenca) <= TOLERANCIA_PONTUALIDADE) status = 'ok';
+        else if (diferenca < 0) status = 'estourado';
+        else status = 'buraco';
+
+        return { ...e, tempoAtual, diferenca, status, itens: blocos };
+      }));
+    }
+
+    function preencherFiltroProgramaEspelho() {
+      const programas = [...new Set(espelhosCache.map(e => (e.programa || '').trim()).filter(Boolean))].sort();
+      const select = document.getElementById('pontualidade-programa');
+      select.innerHTML = '<option value="">Todos</option>' + programas.map(p => `<option value="${escaparHtml(p)}">${escaparHtml(p)}</option>`).join('');
+    }
+
+    function espelhosFiltrados() {
+      const dataDe = document.getElementById('pontualidade-data-de').value;
+      const dataAte = document.getElementById('pontualidade-data-ate').value;
+      const programa = document.getElementById('pontualidade-programa').value;
+
+      return espelhosCache.filter(e => {
+        if (dataDe && (!e.data || e.data < dataDe)) return false;
+        if (dataAte && (!e.data || e.data > dataAte)) return false;
+        if (programa && e.programa !== programa) return false;
+        return true;
+      });
+    }
+
+    function renderAvisoPontualidade(espelhos) {
+      const semMeta = espelhos.filter(e => e.status === 'sem_meta').length;
+      const aviso = document.getElementById('aviso-pontualidade');
+      if (semMeta === 0) { aviso.innerHTML = ''; return; }
+      aviso.innerHTML = `<div class="aviso-dados">⚠️ ${semMeta} espelho${semMeta > 1 ? 's' : ''} sem tempo alvo definido
+        — aparece${semMeta > 1 ? 'm' : ''} na tabela, mas fica${semMeta > 1 ? 'm' : ''} fora do cálculo de % dentro da tolerância.</div>`;
+    }
+
+    function renderResumoPontualidade(espelhos) {
+      const comMeta = espelhos.filter(e => e.status !== 'sem_meta');
+      const ok = comMeta.filter(e => e.status === 'ok').length;
+      const estourado = comMeta.filter(e => e.status === 'estourado').length;
+      const buraco = comMeta.filter(e => e.status === 'buraco').length;
+      const pctOk = comMeta.length ? Math.round((ok / comMeta.length) * 100) : null;
+
+      document.getElementById('cartoes-pontualidade').innerHTML = `
+        <div class="cartao-resumo">
+          <div class="valor">${espelhos.length}</div>
+          <div class="rotulo">Espelhos no período</div>
+        </div>
+        <div class="cartao-resumo destaque">
+          <div class="valor">${pctOk === null ? '—' : pctOk + '%'}</div>
+          <div class="rotulo">Dentro da tolerância (${comMeta.length} com meta)</div>
+        </div>
+        <div class="cartao-resumo alerta">
+          <div class="valor">${estourado}</div>
+          <div class="rotulo">🔴 Estourado</div>
+        </div>
+        <div class="cartao-resumo alerta">
+          <div class="valor">${buraco}</div>
+          <div class="rotulo">🟡 Buraco</div>
+        </div>
+      `;
+    }
+
+    function renderTabelaPontualidade(espelhos) {
+      const area = document.getElementById('area-tabela-pontualidade');
+      if (espelhos.length === 0) {
+        area.innerHTML = '<div class="estado-vazio">Nenhum espelho encontrado para esse período/filtro.</div>';
+        return;
+      }
+
+      const ordenados = espelhos.slice().sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+
+      area.innerHTML = `
+        <table class="tabela-relatorio">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Programa</th>
+              <th style="width:130px;">Status</th>
+              <th style="width:100px;">Tempo Alvo</th>
+              <th style="width:100px;">Tempo Atual</th>
+              <th style="width:110px;">Diferença</th>
+              <th style="width:70px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${ordenados.map((e, i) => `
+              <tr class="clicavel" data-indice="${i}">
+                <td>${formatarData(e.data)}</td>
+                <td class="nome-linha">${escaparHtml(e.programa) || '—'}</td>
+                <td><span class="status-tempo-badge status-tempo-${e.status.replace('_', '-')}">${labelStatusPontualidade[e.status]}</span></td>
+                <td>${e.status === 'sem_meta' ? '—' : formatarTempo(e.duracao_total_prevista)}</td>
+                <td>${formatarTempo(e.tempoAtual)}</td>
+                <td>${e.status === 'sem_meta' ? '—' : (e.diferenca < 0 ? '+' : '-') + formatarTempo(Math.abs(e.diferenca))}</td>
+                <td><a href="espelho.html?espelho_id=${e.id}" target="_blank" onclick="event.stopPropagation()" style="color:#336699; font-size:12px;">Abrir ↗</a></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+
+      ligarExpansaoDetalhe(area, ordenados, (item) => `
+        <span class="titulo-item-detalhe">Bloco ${item.bloco || 1} — ${escaparHtml(item.titulo || 'Sem título')}${item.responsavel ? ' · ' + escaparHtml(item.responsavel) : ''}</span>
+        <span>${formatarTempo(item.duracao_estimada || 0)}</span>
+      `, () => '', 7);
+    }
+
+    function atualizarPontualidade() {
+      const filtrados = espelhosFiltrados();
+      renderAvisoPontualidade(filtrados);
+      renderResumoPontualidade(filtrados);
+      renderTabelaPontualidade(filtrados);
+    }
+
+    document.getElementById('pontualidade-data-de').addEventListener('change', atualizarPontualidade);
+    document.getElementById('pontualidade-data-ate').addEventListener('change', atualizarPontualidade);
+    document.getElementById('pontualidade-programa').addEventListener('change', atualizarPontualidade);
+    document.getElementById('btn-limpar-pontualidade').addEventListener('click', () => {
+      document.getElementById('pontualidade-data-de').value = '';
+      document.getElementById('pontualidade-data-ate').value = '';
+      document.getElementById('pontualidade-programa').value = '';
+      atualizarPontualidade();
+    });
+
     (async function init() {
-      await Promise.all([carregarProgramas(), carregarPautas(), carregarSugestoes()]);
+      await Promise.all([carregarProgramas(), carregarPautas(), carregarSugestoes(), carregarEspelhos()]);
       preencherFiltroEditoria();
+      preencherFiltroProgramaEspelho();
       atualizarProdutividade();
       atualizarFunil();
+      atualizarPontualidade();
     })();
   </script>
   </div>
