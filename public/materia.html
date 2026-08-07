@@ -129,8 +129,7 @@
       .nr-app { height: auto !important; overflow: visible !important; }
       .conteudo { max-width: 100%; margin: 0; padding: 0; }
 
-      .topo { background: #fff !important; color: #000 !important; padding: 0 0 10px; border-bottom: 2px solid #000; }
-      .topo h1 { font-size: 15px; }
+      .topo { display: none !important; }
 
       /* A versão compacta (tela) some; a versão completa (impressão) some
          no navegador e aparece só no papel — nenhuma das duas duplica a
@@ -296,7 +295,9 @@
     // não pela posição geral na lista
     const rotuloTipoImpressao = { OFF: 'Off', SONORA: 'Sonora', PASSAGEM: 'Passagem', ARTE: 'Arte', SOBE_SOM: 'Sobe Som' };
     const sublabelIndicacoesImpressao = { OFF: 'Indicações', SONORA: 'Entrevistado', PASSAGEM: 'Local', ARTE: 'Indicações', SOBE_SOM: 'Indicações' };
-    const sublabelTextoImpressao = { SONORA: 'Citação' };
+    // Lado do texto nunca leva sufixo — é sempre só "[Off 1]", "[Sonora 1]",
+    // "[Passagem 1]"...
+    const sublabelTextoImpressao = {};
 
     // Estimativa de tempo de leitura pra quem não quer cronometrar na mão:
     // ~150 palavras por minuto é uma referência comum de ritmo de locução em
