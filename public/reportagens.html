@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Reportagens — HORUS Newsroom</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+
+    .topo { background: #336699; color: #fff; padding: 14px 20px; }
+    .topo h1 { font-size: 18px; margin: 0; }
+
+    .filtros { display: flex; align-items: flex-end; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; flex-wrap: wrap; }
+    .filtros > div { display: flex; flex-direction: column; gap: 4px; }
+    .filtros label { font-size: 11px; color: #5b6472; }
+    .filtros select, .filtros input { padding: 7px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
+    .filtros .campo-busca { min-width: 220px; flex: 1; }
+
+    .alternador-visao { display: flex; gap: 6px; margin-left: auto; }
+    .alternador-visao button { padding: 8px 14px; border-radius: 6px; border: 1px solid #ddd; background: #fff; color: #5b6472; font-size: 13px; cursor: pointer; }
+    .alternador-visao button.ativo { background: #336699; border-color: #336699; color: #fff; font-weight: bold; }
+    .alternador-visao button:disabled { color: #bbb; cursor: default; background: #f4f5f7; }
+
+    .conteudo { flex: 1; overflow-y: auto; padding: 20px; }
+
+    table.lista-reportagens { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    table.lista-reportagens th { background: #eef1f5; text-align: left; padding: 10px 12px; font-size: 12px; color: #5b6472; text-transform: uppercase; }
+    table.lista-reportagens td { padding: 10px 12px; font-size: 13px; border-top: 1px solid #f0f0f0; vertical-align: middle; }
+
+    .status-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; color: #fff; font-weight: bold; white-space: nowrap; }
+    .status-em_producao { background: #C98A1F; }
+    .status-em_gravacao { background: #336699; }
+    .status-em_edicao { background: #6b3fa0; }
+    .status-concluida { background: #2e8b57; }
+
+    .btn-lauda { background: #336699; color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+    .btn-lauda:hover { background: #285480; }
+
+    .estado-vazio { text-align: center; color: #999; padding: 60px 20px; }
+
+    .paginacao { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; background: #fff; border-top: 1px solid #eee; font-size: 13px; color: #5b6472; }
+    .paginacao .navegar { display: flex; align-items: center; gap: 10px; }
+    .paginacao button { padding: 6px 12px; border-radius: 6px; border: 1px solid #ddd; background: #fff; cursor: pointer; font-size: 13px; }
+    .paginacao button:disabled { color: #ccc; cursor: default; }
+
+    /* ---- Navegação lateral (unificada em todas as telas) ---- */
+    body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
+    .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+    .nr-sidebar .nr-logo { padding: 0 20px 20px; border-bottom: 1px solid #4d7fb3; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
+    .nr-sidebar .nr-titulo, .nr-sidebar .nr-subtitulo { font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+    .nr-sidebar .nr-subtitulo { margin-top: 4px; }
+    .nr-sidebar a, .nr-sidebar .nr-item-desabilitado { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #e8f0f7; text-decoration: none; font-size: 14px; }
+    .nr-sidebar a:hover { background: #4d7fb3; color: #fff; }
+    .nr-sidebar a.nr-ativo { background: #244d70; color: #fff; font-weight: bold; border-left: 4px solid #8D0333; padding-left: 16px; }
+    .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
+    .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
+    .nr-app { flex: 1; min-width: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+  </style>
+</head>
+<body>
+  <div class="nr-sidebar">
+    <a href="index.html" class="nr-logo">
+      <div class="nr-titulo">HORUS</div>
+      <div class="nr-subtitulo">NEWSROOM</div>
+    </a>
+    <a href="sugestoes.html">📋 Sugestões de Pauta</a>
+    <a href="pautas.html">📝 Pautas</a>
+    <div class="nr-item-desabilitado">🗺 Mapa de Produções <span class="nr-badge">em breve</span></div>
+    <a href="reportagens.html" class="nr-ativo">🎬 Reportagens</a>
+    <a href="espelhos.html">📽️ Espelhos</a>
+    <div class="nr-item-desabilitado">🔍 Busca Geral <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📅 Calendário <span class="nr-badge">em breve</span></div>
+    <a href="agenda.html">🗓 Agenda</a>
+    <div class="nr-item-desabilitado">👥 Escala de Equipes <span class="nr-badge">em breve</span></div>
+    <a href="teleprompter.html">🎙 Teleprompter</a>
+    <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📊 Gráficos Gerenciais <span class="nr-badge">em breve</span></div>
+    <a href="relatorios.html">📄 Relatórios</a>
+    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+  </div>
+  <div class="nr-app">
+
+  <div class="topo">
+    <h1>HORUS NEWSROOM — Reportagens</h1>
+  </div>
+
+  <div class="filtros">
+    <div>
+      <label>Data inicial</label>
+      <input type="date" id="filtro-data-inicial">
+    </div>
+    <div>
+      <label>Data final</label>
+      <input type="date" id="filtro-data-final">
+    </div>
+    <div>
+      <label>Status</label>
+      <select id="filtro-status">
+        <option value="">Todos</option>
+        <option value="em_producao">🟡 Em Produção</option>
+        <option value="em_gravacao">🔵 Em Gravação</option>
+        <option value="em_edicao">🟣 Gravado / Em Edição</option>
+        <option value="concluida">🟢 Concluída / Pronta</option>
+      </select>
+    </div>
+    <div class="campo-busca">
+      <label>Buscar por título</label>
+      <input type="text" id="filtro-busca" placeholder="🔍 Filtrar por título...">
+    </div>
+    <div class="alternador-visao">
+      <button class="ativo" id="btn-visao-lista">🗂️ Lista</button>
+      <button disabled title="Em breve">▦ Quadro</button>
+    </div>
+  </div>
+
+  <div class="conteudo">
+    <div id="area-tabela">Carregando...</div>
+  </div>
+
+  <div class="paginacao">
+    <span id="info-paginacao"></span>
+    <div class="navegar">
+      <button id="btn-pagina-anterior">◀ Anterior</button>
+      <span id="texto-pagina"></span>
+      <button id="btn-pagina-seguinte">Próxima ▶</button>
+    </div>
+  </div>
+
+  <script>
+    const ITENS_POR_PAGINA = 25;
+
+    let pautasCache = [];
+    let programasCache = [];
+    let paginaAtual = 1;
+
+    const rotulosStatus = {
+      em_producao: '🟡 Em Produção',
+      em_gravacao: '🔵 Em Gravação',
+      em_edicao: '🟣 Gravado / Em Edição',
+      concluida: '🟢 Concluída / Pronta'
+    };
+
+    function escaparHtml(texto) {
+      return String(texto == null ? '' : texto)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function formatarData(iso) {
+      if (!iso) return '—';
+      const [ano, mes, dia] = iso.split('-');
+      return (dia && mes && ano) ? `${dia}/${mes}/${ano}` : iso;
+    }
+
+    function nomePrograma(id) {
+      const p = programasCache.find(pr => pr.id === id);
+      return p ? p.nome : '—';
+    }
+
+    async function carregarProgramas() {
+      const resp = await fetch('/agenda/programas');
+      programasCache = await resp.json();
+    }
+
+    async function carregarPautas() {
+      const resp = await fetch('/pautas');
+      pautasCache = await resp.json();
+    }
+
+    function pautasFiltradas() {
+      const dataIni = document.getElementById('filtro-data-inicial').value;
+      const dataFim = document.getElementById('filtro-data-final').value;
+      const status = document.getElementById('filtro-status').value;
+      const busca = document.getElementById('filtro-busca').value.trim().toLowerCase();
+
+      return pautasCache
+        .filter(p => {
+          if (dataIni && (!p.data_fato || p.data_fato < dataIni)) return false;
+          if (dataFim && (!p.data_fato || p.data_fato > dataFim)) return false;
+          if (status && p.status !== status) return false;
+          if (busca && !(p.titulo || '').toLowerCase().includes(busca)) return false;
+          return true;
+        })
+        .sort((a, b) => (b.data_fato || '').localeCompare(a.data_fato || ''));
+    }
+
+    function abrirLauda(p) {
+      const params = new URLSearchParams({
+        pauta_id: p.id,
+        titulo: p.titulo || '',
+        programa: nomePrograma(p.programa_id),
+        reporter: p.reporter || ''
+      });
+      window.location.href = 'materia.html?' + params.toString();
+    }
+
+    function renderTabela() {
+      const filtradas = pautasFiltradas();
+      const area = document.getElementById('area-tabela');
+
+      const totalPaginas = Math.max(1, Math.ceil(filtradas.length / ITENS_POR_PAGINA));
+      if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+      const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
+      const paginaDeItens = filtradas.slice(inicio, inicio + ITENS_POR_PAGINA);
+
+      if (filtradas.length === 0) {
+        area.innerHTML = '<div class="estado-vazio">Nenhuma reportagem encontrada para esse período/filtro.</div>';
+      } else {
+        area.innerHTML = `
+          <table class="lista-reportagens">
+            <thead>
+              <tr>
+                <th>Data</th><th>Título</th><th>Repórter</th><th>Programa / Quadro</th><th>Status</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${paginaDeItens.map(p => `
+                <tr>
+                  <td>${formatarData(p.data_fato)}</td>
+                  <td>${escaparHtml(p.titulo)}</td>
+                  <td>${escaparHtml(p.reporter) || '—'}</td>
+                  <td>${escaparHtml(nomePrograma(p.programa_id))}</td>
+                  <td><span class="status-badge status-${p.status}">${rotulosStatus[p.status] || p.status}</span></td>
+                  <td><button class="btn-lauda" data-id="${p.id}">📝 Lauda</button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+        area.querySelectorAll('.btn-lauda').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const p = pautasCache.find(item => item.id === Number(btn.dataset.id));
+            if (p) abrirLauda(p);
+          });
+        });
+      }
+
+      const inicioExibido = filtradas.length === 0 ? 0 : inicio + 1;
+      const fimExibido = Math.min(inicio + ITENS_POR_PAGINA, filtradas.length);
+      document.getElementById('info-paginacao').textContent = `Mostrando ${inicioExibido}–${fimExibido} de ${filtradas.length}`;
+      document.getElementById('texto-pagina').textContent = `Página ${paginaAtual} de ${totalPaginas}`;
+      document.getElementById('btn-pagina-anterior').disabled = paginaAtual <= 1;
+      document.getElementById('btn-pagina-seguinte').disabled = paginaAtual >= totalPaginas;
+    }
+
+    function atualizar() {
+      paginaAtual = 1;
+      renderTabela();
+    }
+
+    document.getElementById('filtro-data-inicial').addEventListener('change', atualizar);
+    document.getElementById('filtro-data-final').addEventListener('change', atualizar);
+    document.getElementById('filtro-status').addEventListener('change', atualizar);
+    document.getElementById('filtro-busca').addEventListener('input', () => {
+      clearTimeout(window._buscaTimeout);
+      window._buscaTimeout = setTimeout(atualizar, 300);
+    });
+
+    document.getElementById('btn-pagina-anterior').addEventListener('click', () => {
+      if (paginaAtual > 1) { paginaAtual--; renderTabela(); }
+    });
+    document.getElementById('btn-pagina-seguinte').addEventListener('click', () => {
+      paginaAtual++; renderTabela();
+    });
+
+    (async function init() {
+      await Promise.all([carregarProgramas(), carregarPautas()]);
+      renderTabela();
+    })();
+  </script>
+  </div>
+</body>
+</html>
