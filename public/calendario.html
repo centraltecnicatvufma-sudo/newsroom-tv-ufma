@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Calendário — HORUS Newsroom</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+
+    .topo { background: #336699; color: #fff; padding: 14px 20px; }
+    .topo h1 { font-size: 18px; margin: 0; }
+    .topo .sub { font-size: 12px; color: #cfe0f0; margin-top: 2px; }
+
+    .filtros { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; flex-wrap: wrap; }
+    .navegacao-mes { display: flex; align-items: center; gap: 10px; }
+    .navegacao-mes button { padding: 7px 12px; border-radius: 6px; border: 1px solid #ddd; background: #fff; color: #5b6472; font-size: 13px; cursor: pointer; }
+    .navegacao-mes button:hover { background: #f4f5f7; }
+    .navegacao-mes #rotulo-mes-ano { font-size: 15px; font-weight: bold; min-width: 160px; text-align: center; }
+    .btn-adicionar { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 9px 16px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+    .btn-adicionar:hover { background: #6d0227; }
+
+    .conteudo { flex: 1; overflow-y: auto; padding: 20px; }
+
+    .legenda-editorias { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-bottom: 16px; font-size: 11px; color: #5b6472; }
+    .item-legenda { display: flex; align-items: center; gap: 5px; }
+    .ponto-editoria { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+    .grade-calendario { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 28px; }
+    .cabecalho-dia-semana { text-align: center; font-size: 11px; color: #5b6472; text-transform: uppercase; font-weight: bold; padding: 4px 0; }
+    .celula-dia { background: #fff; border-radius: 8px; padding: 8px; min-height: 96px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.06); display: flex; flex-direction: column; gap: 4px; border: 2px solid transparent; }
+    .celula-dia:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.16); }
+    .celula-dia.fora-do-mes { opacity: 0.4; }
+    .celula-dia.dia-hoje { border-color: #336699; }
+    .celula-dia.dia-cheio { background: #f7ecd9; }
+    .numero-dia-cal { font-size: 13px; font-weight: bold; }
+    .tag-efemeride { font-size: 10px; background: #C98A1F; color: #fff; padding: 2px 5px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pontos-editoria { display: flex; gap: 3px; flex-wrap: wrap; align-items: center; }
+    .ponto-mais { font-size: 9px; color: #999; }
+    .contador-dia { font-size: 10px; color: #5b6472; margin-top: auto; white-space: nowrap; }
+
+    .secao-eventos h2 { font-size: 15px; margin: 0 0 12px; }
+    table.tabela-simples { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    table.tabela-simples th { background: #eef1f5; text-align: left; padding: 10px 12px; font-size: 12px; color: #5b6472; text-transform: uppercase; }
+    table.tabela-simples td { padding: 10px 12px; font-size: 13px; border-top: 1px solid #f0f0f0; vertical-align: middle; }
+    .tag-tipo { font-size: 10px; color: #fff; background: #336699; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; margin-left: 6px; }
+    .acoes-lista { white-space: nowrap; text-align: right; }
+    .acoes-lista button { font-size: 14px; padding: 6px 10px; line-height: 1; border-radius: 6px; border: none; cursor: pointer; margin-left: 4px; }
+    .btn-ver { background: #eee; color: #333; }
+    .btn-excluir { background: #8D0333; color: #fff; }
+    .estado-vazio { text-align: center; color: #999; padding: 20px; }
+
+    .overlay-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 10; }
+    .overlay-modal.aberto { display: flex; }
+    .modal { background: #fff; border-radius: 10px; padding: 20px; width: 380px; }
+    .modal h2 { font-size: 16px; margin: 0 0 4px; }
+    .modal label { font-size: 12px; color: #5b6472; display: block; margin: 12px 0 4px; }
+    .modal input[type="text"], .modal input[type="date"], .modal textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; }
+    .modal textarea { min-height: 60px; resize: vertical; }
+    .modal label.linha-checkbox { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #1b2430; }
+    .modal .botoes-modal { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+    .modal .botoes-modal button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .modal .btn-cancelar { background: #eee; color: #333; }
+    .modal .btn-confirmar { background: #8D0333; color: #fff; }
+
+    /* ---- Navegação lateral (unificada em todas as telas) ---- */
+    body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
+    .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+    .nr-sidebar .nr-logo { padding: 0 20px 20px; border-bottom: 1px solid #4d7fb3; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
+    .nr-sidebar .nr-titulo, .nr-sidebar .nr-subtitulo { font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+    .nr-sidebar .nr-subtitulo { margin-top: 4px; }
+    .nr-sidebar a, .nr-sidebar .nr-item-desabilitado { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #e8f0f7; text-decoration: none; font-size: 14px; }
+    .nr-sidebar a:hover { background: #4d7fb3; color: #fff; }
+    .nr-sidebar a.nr-ativo { background: #244d70; color: #fff; font-weight: bold; border-left: 4px solid #8D0333; padding-left: 16px; }
+    .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
+    .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
+    .nr-app { flex: 1; min-width: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+  </style>
+</head>
+<body>
+  <div class="nr-sidebar">
+    <a href="index.html" class="nr-logo">
+      <div class="nr-titulo">HORUS</div>
+      <div class="nr-subtitulo">NEWSROOM</div>
+    </a>
+    <a href="sugestoes.html">📋 Sugestões de Pauta</a>
+    <a href="pautas.html">📝 Pautas</a>
+    <a href="mapa-producao.html">🗺 Mapa de Produções</a>
+    <a href="reportagens.html">🎬 Reportagens</a>
+    <a href="espelhos.html">📽️ Espelhos</a>
+    <div class="nr-item-desabilitado">🔍 Busca Geral <span class="nr-badge">em breve</span></div>
+    <a href="calendario.html" class="nr-ativo">📅 Calendário</a>
+    <a href="agenda.html">🗓 Agenda</a>
+    <a href="escala.html">👥 Escala de Equipes</a>
+    <a href="teleprompter.html">🎙 Teleprompter</a>
+    <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
+    <a href="graficos.html">📊 Gráficos Gerenciais</a>
+    <a href="relatorios.html">📄 Relatórios</a>
+    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+  </div>
+  <div class="nr-app">
+
+  <div class="topo">
+    <h1>HORUS NEWSROOM — Calendário</h1>
+    <div class="sub">Planejamento de longo prazo — grandes coberturas, séries e efemérides. Clique num dia pra ver/editar a agenda dele.</div>
+  </div>
+
+  <div class="filtros">
+    <div class="navegacao-mes">
+      <button id="btn-mes-anterior">◀</button>
+      <span id="rotulo-mes-ano"></span>
+      <button id="btn-mes-proximo">▶</button>
+      <button id="btn-hoje">Hoje</button>
+    </div>
+    <button class="btn-adicionar" id="btn-add-evento">+ Nova Efeméride</button>
+  </div>
+
+  <div class="conteudo">
+    <div class="legenda-editorias" id="legenda-editorias"></div>
+    <div class="grade-calendario" id="grade-calendario"></div>
+
+    <div class="secao-eventos">
+      <h2>🎉 Efemérides Cadastradas</h2>
+      <table class="tabela-simples">
+        <thead><tr><th>Título</th><th>Data</th><th>Ações</th></tr></thead>
+        <tbody id="corpo-lista-eventos"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="overlay-modal" id="modal-evento">
+    <div class="modal">
+      <h2 id="titulo-modal-evento">🎉 Nova Efeméride / Evento Fixo</h2>
+      <label>Título</label>
+      <input type="text" id="input-titulo-evento" placeholder='Ex: "Aniversário da UFMA"'>
+      <label>Data</label>
+      <input type="date" id="input-data-evento">
+      <label class="linha-checkbox" style="margin-top:14px;">
+        <input type="checkbox" id="input-recorrente-evento"> Repete todo ano nessa data
+      </label>
+      <label>Observação</label>
+      <textarea id="input-observacao-evento"></textarea>
+      <div class="botoes-modal">
+        <button class="btn-cancelar" id="cancelar-evento">Cancelar</button>
+        <button class="btn-confirmar" id="confirmar-evento">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const NOMES_MES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const LIMIAR_DIA_CHEIO = 5; // agendamentos no dia a partir daqui = redação no limite
+
+    // Mesma cor pra cada editoria em todo lugar que ela aparece no calendário
+    // (pontinhos no dia + legenda) — reaproveita a Editoria que Pautas já
+    // tem, sem criar uma segunda classificação paralela
+    const CORES_EDITORIA = {
+      'Arte e Cultura': '#B85C38',
+      'Cidade': '#336699',
+      'Ciência e Tecnologia': '#075B91',
+      'Comportamento e Sociedade': '#6b3fa0',
+      'Direitos Humanos e Inclusão': '#8D0333',
+      'Economia e Trabalho': '#2e8b57',
+      'Esporte e Lazer': '#C98A1F',
+      'Educação': '#1c7c54',
+      'Meio Ambiente': '#3a7d44',
+      'Política': '#5A021F',
+      'Saúde': '#0f7173',
+      'Segurança e Justiça': '#4a4e69',
+      'Especial': '#d62828',
+      'UFMA': '#264653',
+      'Outra': '#5b6472'
+    };
+
+    let mesAtual = new Date().getMonth();
+    let anoAtual = new Date().getFullYear();
+    let agendamentosCache = [];
+    let pautasCache = [];
+    let eventosCache = [];
+    let idEmEdicaoEvento = null;
+
+    function escaparHtml(texto) {
+      return String(texto == null ? '' : texto)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function formatarDataISO(data) {
+      const ano = data.getFullYear();
+      const mes = String(data.getMonth() + 1).padStart(2, '0');
+      const dia = String(data.getDate()).padStart(2, '0');
+      return `${ano}-${mes}-${dia}`;
+    }
+
+    function formatarDataBR(iso) {
+      const [ano, mes, dia] = iso.split('-');
+      return `${dia}/${mes}/${ano}`;
+    }
+
+    async function carregarDados() {
+      const [respAgendamentos, respPautas, respEventos] = await Promise.all([
+        fetch('/agenda'), fetch('/pautas'), fetch('/calendario/eventos')
+      ]);
+      agendamentosCache = await respAgendamentos.json();
+      pautasCache = await respPautas.json();
+      eventosCache = await respEventos.json();
+    }
+
+    function renderLegenda() {
+      document.getElementById('legenda-editorias').innerHTML = Object.entries(CORES_EDITORIA).map(([ed, cor]) => `
+        <span class="item-legenda"><span class="ponto-editoria" style="background:${cor}"></span>${escaparHtml(ed)}</span>
+      `).join('') + `<span class="item-legenda"><span class="ponto-editoria" style="background:#C98A1F;"></span>🎉 Efeméride</span>`;
+    }
+
+    function gerarGradeDoMes(ano, mes) {
+      const primeiroDia = new Date(ano, mes, 1);
+      const ultimoDia = new Date(ano, mes + 1, 0);
+      const diaSemanaInicio = primeiroDia.getDay();
+      const totalDias = ultimoDia.getDate();
+
+      const celulas = [];
+      for (let i = 0; i < diaSemanaInicio; i++) {
+        celulas.push({ data: new Date(ano, mes, 1 - (diaSemanaInicio - i)), foraDoMes: true });
+      }
+      for (let dia = 1; dia <= totalDias; dia++) {
+        celulas.push({ data: new Date(ano, mes, dia), foraDoMes: false });
+      }
+      while (celulas.length % 7 !== 0) {
+        const ultima = celulas[celulas.length - 1].data;
+        const d = new Date(ultima);
+        d.setDate(d.getDate() + 1);
+        celulas.push({ data: d, foraDoMes: true });
+      }
+      return celulas;
+    }
+
+    function agendamentosDoDia(iso) {
+      return agendamentosCache.filter(a => a.data === iso);
+    }
+    function pautasDoDia(iso) {
+      return pautasCache.filter(p => p.data_fato === iso);
+    }
+    function eventosDoDia(iso) {
+      const mesDia = iso.slice(5); // "MM-DD"
+      return eventosCache.filter(e => e.recorrente_anual ? e.data.slice(5) === mesDia : e.data === iso);
+    }
+
+    function renderCelula(celula) {
+      const iso = formatarDataISO(celula.data);
+      const agendamentosDia = agendamentosDoDia(iso);
+      const pautasDia = pautasDoDia(iso);
+      const eventosDia = eventosDoDia(iso);
+
+      const editoriasPresentes = [...new Set(pautasDia.map(p => p.editoria).filter(Boolean))];
+      const pontos = editoriasPresentes.slice(0, 5).map(ed =>
+        `<span class="ponto-editoria" style="background:${CORES_EDITORIA[ed] || '#ccc'}" title="${escaparHtml(ed)}"></span>`
+      ).join('');
+      const maisPontos = editoriasPresentes.length > 5 ? `<span class="ponto-mais">+${editoriasPresentes.length - 5}</span>` : '';
+
+      const emAndamento = agendamentosDia.filter(a => a.status !== 'cancelado').length;
+      const cancelados = agendamentosDia.filter(a => a.status === 'cancelado').length;
+      const partesContador = [];
+      if (emAndamento) partesContador.push('📅 ' + emAndamento);
+      if (cancelados) partesContador.push('🛑 ' + cancelados);
+
+      const cheio = agendamentosDia.length >= LIMIAR_DIA_CHEIO;
+      const hoje = iso === formatarDataISO(new Date());
+
+      return `
+        <div class="celula-dia ${celula.foraDoMes ? 'fora-do-mes' : ''} ${cheio ? 'dia-cheio' : ''} ${hoje ? 'dia-hoje' : ''}" data-data="${iso}">
+          <div class="numero-dia-cal">${celula.data.getDate()}</div>
+          ${eventosDia.length ? `<div class="tag-efemeride" title="${escaparHtml(eventosDia.map(e => e.titulo).join(', '))}">🎉 ${escaparHtml(eventosDia[0].titulo)}${eventosDia.length > 1 ? ' +' + (eventosDia.length - 1) : ''}</div>` : ''}
+          ${pontos || maisPontos ? `<div class="pontos-editoria">${pontos}${maisPontos}</div>` : ''}
+          ${partesContador.length ? `<div class="contador-dia">${partesContador.join(' · ')}</div>` : ''}
+        </div>
+      `;
+    }
+
+    function renderCalendario() {
+      document.getElementById('rotulo-mes-ano').textContent = NOMES_MES[mesAtual] + ' ' + anoAtual;
+      const celulas = gerarGradeDoMes(anoAtual, mesAtual);
+      const nomesDias = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+      const cabecalho = nomesDias.map(n => `<div class="cabecalho-dia-semana">${n}</div>`).join('');
+
+      document.getElementById('grade-calendario').innerHTML = cabecalho + celulas.map(renderCelula).join('');
+
+      document.querySelectorAll('.celula-dia').forEach(el => {
+        el.addEventListener('click', () => {
+          window.location.href = 'agenda.html?data=' + el.dataset.data;
+        });
+      });
+    }
+
+    function renderListaEventos() {
+      const corpo = eventosCache.map(e => `
+        <tr>
+          <td>${escaparHtml(e.titulo)}</td>
+          <td>${formatarDataBR(e.data)}${e.recorrente_anual ? '<span class="tag-tipo">Anual</span>' : ''}</td>
+          <td class="acoes-lista">
+            <button class="btn-ver btn-editar-evento" data-id="${e.id}" title="Editar">✏️</button>
+            <button class="btn-excluir btn-excluir-evento" data-id="${e.id}" title="Excluir">🗑️</button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('corpo-lista-eventos').innerHTML = corpo ||
+        '<tr><td colspan="3" class="estado-vazio">Nenhuma efeméride cadastrada ainda.</td></tr>';
+
+      document.querySelectorAll('.btn-editar-evento').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const ev = eventosCache.find(e => e.id === Number(btn.dataset.id));
+          abrirModalEvento(ev);
+        });
+      });
+      document.querySelectorAll('.btn-excluir-evento').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Tem certeza que deseja excluir esta efeméride?')) return;
+          await fetch('/calendario/eventos/' + btn.dataset.id, { method: 'DELETE' });
+          await carregarDados();
+          renderCalendario();
+          renderListaEventos();
+        });
+      });
+    }
+
+    function abrirModalEvento(evento) {
+      idEmEdicaoEvento = evento ? evento.id : null;
+      document.getElementById('titulo-modal-evento').textContent = evento ? '🎉 Editar Efeméride' : '🎉 Nova Efeméride / Evento Fixo';
+      document.getElementById('input-titulo-evento').value = evento ? evento.titulo : '';
+      document.getElementById('input-data-evento').value = evento ? evento.data : '';
+      document.getElementById('input-recorrente-evento').checked = evento ? !!evento.recorrente_anual : false;
+      document.getElementById('input-observacao-evento').value = evento ? (evento.observacao || '') : '';
+      document.getElementById('modal-evento').classList.add('aberto');
+    }
+
+    document.getElementById('btn-add-evento').addEventListener('click', () => abrirModalEvento(null));
+    document.getElementById('cancelar-evento').addEventListener('click', () => {
+      document.getElementById('modal-evento').classList.remove('aberto');
+    });
+
+    document.getElementById('confirmar-evento').addEventListener('click', async () => {
+      const titulo = document.getElementById('input-titulo-evento').value.trim();
+      const data = document.getElementById('input-data-evento').value;
+      if (!titulo || !data) { alert('Preencha ao menos o título e a data.'); return; }
+
+      const corpo = {
+        titulo, data,
+        recorrente_anual: document.getElementById('input-recorrente-evento').checked,
+        observacao: document.getElementById('input-observacao-evento').value.trim()
+      };
+
+      if (idEmEdicaoEvento !== null) {
+        await fetch('/calendario/eventos/' + idEmEdicaoEvento, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo)
+        });
+      } else {
+        await fetch('/calendario/eventos', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo)
+        });
+      }
+
+      document.getElementById('modal-evento').classList.remove('aberto');
+      await carregarDados();
+      renderCalendario();
+      renderListaEventos();
+    });
+
+    document.getElementById('btn-mes-anterior').addEventListener('click', () => {
+      mesAtual--; if (mesAtual < 0) { mesAtual = 11; anoAtual--; }
+      renderCalendario();
+    });
+    document.getElementById('btn-mes-proximo').addEventListener('click', () => {
+      mesAtual++; if (mesAtual > 11) { mesAtual = 0; anoAtual++; }
+      renderCalendario();
+    });
+    document.getElementById('btn-hoje').addEventListener('click', () => {
+      const hoje = new Date();
+      mesAtual = hoje.getMonth(); anoAtual = hoje.getFullYear();
+      renderCalendario();
+    });
+
+    (async function init() {
+      renderLegenda();
+      await carregarDados();
+      renderCalendario();
+      renderListaEventos();
+    })();
+  </script>
+  </div>
+</body>
+</html>

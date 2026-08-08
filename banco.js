@@ -238,4 +238,65 @@ db.exec(`
   )
 `);
 
+// Eventos fixos/efemérides do Calendário (planejamento de longo prazo) —
+// separado da tabela "agendamentos" que a Agenda usa, porque não têm
+// equipe/hora/programa: só título, data e se repete todo ano.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS eventos_calendario (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    titulo TEXT NOT NULL,
+    data TEXT NOT NULL,
+    recorrente_anual INTEGER DEFAULT 0,
+    observacao TEXT
+  )
+`);
+
+// Escala de Equipes — núcleo visual: tipos de turno cadastráveis, uma
+// entrada de escala por membro/dia, e vínculos de dupla (Repórter +
+// Cinegrafista que sempre rodam juntos). membro_id referencia
+// equipe_agenda, o mesmo cadastro que a aba "Equipe" da Agenda já usa —
+// não duplica o registro de pessoas.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS turnos_tipo (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL,
+    hora_inicio TEXT NOT NULL,
+    hora_fim TEXT NOT NULL
+  )
+`);
+
+// Turnos padrão só na primeira vez (tabela vazia) — ponto de partida
+// editável pela tela, não dado inventado por pessoa/escala real
+const totalTurnos = db.prepare('SELECT COUNT(*) AS c FROM turnos_tipo').get().c;
+if (totalTurnos === 0) {
+  const inserirTurno = db.prepare('INSERT INTO turnos_tipo (nome, hora_inicio, hora_fim) VALUES (?, ?, ?)');
+  inserirTurno.run('Manhã', '08:00', '14:00');
+  inserirTurno.run('Tarde', '14:00', '20:00');
+  inserirTurno.run('Noite', '20:00', '02:00');
+  inserirTurno.run('Plantão', '00:00', '23:59');
+}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS escala (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    membro_id INTEGER NOT NULL,
+    data TEXT NOT NULL,
+    status TEXT NOT NULL,
+    turno_tipo_id INTEGER,
+    FOREIGN KEY (membro_id) REFERENCES equipe_agenda(id),
+    FOREIGN KEY (turno_tipo_id) REFERENCES turnos_tipo(id)
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS vinculos_equipe (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT,
+    membro_a_id INTEGER NOT NULL,
+    membro_b_id INTEGER NOT NULL,
+    FOREIGN KEY (membro_a_id) REFERENCES equipe_agenda(id),
+    FOREIGN KEY (membro_b_id) REFERENCES equipe_agenda(id)
+  )
+`);
+
 module.exports = db;

@@ -120,9 +120,9 @@
     <a href="reportagens.html">🎬 Reportagens</a>
     <a href="espelhos.html">📽️ Espelhos</a>
     <div class="nr-item-desabilitado">🔍 Busca Geral <span class="nr-badge">em breve</span></div>
-    <div class="nr-item-desabilitado">📅 Calendário <span class="nr-badge">em breve</span></div>
+    <a href="calendario.html">📅 Calendário</a>
     <a href="agenda.html" class="nr-ativo">🗓 Agenda</a>
-    <div class="nr-item-desabilitado">👥 Escala de Equipes <span class="nr-badge">em breve</span></div>
+    <a href="escala.html">👥 Escala de Equipes</a>
     <a href="teleprompter.html">🎙 Teleprompter</a>
     <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
     <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
@@ -508,7 +508,17 @@
       });
     }
 
-    trocarAba('relatorio');
+    // Vindo do Calendário (?data=YYYY-MM-DD) — abre direto na aba "Por Dia"
+    // já no dia clicado, em vez de cair na Agenda Semanal por padrão
+    const paramsUrl = new URLSearchParams(location.search);
+    const dataUrl = paramsUrl.get('data');
+    if (dataUrl) {
+      diaSelecionado = new Date(dataUrl + 'T12:00:00');
+      trocarAba('agenda');
+    } else {
+      trocarAba('relatorio');
+    }
+
     let agendamentoEmEdicao = null; // guarda o objeto do agendamento, se estiver editando
 
     async function abrirFormularioAgendamento(agendamento) {

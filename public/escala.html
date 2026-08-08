@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Escala de Equipes — HORUS Newsroom</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+
+    .topo { background: #336699; color: #fff; padding: 14px 20px; }
+    .topo h1 { font-size: 18px; margin: 0; }
+    .topo .sub { font-size: 12px; color: #cfe0f0; margin-top: 2px; }
+
+    .filtros { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; flex-wrap: wrap; }
+    .navegacao-semana { display: flex; align-items: center; gap: 10px; }
+    .navegacao-semana button { padding: 7px 12px; border-radius: 6px; border: 1px solid #ddd; background: #fff; color: #5b6472; font-size: 13px; cursor: pointer; }
+    .navegacao-semana button:hover { background: #f4f5f7; }
+    .navegacao-semana #rotulo-semana { font-size: 14px; font-weight: bold; min-width: 150px; text-align: center; }
+    .legenda-status { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: #5b6472; }
+    .item-legenda-status { display: flex; align-items: center; gap: 5px; }
+    .ponto-status { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+    .conteudo { flex: 1; overflow-y: auto; padding: 20px; }
+
+    .aviso-dados { font-size: 12px; color: #8D0333; background: #fdf0f3; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; }
+
+    /* Grade semanal: coluna de nomes + 7 dias — display:contents nas
+       "linhas" pra tudo alinhar nas mesmas colunas do grid pai */
+    .grade-escala { display: grid; grid-template-columns: 210px repeat(7, minmax(110px, 1fr)); gap: 4px; margin-bottom: 28px; }
+    .linha-grade { display: contents; }
+    .cabecalho-grade .celula-nome, .cabecalho-grade .celula-dia-cabecalho { font-size: 11px; color: #5b6472; text-transform: uppercase; font-weight: bold; padding: 6px; text-align: center; }
+    .cabecalho-grade .celula-nome { text-align: left; }
+    .cabecalho-funcao { grid-column: 1 / -1; background: #eef1f5; padding: 7px 10px; font-size: 12px; font-weight: bold; color: #336699; border-radius: 6px; margin-top: 10px; }
+    .celula-nome { background: #fff; padding: 8px 10px; font-size: 13px; display: flex; align-items: center; justify-content: space-between; gap: 6px; border-radius: 6px; }
+    .carga-horaria { font-size: 10px; color: #5b6472; background: #eef1f5; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+    .carga-horaria.acima { background: #fdf0f3; color: #8D0333; font-weight: bold; }
+    .celula-turno { background: #fff; border-radius: 6px; min-height: 52px; padding: 6px; cursor: pointer; display: flex; flex-direction: column; justify-content: center; position: relative; border-left: 3px solid transparent; }
+    .celula-turno:hover { box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
+    .celula-turno.vazia { color: #ccc; text-align: center; font-size: 18px; align-items: center; }
+    .celula-turno .rotulo-turno { font-size: 11px; font-weight: bold; }
+    .celula-turno .horario-turno { font-size: 10px; color: #5b6472; }
+    .celula-turno.violacao { outline: 2px solid #8D0333; }
+    .marca-violacao { position: absolute; top: 4px; right: 4px; font-size: 11px; }
+
+    .cabecalho-secao { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 28px 0 14px; flex-wrap: wrap; }
+    .cabecalho-secao h2 { font-size: 15px; margin: 0; }
+    .btn-adicionar { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 9px 16px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+    .btn-adicionar:hover { background: #6d0227; }
+
+    .form-dupla { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .form-dupla select { padding: 7px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; min-width: 200px; }
+    .lista-duplas { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip-dupla { background: #fff; border-radius: 20px; padding: 7px 8px 7px 14px; font-size: 13px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 8px; }
+    .btn-remover-dupla { background: #f4f5f7; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; color: #8D0333; font-size: 12px; line-height: 1; }
+
+    table.tabela-simples { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    table.tabela-simples th { background: #eef1f5; text-align: left; padding: 10px 12px; font-size: 12px; color: #5b6472; text-transform: uppercase; }
+    table.tabela-simples td { padding: 10px 12px; font-size: 13px; border-top: 1px solid #f0f0f0; vertical-align: middle; }
+    .acoes-lista { white-space: nowrap; text-align: right; }
+    .acoes-lista button { font-size: 14px; padding: 6px 10px; line-height: 1; border-radius: 6px; border: none; cursor: pointer; margin-left: 4px; }
+    .btn-ver { background: #eee; color: #333; }
+    .btn-excluir { background: #8D0333; color: #fff; }
+    .estado-vazio { text-align: center; color: #999; padding: 20px; }
+
+    .overlay-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 10; }
+    .overlay-modal.aberto { display: flex; }
+    .modal { background: #fff; border-radius: 10px; padding: 20px; width: 360px; }
+    .modal h2 { font-size: 16px; margin: 0 0 16px; }
+    .modal label { font-size: 12px; color: #5b6472; display: block; margin: 12px 0 4px; }
+    .modal input[type="text"], .modal input[type="time"], .modal select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; }
+    .modal .linha-dupla-turno { display: flex; gap: 10px; }
+    .modal .linha-dupla-turno > div { flex: 1; }
+    .modal .botoes-modal { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+    .modal .botoes-modal button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .modal .btn-cancelar { background: #eee; color: #333; }
+    .modal .btn-confirmar { background: #8D0333; color: #fff; }
+
+    /* ---- Navegação lateral (unificada em todas as telas) ---- */
+    body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
+    .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+    .nr-sidebar .nr-logo { padding: 0 20px 20px; border-bottom: 1px solid #4d7fb3; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
+    .nr-sidebar .nr-titulo, .nr-sidebar .nr-subtitulo { font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+    .nr-sidebar .nr-subtitulo { margin-top: 4px; }
+    .nr-sidebar a, .nr-sidebar .nr-item-desabilitado { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #e8f0f7; text-decoration: none; font-size: 14px; }
+    .nr-sidebar a:hover { background: #4d7fb3; color: #fff; }
+    .nr-sidebar a.nr-ativo { background: #244d70; color: #fff; font-weight: bold; border-left: 4px solid #8D0333; padding-left: 16px; }
+    .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
+    .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
+    .nr-app { flex: 1; min-width: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+  </style>
+</head>
+<body>
+  <div class="nr-sidebar">
+    <a href="index.html" class="nr-logo">
+      <div class="nr-titulo">HORUS</div>
+      <div class="nr-subtitulo">NEWSROOM</div>
+    </a>
+    <a href="sugestoes.html">📋 Sugestões de Pauta</a>
+    <a href="pautas.html">📝 Pautas</a>
+    <a href="mapa-producao.html">🗺 Mapa de Produções</a>
+    <a href="reportagens.html">🎬 Reportagens</a>
+    <a href="espelhos.html">📽️ Espelhos</a>
+    <div class="nr-item-desabilitado">🔍 Busca Geral <span class="nr-badge">em breve</span></div>
+    <a href="calendario.html">📅 Calendário</a>
+    <a href="agenda.html">🗓 Agenda</a>
+    <a href="escala.html" class="nr-ativo">👥 Escala de Equipes</a>
+    <a href="teleprompter.html">🎙 Teleprompter</a>
+    <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
+    <a href="graficos.html">📊 Gráficos Gerenciais</a>
+    <a href="relatorios.html">📄 Relatórios</a>
+    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+  </div>
+  <div class="nr-app">
+
+  <div class="topo">
+    <h1>HORUS NEWSROOM — Escala de Equipes</h1>
+    <div class="sub">Quem está trabalhando, em qual turno, e quem está de folga — clique numa célula pra escalar.</div>
+  </div>
+
+  <div class="filtros">
+    <div class="navegacao-semana">
+      <button id="btn-semana-anterior">◀</button>
+      <span id="rotulo-semana"></span>
+      <button id="btn-semana-proxima">▶</button>
+      <button id="btn-semana-atual">Hoje</button>
+    </div>
+    <div class="legenda-status">
+      <span class="item-legenda-status"><span class="ponto-status" style="background:#2e8b57;"></span>Trabalhando</span>
+      <span class="item-legenda-status"><span class="ponto-status" style="background:#C98A1F;"></span>Plantão</span>
+      <span class="item-legenda-status"><span class="ponto-status" style="background:#5b6472;"></span>Folga</span>
+      <span class="item-legenda-status"><span class="ponto-status" style="background:#336699;"></span>Férias</span>
+    </div>
+  </div>
+
+  <div class="conteudo">
+    <div id="aviso-intersticio"></div>
+    <div class="grade-escala" id="grade-escala"></div>
+
+    <div class="cabecalho-secao">
+      <h2>🔗 Vínculos de Dupla</h2>
+    </div>
+    <div class="form-dupla">
+      <select id="select-membro-a"></select>
+      <span>+</span>
+      <select id="select-membro-b"></select>
+      <button class="btn-adicionar" id="btn-add-dupla">Vincular</button>
+    </div>
+    <div class="lista-duplas" id="lista-duplas"></div>
+
+    <div class="cabecalho-secao">
+      <h2>⏱️ Tipos de Turno</h2>
+      <button class="btn-adicionar" id="btn-add-turno">+ Novo Turno</button>
+    </div>
+    <table class="tabela-simples">
+      <thead><tr><th>Nome</th><th>Início</th><th>Fim</th><th>Ações</th></tr></thead>
+      <tbody id="corpo-lista-turnos"></tbody>
+    </table>
+  </div>
+
+  <div class="overlay-modal" id="modal-escala">
+    <div class="modal">
+      <h2 id="titulo-modal-escala"></h2>
+      <label>Status</label>
+      <select id="input-status-escala">
+        <option value="trabalhando">Trabalhando</option>
+        <option value="plantao">Plantão</option>
+        <option value="folga">Folga</option>
+        <option value="ferias">Férias</option>
+      </select>
+      <div id="campo-turno-escala">
+        <label>Turno</label>
+        <select id="input-turno-escala"></select>
+      </div>
+      <div class="botoes-modal">
+        <button class="btn-cancelar" id="btn-limpar-escala">🗑️ Limpar</button>
+        <button class="btn-cancelar" id="cancelar-escala">Cancelar</button>
+        <button class="btn-confirmar" id="confirmar-escala">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay-modal" id="modal-turno">
+    <div class="modal">
+      <h2 id="titulo-modal-turno">Novo Turno</h2>
+      <label>Nome</label>
+      <input type="text" id="input-nome-turno" placeholder='Ex: "Manhã"'>
+      <div class="linha-dupla-turno">
+        <div><label>Início</label><input type="time" id="input-inicio-turno"></div>
+        <div><label>Fim</label><input type="time" id="input-fim-turno"></div>
+      </div>
+      <div class="botoes-modal">
+        <button class="btn-cancelar" id="cancelar-turno">Cancelar</button>
+        <button class="btn-confirmar" id="confirmar-turno">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const NOMES_DIAS = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+    const ORDEM_FUNCOES_PADRAO = ['Repórter', 'Cinegrafista', 'Editor de Imagens', 'Produtor', 'Motorista', 'Estagiário', 'Bolsista'];
+    const CORES_STATUS = { trabalhando: '#2e8b57', plantao: '#C98A1F', folga: '#5b6472', ferias: '#336699' };
+    const ROTULOS_STATUS = { trabalhando: 'Trabalhando', plantao: 'Plantão', folga: 'Folga', ferias: 'Férias' };
+    const LIMIAR_INTERSTICIO_HORAS = 11; // alerta simples — não substitui confirmação de RH/jurídico
+    const CARGA_HORARIA_REFERENCIA = 44; // horas/semana — referência de jornada padrão, só pra sinalizar visualmente
+
+    let dataInicioSemana = inicioDaSemana(new Date());
+    let equipeCache = [];
+    let escalaCache = [];
+    let turnosCache = [];
+    let duplasCache = [];
+    let celulaEmEdicao = null;
+    let idEmEdicaoTurno = null;
+
+    function escaparHtml(texto) {
+      return String(texto == null ? '' : texto)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function inicioDaSemana(data) {
+      const d = new Date(data);
+      d.setDate(d.getDate() - d.getDay());
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    function formatarDataISO(data) {
+      const ano = data.getFullYear();
+      const mes = String(data.getMonth() + 1).padStart(2, '0');
+      const dia = String(data.getDate()).padStart(2, '0');
+      return `${ano}-${mes}-${dia}`;
+    }
+
+    function formatarDataBR(iso) {
+      const [, mes, dia] = iso.split('-');
+      return `${dia}/${mes}`;
+    }
+
+    function diasDaSemana(inicio) {
+      const dias = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(inicio);
+        d.setDate(inicio.getDate() + i);
+        dias.push(d);
+      }
+      return dias;
+    }
+
+    async function carregarDados() {
+      const dias = diasDaSemana(dataInicioSemana);
+      const dataIni = formatarDataISO(dias[0]);
+      const dataFim = formatarDataISO(dias[6]);
+
+      const [respEquipe, respEscala, respTurnos, respDuplas] = await Promise.all([
+        fetch('/agenda/equipe'),
+        fetch(`/escala?data_inicial=${dataIni}&data_final=${dataFim}`),
+        fetch('/escala/turnos'),
+        fetch('/escala/duplas')
+      ]);
+      equipeCache = await respEquipe.json();
+      escalaCache = await respEscala.json();
+      turnosCache = await respTurnos.json();
+      duplasCache = await respDuplas.json();
+    }
+
+    function membrosAgrupados() {
+      const grupos = {};
+      equipeCache.forEach(m => {
+        const f = m.funcao || 'Sem função definida';
+        (grupos[f] = grupos[f] || []).push(m);
+      });
+      const chaves = Object.keys(grupos);
+      chaves.sort((a, b) => {
+        const ia = ORDEM_FUNCOES_PADRAO.indexOf(a);
+        const ib = ORDEM_FUNCOES_PADRAO.indexOf(b);
+        if (ia === -1 && ib === -1) return a.localeCompare(b);
+        if (ia === -1) return 1;
+        if (ib === -1) return -1;
+        return ia - ib;
+      });
+      return chaves.map(f => ({ funcao: f, membros: grupos[f].sort((a, b) => a.nome.localeCompare(b.nome)) }));
+    }
+
+    function entradaDoMembroNoDia(membroId, iso) {
+      return escalaCache.find(e => e.membro_id === membroId && e.data === iso) || null;
+    }
+
+    function duracaoHoras(horaInicio, horaFim) {
+      const [hi, mi] = horaInicio.split(':').map(Number);
+      const [hf, mf] = horaFim.split(':').map(Number);
+      let minutos = (hf * 60 + mf) - (hi * 60 + mi);
+      if (minutos <= 0) minutos += 24 * 60;
+      return minutos / 60;
+    }
+
+    function cargaHorariaSemanal(membroId) {
+      const entradas = escalaCache.filter(e =>
+        e.membro_id === membroId && (e.status === 'trabalhando' || e.status === 'plantao') && e.turno_hora_inicio
+      );
+      const total = entradas.reduce((soma, e) => soma + duracaoHoras(e.turno_hora_inicio, e.turno_hora_fim), 0);
+      return Math.round(total * 10) / 10;
+    }
+
+    // Checagem simples de intervalo mínimo entre turnos consecutivos do MESMO
+    // profissional dentro da semana visível — alerta automático, não
+    // substitui conferência de RH/jurídico sobre a CLT
+    function instanteInicio(dataISO, horaInicio) {
+      return new Date(dataISO + 'T' + horaInicio + ':00');
+    }
+    function instanteFim(dataISO, horaInicio, horaFim) {
+      const inicio = instanteInicio(dataISO, horaInicio);
+      const fim = new Date(dataISO + 'T' + horaFim + ':00');
+      if (fim <= inicio) fim.setDate(fim.getDate() + 1);
+      return fim;
+    }
+
+    function violacoesIntersticio() {
+      const violacoes = [];
+      const porMembro = {};
+      escalaCache
+        .filter(e => (e.status === 'trabalhando' || e.status === 'plantao') && e.turno_hora_inicio)
+        .forEach(e => { (porMembro[e.membro_id] = porMembro[e.membro_id] || []).push(e); });
+
+      Object.entries(porMembro).forEach(([membroId, entradas]) => {
+        entradas.sort((a, b) => a.data.localeCompare(b.data));
+        for (let i = 0; i < entradas.length - 1; i++) {
+          const atual = entradas[i], proximo = entradas[i + 1];
+          const fimAtual = instanteFim(atual.data, atual.turno_hora_inicio, atual.turno_hora_fim);
+          const inicioProximo = instanteInicio(proximo.data, proximo.turno_hora_inicio);
+          const gapHoras = (inicioProximo - fimAtual) / 3600000;
+          if (gapHoras >= 0 && gapHoras < LIMIAR_INTERSTICIO_HORAS) {
+            violacoes.push({ membroId: Number(membroId), dataA: atual.data, dataB: proximo.data, gapHoras: Math.round(gapHoras * 10) / 10 });
+          }
+        }
+      });
+      return violacoes;
+    }
+
+    function renderCelulaEscala(membroId, iso, violacoes) {
+      const entrada = entradaDoMembroNoDia(membroId, iso);
+      const temViolacao = violacoes.some(v => v.membroId === membroId && (v.dataA === iso || v.dataB === iso));
+
+      if (!entrada) {
+        return `<div class="celula-turno vazia" data-membro="${membroId}" data-data="${iso}">+</div>`;
+      }
+
+      const cor = CORES_STATUS[entrada.status] || '#ccc';
+      const rotulo = (entrada.status === 'trabalhando' || entrada.status === 'plantao')
+        ? (entrada.turno_nome || 'Turno') : ROTULOS_STATUS[entrada.status];
+      const horario = entrada.turno_hora_inicio ? `${entrada.turno_hora_inicio}–${entrada.turno_hora_fim}` : '';
+
+      return `
+        <div class="celula-turno ${temViolacao ? 'violacao' : ''}" data-membro="${membroId}" data-data="${iso}" style="background:${cor}1a; border-left-color:${cor};">
+          <div class="rotulo-turno" style="color:${cor};">${escaparHtml(rotulo)}</div>
+          ${horario ? `<div class="horario-turno">${horario}</div>` : ''}
+          ${temViolacao ? '<div class="marca-violacao" title="Possível violação de intervalo mínimo de descanso">⚠️</div>' : ''}
+        </div>
+      `;
+    }
+
+    function renderGrade() {
+      const dias = diasDaSemana(dataInicioSemana);
+      const isos = dias.map(formatarDataISO);
+      const grupos = membrosAgrupados();
+      const violacoes = violacoesIntersticio();
+
+      document.getElementById('rotulo-semana').textContent = `${formatarDataBR(isos[0])} – ${formatarDataBR(isos[6])}`;
+
+      let html = `
+        <div class="linha-grade cabecalho-grade">
+          <div class="celula-nome">Funcionário</div>
+          ${dias.map((d, i) => `<div class="celula-dia-cabecalho">${NOMES_DIAS[i]}<br>${d.getDate()}</div>`).join('')}
+        </div>
+      `;
+
+      if (grupos.length === 0) {
+        html += '<div class="estado-vazio" style="grid-column:1/-1;">Nenhum membro de equipe cadastrado ainda (cadastre na Agenda → Equipe).</div>';
+      }
+
+      grupos.forEach(grupo => {
+        html += `<div class="cabecalho-funcao">${escaparHtml(grupo.funcao)}</div>`;
+        grupo.membros.forEach(m => {
+          const horas = cargaHorariaSemanal(m.id);
+          const acimaDaCarga = horas > CARGA_HORARIA_REFERENCIA;
+          html += `
+            <div class="linha-grade">
+              <div class="celula-nome">
+                <span>${escaparHtml(m.nome)}</span>
+                <span class="carga-horaria ${acimaDaCarga ? 'acima' : ''}" title="Carga prevista na semana, somando os turnos escalados">${horas}h</span>
+              </div>
+              ${isos.map(iso => renderCelulaEscala(m.id, iso, violacoes)).join('')}
+            </div>
+          `;
+        });
+      });
+
+      document.getElementById('grade-escala').innerHTML = html;
+
+      document.querySelectorAll('.celula-turno').forEach(el => {
+        el.addEventListener('click', () => abrirModalEscala(Number(el.dataset.membro), el.dataset.data));
+      });
+
+      document.getElementById('aviso-intersticio').innerHTML = violacoes.length
+        ? `<div class="aviso-dados">⚠️ ${violacoes.length} possível(is) violação(ões) de intervalo mínimo de ${LIMIAR_INTERSTICIO_HORAS}h entre turnos na semana visível (marcadas com ⚠️ na grade). Isso é um alerta automático simples — confirme com RH/jurídico antes de qualquer decisão.</div>`
+        : '';
+    }
+
+    function abrirModalEscala(membroId, iso) {
+      const membro = equipeCache.find(m => m.id === membroId);
+      const entrada = entradaDoMembroNoDia(membroId, iso);
+      celulaEmEdicao = { membroId, data: iso, entradaId: entrada ? entrada.id : null };
+
+      document.getElementById('titulo-modal-escala').textContent = `${membro.nome} — ${formatarDataBR(iso)}`;
+      document.getElementById('input-status-escala').value = entrada ? entrada.status : 'trabalhando';
+      document.getElementById('input-turno-escala').innerHTML = turnosCache.map(t =>
+        `<option value="${t.id}">${escaparHtml(t.nome)} (${t.hora_inicio}–${t.hora_fim})</option>`
+      ).join('');
+      if (entrada && entrada.turno_tipo_id) document.getElementById('input-turno-escala').value = entrada.turno_tipo_id;
+
+      atualizarVisibilidadeCampoTurno();
+      document.getElementById('btn-limpar-escala').style.display = entrada ? 'inline-block' : 'none';
+      document.getElementById('modal-escala').classList.add('aberto');
+    }
+
+    function atualizarVisibilidadeCampoTurno() {
+      const status = document.getElementById('input-status-escala').value;
+      document.getElementById('campo-turno-escala').style.display = (status === 'trabalhando' || status === 'plantao') ? 'block' : 'none';
+    }
+    document.getElementById('input-status-escala').addEventListener('change', atualizarVisibilidadeCampoTurno);
+
+    document.getElementById('cancelar-escala').addEventListener('click', () => {
+      document.getElementById('modal-escala').classList.remove('aberto');
+    });
+
+    document.getElementById('btn-limpar-escala').addEventListener('click', async () => {
+      if (celulaEmEdicao.entradaId) await fetch('/escala/' + celulaEmEdicao.entradaId, { method: 'DELETE' });
+      document.getElementById('modal-escala').classList.remove('aberto');
+      await carregarDados();
+      renderGrade();
+    });
+
+    document.getElementById('confirmar-escala').addEventListener('click', async () => {
+      const status = document.getElementById('input-status-escala').value;
+      const precisaTurno = status === 'trabalhando' || status === 'plantao';
+      const turno_tipo_id = precisaTurno ? Number(document.getElementById('input-turno-escala').value) : null;
+
+      if (precisaTurno && !turno_tipo_id) { alert('Selecione um turno.'); return; }
+
+      await fetch('/escala', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ membro_id: celulaEmEdicao.membroId, data: celulaEmEdicao.data, status, turno_tipo_id })
+      });
+
+      document.getElementById('modal-escala').classList.remove('aberto');
+      await carregarDados();
+      renderGrade();
+    });
+
+    // --- Duplas ---
+
+    function renderSelectsMembros() {
+      const opcoes = equipeCache.map(m => `<option value="${m.id}">${escaparHtml(m.nome)} (${escaparHtml(m.funcao)})</option>`).join('');
+      document.getElementById('select-membro-a').innerHTML = opcoes;
+      document.getElementById('select-membro-b').innerHTML = opcoes;
+    }
+
+    function renderDuplas() {
+      const el = document.getElementById('lista-duplas');
+      el.innerHTML = duplasCache.length === 0
+        ? '<div class="estado-vazio">Nenhuma dupla vinculada ainda.</div>'
+        : duplasCache.map(d => `
+            <div class="chip-dupla">
+              ${escaparHtml(d.membro_a_nome)} + ${escaparHtml(d.membro_b_nome)}
+              <button class="btn-remover-dupla" data-id="${d.id}" title="Desvincular">✕</button>
+            </div>
+          `).join('');
+
+      document.querySelectorAll('.btn-remover-dupla').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          await fetch('/escala/duplas/' + btn.dataset.id, { method: 'DELETE' });
+          duplasCache = await (await fetch('/escala/duplas')).json();
+          renderDuplas();
+        });
+      });
+    }
+
+    document.getElementById('btn-add-dupla').addEventListener('click', async () => {
+      const a = Number(document.getElementById('select-membro-a').value);
+      const b = Number(document.getElementById('select-membro-b').value);
+      if (!a || !b || a === b) { alert('Selecione duas pessoas diferentes.'); return; }
+
+      await fetch('/escala/duplas', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ membro_a_id: a, membro_b_id: b })
+      });
+      duplasCache = await (await fetch('/escala/duplas')).json();
+      renderDuplas();
+    });
+
+    // --- Tipos de turno ---
+
+    function renderListaTurnos() {
+      document.getElementById('corpo-lista-turnos').innerHTML = turnosCache.length === 0
+        ? '<tr><td colspan="4" class="estado-vazio">Nenhum turno cadastrado.</td></tr>'
+        : turnosCache.map(t => `
+            <tr>
+              <td>${escaparHtml(t.nome)}</td>
+              <td>${t.hora_inicio}</td>
+              <td>${t.hora_fim}</td>
+              <td class="acoes-lista">
+                <button class="btn-ver btn-editar-turno" data-id="${t.id}" title="Editar">✏️</button>
+                <button class="btn-excluir btn-excluir-turno" data-id="${t.id}" title="Excluir">🗑️</button>
+              </td>
+            </tr>
+          `).join('');
+
+      document.querySelectorAll('.btn-editar-turno').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const t = turnosCache.find(x => x.id === Number(btn.dataset.id));
+          idEmEdicaoTurno = t.id;
+          document.getElementById('titulo-modal-turno').textContent = 'Editar Turno';
+          document.getElementById('input-nome-turno').value = t.nome;
+          document.getElementById('input-inicio-turno').value = t.hora_inicio;
+          document.getElementById('input-fim-turno').value = t.hora_fim;
+          document.getElementById('modal-turno').classList.add('aberto');
+        });
+      });
+      document.querySelectorAll('.btn-excluir-turno').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Excluir este tipo de turno? Quem já está escalado com ele mantém a data marcada, só perde o vínculo de horário.')) return;
+          await fetch('/escala/turnos/' + btn.dataset.id, { method: 'DELETE' });
+          turnosCache = await (await fetch('/escala/turnos')).json();
+          renderListaTurnos();
+        });
+      });
+    }
+
+    document.getElementById('btn-add-turno').addEventListener('click', () => {
+      idEmEdicaoTurno = null;
+      document.getElementById('titulo-modal-turno').textContent = 'Novo Turno';
+      document.getElementById('input-nome-turno').value = '';
+      document.getElementById('input-inicio-turno').value = '';
+      document.getElementById('input-fim-turno').value = '';
+      document.getElementById('modal-turno').classList.add('aberto');
+    });
+    document.getElementById('cancelar-turno').addEventListener('click', () => {
+      document.getElementById('modal-turno').classList.remove('aberto');
+    });
+    document.getElementById('confirmar-turno').addEventListener('click', async () => {
+      const nome = document.getElementById('input-nome-turno').value.trim();
+      const hora_inicio = document.getElementById('input-inicio-turno').value;
+      const hora_fim = document.getElementById('input-fim-turno').value;
+      if (!nome || !hora_inicio || !hora_fim) { alert('Preencha nome, início e fim.'); return; }
+
+      if (idEmEdicaoTurno !== null) {
+        await fetch('/escala/turnos/' + idEmEdicaoTurno, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome, hora_inicio, hora_fim })
+        });
+      } else {
+        await fetch('/escala/turnos', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome, hora_inicio, hora_fim })
+        });
+      }
+
+      document.getElementById('modal-turno').classList.remove('aberto');
+      turnosCache = await (await fetch('/escala/turnos')).json();
+      renderListaTurnos();
+      renderGrade();
+    });
+
+    // --- Navegação de semana ---
+
+    document.getElementById('btn-semana-anterior').addEventListener('click', async () => {
+      dataInicioSemana.setDate(dataInicioSemana.getDate() - 7);
+      await carregarDados();
+      renderGrade();
+    });
+    document.getElementById('btn-semana-proxima').addEventListener('click', async () => {
+      dataInicioSemana.setDate(dataInicioSemana.getDate() + 7);
+      await carregarDados();
+      renderGrade();
+    });
+    document.getElementById('btn-semana-atual').addEventListener('click', async () => {
+      dataInicioSemana = inicioDaSemana(new Date());
+      await carregarDados();
+      renderGrade();
+    });
+
+    (async function init() {
+      await carregarDados();
+      renderGrade();
+      renderSelectsMembros();
+      renderDuplas();
+      renderListaTurnos();
+    })();
+  </script>
+  </div>
+</body>
+</html>
