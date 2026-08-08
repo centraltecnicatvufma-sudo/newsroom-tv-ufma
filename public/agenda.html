@@ -7,39 +7,69 @@
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
 
-    .conteudo { flex: 1; overflow-y: auto; padding: 24px; }
-    .conteudo h1 { text-align: center; font-size: 22px; margin-bottom: 20px; }
+    .topo { background: #336699; color: #fff; padding: 14px 20px; }
+    .topo h1 { font-size: 18px; margin: 0; }
 
-    .grid-agendamentos { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .cartao-agendamento { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.12); padding: 16px 20px; border-left: 8px solid #336699; }
-    .cartao-agendamento .data-hora { font-size: 22px; font-weight: bold; color: #336699; }
-    .cartao-agendamento .programa { font-size: 20px; font-weight: bold; margin-top: 6px; }
-    .cartao-agendamento .local { font-size: 16px; color: #5b6472; margin-top: 4px; }
-    .cartao-agendamento { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-    .cartao-agendamento .info-cartao { flex: 1; }
-    .selo-status { flex-shrink: 0; color: #fff; font-weight: bold; text-transform: uppercase; font-size: 22,5px; padding: 16px 24px; border-radius: 8px; text-align: center; min-width: 165px; }
-    .selo-status.agendado { background: #C98A1F; }
-    .selo-status.gravando { background: #075B91; }
-    .selo-status.concluido { background: #2e8b57; }
-    .selo-status.cancelado { background: #8A0834; }
+    /* Sub-navegação entre as 4 vistas desta tela (antes era uma barra fixa
+       no rodapé, estilo app mobile — trocada pela mesma barra de
+       alternância usada em Reportagens, pra combinar com o resto do app) */
+    .subabas { display: flex; gap: 8px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; flex-wrap: wrap; }
+    .subabas button { padding: 8px 16px; border-radius: 6px; border: 1px solid #ddd; background: #fff; color: #5b6472; font-size: 13px; cursor: pointer; white-space: nowrap; }
+    .subabas button.ativo { background: #336699; border-color: #336699; color: #fff; font-weight: bold; }
 
-    .paginacao { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 16px; }
-    .paginacao button { background: #336699; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-size: 13px; }
-    .paginacao button:disabled { background: #ccc; cursor: default; }
-    .paginacao span { font-size: 13px; color: #5b6472; }
+    .conteudo { flex: 1; overflow-y: auto; padding: 20px; }
+    .conteudo h1 { font-size: 18px; margin: 0 0 16px; }
 
-    .abas-inferior { display: flex; border-top: 1px solid #ddd; background: #fff; }
-    .abas-inferior button {
-      flex: 1; background: transparent; border: none; padding: 12px 0; cursor: pointer;
-      font-size: 13px; color: #5b6472; display: flex; flex-direction: column; align-items: center; gap: 4px;
-    }
-    .abas-inferior button.ativo { color: #336699; font-weight: bold; }
-    .abas-inferior button .icone { font-size: 18px; }
-    .lista-simples { list-style: none; padding: 0; margin: 0; }
-    .lista-simples li { background: #fff; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 15px; }
-    .lista-simples li .tag-tipo { font-size: 11px; color: #fff; background: #336699; padding: 2px 8px; border-radius: 4px; margin-left: 8px; text-transform: uppercase; }
+    .cabecalho-secao { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .cabecalho-secao h1 { margin: 0; }
+    .btn-adicionar { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 9px 16px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+    .btn-adicionar:hover { background: #6d0227; }
 
-    .btn-flutuante { position: fixed; bottom: 76px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: #336699; color: #fff; border: none; font-size: 28px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    /* Cards da Agenda Semanal — grade flui e preenche a largura disponível
+       (mais colunas em telas largas), sem paginação: rola normalmente,
+       como o resto do app */
+    .grid-agendamentos { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+    .cartao-agendamento { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); padding: 14px 16px; border-left: 4px solid #336699; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .cartao-agendamento .info-cartao { flex: 1; min-width: 0; }
+    .cartao-agendamento .data-hora { font-size: 12px; font-weight: bold; color: #336699; }
+    .cartao-agendamento .programa { font-size: 15px; font-weight: bold; margin-top: 3px; }
+    .cartao-agendamento .local { font-size: 12px; color: #5b6472; margin-top: 3px; }
+
+    /* Selo de status — um único padrão reaproveitado nas duas vistas
+       (Semanal e Por Dia), igual ao .status-badge usado em Pautas/Reportagens */
+    .status-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; color: #fff; font-weight: bold; white-space: nowrap; text-transform: uppercase; flex-shrink: 0; }
+    .status-agendado { background: #C98A1F; }
+    .status-gravando { background: #075B91; }
+    .status-concluido { background: #2e8b57; }
+    .status-cancelado { background: #5A021F; }
+
+    /* Vista "Por Dia" — seletor de dia da semana + lista do dia selecionado */
+    .dias-semana { display: flex; gap: 8px; margin-bottom: 16px; }
+    .dia-semana { flex: 1; text-align: center; padding: 10px 4px; border-radius: 8px; background: #fff; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #eee; }
+    .dia-semana .nome-dia { font-size: 11px; color: #999; text-transform: uppercase; }
+    .dia-semana .numero-dia { font-size: 16px; font-weight: bold; margin-top: 2px; color: #1b2430; }
+    .dia-semana.selecionado { background: #336699; border-color: #336699; }
+    .dia-semana.selecionado .nome-dia, .dia-semana.selecionado .numero-dia { color: #fff; }
+
+    .card-agendamento { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); padding: 14px 16px; margin-bottom: 10px; }
+    .card-agendamento .titulo-card { font-size: 15px; font-weight: bold; margin-top: 8px; }
+    .card-agendamento .detalhe-card { font-size: 12px; color: #5b6472; margin-top: 4px; }
+    .card-agendamento .linha-acoes { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+    .card-agendamento select { padding: 5px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; }
+    .card-agendamento .btn-editar-agendamento { background: transparent; border: none; cursor: pointer; font-size: 12px; color: #336699; padding: 0; }
+
+    /* Listas simples (Programas/Quadros e Equipe) — tabela igual ao
+       padrão de Pautas/Reportagens, com botões de ação por ícone */
+    table.tabela-simples { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    table.tabela-simples th { background: #eef1f5; text-align: left; padding: 10px 12px; font-size: 12px; color: #5b6472; text-transform: uppercase; }
+    table.tabela-simples td { padding: 10px 12px; font-size: 13px; border-top: 1px solid #f0f0f0; vertical-align: middle; }
+    .tag-tipo { font-size: 11px; color: #fff; background: #336699; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; }
+    .acoes-lista { white-space: nowrap; text-align: right; }
+    .acoes-lista button { font-size: 14px; padding: 6px 10px; line-height: 1; border-radius: 6px; border: none; cursor: pointer; margin-left: 4px; }
+    .btn-ver { background: #eee; color: #333; }
+    .btn-excluir { background: #8D0333; color: #fff; }
+
+    .estado-vazio { text-align: center; color: #999; padding: 40px 20px; }
 
     .overlay-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 10; }
     .overlay-modal.aberto { display: flex; }
@@ -47,39 +77,23 @@
     .modal h2 { font-size: 16px; margin: 0 0 16px; }
     .modal label { font-size: 12px; color: #5b6472; display: block; margin: 12px 0 4px; }
     .modal input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
-    .modal .opcoes-tipo { display: flex; gap: 12px; font-size: 14px; }
+    .modal .opcoes-tipo { display: flex; gap: 12px; font-size: 13px; flex-wrap: wrap; }
     .modal .botoes-modal { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
     .modal .botoes-modal button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
     .modal .btn-cancelar { background: #eee; color: #333; }
-    .modal .btn-confirmar { background: #336699; color: #fff; }
-    .dias-semana { display: flex; gap: 8px; margin-bottom: 20px; }
-    .dia-semana { flex: 1; text-align: center; padding: 10px 4px; border-radius: 8px; background: #fff; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-    .dia-semana .nome-dia { font-size: 11px; color: #999; text-transform: uppercase; }
-    .dia-semana .numero-dia { font-size: 18px; font-weight: bold; margin-top: 2px; }
-    .dia-semana.selecionado { background: #8D0333; }
-    .dia-semana.selecionado .nome-dia, .dia-semana.selecionado .numero-dia { color: #fff; }
+    .modal .btn-confirmar { background: #8D0333; color: #fff; }
 
-    .card-agendamento { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.12); padding: 14px 18px; margin-bottom: 12px; }
-    .card-agendamento .status-badge { font-size: 10px; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; color: #fff; }
-    .status-agendado { background: #C98A1F; }
-    .status-gravando { background: #075B91; }
-    .status-concluido { background: #2e8b57; }
-    .status-cancelado { background: #5A021F; }
-    .card-agendamento .titulo-card { font-size: 16px; font-weight: bold; margin-top: 8px; }
-    .card-agendamento .detalhe-card { font-size: 13px; color: #5b6472; margin-top: 4px; }
-    .card-agendamento .linha-acoes { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
-    .card-agendamento select { padding: 4px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
-    .card-agendamento .btn-editar-agendamento { background: transparent; border: none; cursor: pointer; font-size: 13px; color: #336699; }
     .formulario-agendamento label { font-size: 12px; color: #5b6472; display: block; margin: 14px 0 4px; }
     .formulario-agendamento select, .formulario-agendamento input, .formulario-agendamento textarea {
-      width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;
+      width: 100%; padding: 9px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;
     }
     .formulario-agendamento textarea { min-height: 80px; resize: vertical; }
     .formulario-agendamento .linha-dupla { display: flex; gap: 12px; }
     .formulario-agendamento .linha-dupla > div { flex: 1; }
+    .formulario-agendamento { max-width: 520px; }
     .btn-salvar-agendamento { margin-top: 20px; background: #8D0333; color: #fff; border: none; border-radius: 8px; padding: 12px; width: 100%; font-size: 15px; cursor: pointer; }
-    .btn-voltar { background: transparent; border: none; color: #336699; cursor: pointer; font-size: 14px; margin-bottom: 12px; }
-  
+    .btn-voltar { background: transparent; border: none; color: #336699; cursor: pointer; font-size: 13px; margin-bottom: 12px; padding: 0; }
+
     /* ---- Navegação lateral (unificada em todas as telas) ---- */
     body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
     .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
@@ -118,6 +132,16 @@
   </div>
   <div class="nr-app">
 
+  <div class="topo">
+    <h1>HORUS NEWSROOM — Agenda</h1>
+  </div>
+
+  <div class="subabas">
+    <button data-aba="relatorio" id="aba-relatorio">📅 Agenda Semanal</button>
+    <button data-aba="agenda" id="aba-agenda">🗓️ Por Dia</button>
+    <button data-aba="programas" id="aba-programas">🎬 Programas &amp; Quadros</button>
+    <button data-aba="equipe" id="aba-equipe">👥 Equipe</button>
+  </div>
 
   <div class="conteudo" id="conteudo">
     <!-- conteúdo da aba ativa entra aqui -->
@@ -154,22 +178,14 @@
       </div>
     </div>
   </div>
-  <div class="abas-inferior">
-    <button data-aba="programas" id="aba-programas"><span class="icone">🎬</span>Programa/Quadro</button>
-    <button data-aba="equipe" id="aba-equipe"><span class="icone">👥</span>Equipe</button>
-    <button data-aba="agenda" id="aba-agenda"><span class="icone">📅</span>Agenda</button>
-    <button data-aba="relatorio" id="aba-relatorio"><span class="icone">📋</span>Relatório</button>
-  </div>
 
   <script>
     let abaAtiva = 'relatorio';
-    let paginaAtual = 1;
-    const ITENS_POR_PAGINA = 8;
     let idEmEdicaoGlobal = null;
 
     function trocarAba(aba) {
       abaAtiva = aba;
-      document.querySelectorAll('.abas-inferior button').forEach(b => b.classList.remove('ativo'));
+      document.querySelectorAll('.subabas button').forEach(b => b.classList.remove('ativo'));
       document.getElementById('aba-' + aba).classList.add('ativo');
 
       if (aba === 'relatorio') renderRelatorio();
@@ -178,87 +194,69 @@
       if (aba === 'agenda') renderAgendaDia();
     }
 
-    document.querySelectorAll('.abas-inferior button').forEach(btn => {
+    document.querySelectorAll('.subabas button').forEach(btn => {
       btn.addEventListener('click', () => trocarAba(btn.dataset.aba));
     });
 
     async function renderRelatorio() {
       const conteudo = document.getElementById('conteudo');
-      conteudo.innerHTML = '<h1>AGENDA SEMANAL</h1><p>Carregando...</p>';
+      conteudo.innerHTML = '<h1>Agenda Semanal</h1><p>Carregando...</p>';
 
       const resposta = await fetch('/agenda');
       const todos = await resposta.json();
 
-      const totalPaginas = Math.max(1, Math.ceil(todos.length / ITENS_POR_PAGINA));
-      if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
-
-      const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
-      const pagina = todos.slice(inicio, inicio + ITENS_POR_PAGINA);
-
       const rotulosStatusRelatorio = { agendado: 'Agendado', gravando: 'Gravando', concluido: 'Concluído', cancelado: 'Cancelado' };
 
-      let cartoes = pagina.map(item => `
+      let cartoes = todos.map(item => `
         <div class="cartao-agendamento">
           <div class="info-cartao">
             <div class="data-hora">${item.data || ''} · ${item.hora || ''}</div>
             <div class="programa">${item.programa_nome || ''}</div>
             <div class="local">📍 ${item.local || ''}</div>
           </div>
-          <div class="selo-status ${item.status || 'agendado'}">${rotulosStatusRelatorio[item.status] || item.status || 'Agendado'}</div>
+          <span class="status-badge status-${item.status || 'agendado'}">${rotulosStatusRelatorio[item.status] || item.status || 'Agendado'}</span>
         </div>
       `).join('');
 
-      if (pagina.length === 0) {
-        cartoes = '<p style="text-align:center; color:#999; grid-column: 1 / -1;">Nenhum agendamento cadastrado ainda.</p>';
-      }
-
       conteudo.innerHTML = `
-        <h1>AGENDA SEMANAL</h1>
-        <div class="grid-agendamentos">${cartoes}</div>
-        <div class="paginacao">
-          <button id="btn-anterior" ${paginaAtual <= 1 ? 'disabled' : ''}>&lt; Anterior</button>
-          <span>Página ${paginaAtual} de ${totalPaginas}</span>
-          <button id="btn-proxima" ${paginaAtual >= totalPaginas ? 'disabled' : ''}>Próxima &gt;</button>
-        </div>
+        <h1>Agenda Semanal</h1>
+        ${todos.length === 0
+          ? '<div class="estado-vazio">Nenhum agendamento cadastrado ainda.</div>'
+          : `<div class="grid-agendamentos">${cartoes}</div>`}
       `;
-
-      document.getElementById('btn-anterior').addEventListener('click', () => {
-        paginaAtual--;
-        renderRelatorio();
-      });
-      document.getElementById('btn-proxima').addEventListener('click', () => {
-        paginaAtual++;
-        renderRelatorio();
-      });
     }
 
     async function renderProgramas() {
       const conteudo = document.getElementById('conteudo');
-      conteudo.innerHTML = '<h1>PROGRAMAS E QUADROS</h1><p>Carregando...</p>';
+      conteudo.innerHTML = '<h1>Programas &amp; Quadros</h1><p>Carregando...</p>';
 
       const resposta = await fetch('/agenda/programas');
       const lista = await resposta.json();
 
-      const rotuloTipo = { programa: 'Programa', 'inter-programa': 'Inter-programa', quadro: 'Quadro' };
+      const rotuloTipo = { programa: 'Programa', 'inter-programa': 'Inter-programa', quadro: 'Quadro', jornal: 'Jornal' };
 
-      let itensHtml = lista.map(p => `
-        <li style="display:flex; justify-content:space-between; align-items:center;">
-          <div>${p.nome} <span class="tag-tipo">${rotuloTipo[p.tipo] || p.tipo}</span></div>
-          <div>
-            <button class="btn-editar-programa" data-id="${p.id}" data-nome="${p.nome}" data-tipo="${p.tipo}" style="background:transparent; border:none; cursor:pointer; font-size:14px;">✏️</button>
-            <button class="btn-excluir-programa" data-id="${p.id}" style="background:transparent; border:none; cursor:pointer; font-size:14px;">🗑️</button>
-          </div>
-        </li>
+      let corpoTabela = lista.map(p => `
+        <tr>
+          <td>${p.nome}</td>
+          <td><span class="tag-tipo">${rotuloTipo[p.tipo] || p.tipo}</span></td>
+          <td class="acoes-lista">
+            <button class="btn-ver btn-editar-programa" data-id="${p.id}" data-nome="${p.nome}" data-tipo="${p.tipo}" title="Editar">✏️</button>
+            <button class="btn-excluir btn-excluir-programa" data-id="${p.id}" title="Excluir">🗑️</button>
+          </td>
+        </tr>
       `).join('');
 
-      if (lista.length === 0) {
-        itensHtml = '<li style="text-align:center; color:#999; box-shadow:none;">Nenhum programa ou quadro cadastrado ainda.</li>';
-      }
-
       conteudo.innerHTML = `
-        <h1>PROGRAMAS E QUADROS</h1>
-        <ul class="lista-simples">${itensHtml}</ul>
-        <button class="btn-flutuante" id="btn-add-programa">+</button>
+        <div class="cabecalho-secao">
+          <h1>Programas &amp; Quadros</h1>
+          <button class="btn-adicionar" id="btn-add-programa">+ Novo Item</button>
+        </div>
+        ${lista.length === 0
+          ? '<div class="estado-vazio">Nenhum programa ou quadro cadastrado ainda.</div>'
+          : `<table class="tabela-simples">
+              <thead><tr><th>Nome</th><th>Tipo</th><th>Ações</th></tr></thead>
+              <tbody>${corpoTabela}</tbody>
+            </table>`}
       `;
 
       document.getElementById('btn-add-programa').addEventListener('click', () => {
@@ -267,11 +265,10 @@
         document.querySelector('input[name="tipo-programa"][value="programa"]').checked = true;
         document.getElementById('modal-programa').classList.add('aberto');
       });
-      // (linha removida — já temos idEmEdicaoGlobal declarado no topo do script)
 
       document.querySelectorAll('.btn-editar-programa').forEach(btn => {
         btn.addEventListener('click', () => {
-          idEmEdicaoGlobal = Number(btn.dataset.id);idEmEdicao = Number(btn.dataset.id);
+          idEmEdicaoGlobal = Number(btn.dataset.id);
           document.getElementById('input-nome-programa').value = btn.dataset.nome;
           document.querySelector(`input[name="tipo-programa"][value="${btn.dataset.tipo}"]`).checked = true;
           document.getElementById('modal-programa').classList.add('aberto');
@@ -321,29 +318,33 @@
 
     async function renderEquipe() {
       const conteudo = document.getElementById('conteudo');
-      conteudo.innerHTML = '<h1>CADASTRO DE EQUIPE</h1><p>Carregando...</p>';
+      conteudo.innerHTML = '<h1>Equipe</h1><p>Carregando...</p>';
 
       const resposta = await fetch('/agenda/equipe');
       const lista = await resposta.json();
 
-      let itensHtml = lista.map(m => `
-        <li style="display:flex; justify-content:space-between; align-items:center;">
-          <div>${m.nome} <span class="tag-tipo">${m.funcao}</span></div>
-          <div>
-            <button class="btn-editar-membro" data-id="${m.id}" data-nome="${m.nome}" data-funcao="${m.funcao}" style="background:transparent; border:none; cursor:pointer; font-size:14px;">✏️</button>
-            <button class="btn-excluir-membro" data-id="${m.id}" style="background:transparent; border:none; cursor:pointer; font-size:14px;">🗑️</button>
-          </div>
-        </li>
+      let corpoTabela = lista.map(m => `
+        <tr>
+          <td>${m.nome}</td>
+          <td><span class="tag-tipo">${m.funcao}</span></td>
+          <td class="acoes-lista">
+            <button class="btn-ver btn-editar-membro" data-id="${m.id}" data-nome="${m.nome}" data-funcao="${m.funcao}" title="Editar">✏️</button>
+            <button class="btn-excluir btn-excluir-membro" data-id="${m.id}" title="Excluir">🗑️</button>
+          </td>
+        </tr>
       `).join('');
 
-      if (lista.length === 0) {
-        itensHtml = '<li style="text-align:center; color:#999; box-shadow:none;">Nenhum membro cadastrado ainda.</li>';
-      }
-
       conteudo.innerHTML = `
-        <h1>CADASTRO DE EQUIPE</h1>
-        <ul class="lista-simples">${itensHtml}</ul>
-        <button class="btn-flutuante" id="btn-add-membro">+</button>
+        <div class="cabecalho-secao">
+          <h1>Equipe</h1>
+          <button class="btn-adicionar" id="btn-add-membro">+ Novo Membro</button>
+        </div>
+        ${lista.length === 0
+          ? '<div class="estado-vazio">Nenhum membro cadastrado ainda.</div>'
+          : `<table class="tabela-simples">
+              <thead><tr><th>Nome</th><th>Função</th><th>Ações</th></tr></thead>
+              <tbody>${corpoTabela}</tbody>
+            </table>`}
       `;
 
       document.getElementById('btn-add-membro').addEventListener('click', () => {
@@ -425,7 +426,7 @@
 
     async function renderAgendaDia() {
       const conteudo = document.getElementById('conteudo');
-      conteudo.innerHTML = '<h1>AGENDA</h1><p>Carregando...</p>';
+      conteudo.innerHTML = '<h1>Por Dia</h1><p>Carregando...</p>';
 
       const dias = gerarDiasDaSemana(diaSelecionado);
       const nomesDias = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
@@ -465,15 +466,15 @@
         </div>
       `).join('');
 
-      if (agendamentos.length === 0) {
-        cardsHtml = '<p style="text-align:center; color:#999;">Nenhum agendamento para este dia.</p>';
-      }
-
       conteudo.innerHTML = `
-        <h1>AGENDA</h1>
+        <div class="cabecalho-secao">
+          <h1>Por Dia</h1>
+          <button class="btn-adicionar" id="btn-add-agendamento">+ Novo Agendamento</button>
+        </div>
         <div class="dias-semana">${diasHtml}</div>
-        <div id="lista-cards-agenda">${cardsHtml}</div>
-        <button class="btn-flutuante" id="btn-add-agendamento">+</button>
+        <div id="lista-cards-agenda">${agendamentos.length === 0
+          ? '<div class="estado-vazio">Nenhum agendamento para este dia.</div>'
+          : cardsHtml}</div>
       `;
 
       document.querySelectorAll('.dia-semana').forEach(div => {
@@ -508,7 +509,7 @@
     }
 
     trocarAba('relatorio');
-  let agendamentoEmEdicao = null; // guarda o objeto do agendamento, se estiver editando
+    let agendamentoEmEdicao = null; // guarda o objeto do agendamento, se estiver editando
 
     async function abrirFormularioAgendamento(agendamento) {
       agendamentoEmEdicao = agendamento || null;
@@ -535,7 +536,7 @@
 
       conteudo.innerHTML = `
         <button class="btn-voltar" id="btn-voltar-agenda">← Voltar</button>
-        <h1>${agendamentoEmEdicao ? 'EDITAR AGENDAMENTO' : 'NOVO AGENDAMENTO'}</h1>
+        <h1>${agendamentoEmEdicao ? 'Editar Agendamento' : 'Novo Agendamento'}</h1>
         <div class="formulario-agendamento">
           <label>Programa/Quadro</label>
           <select id="form-programa">${opcoesPrograma}</select>
@@ -598,7 +599,7 @@
         renderAgendaDia();
       });
     }
-    </script>
+  </script>
   </div>
 </body>
 </html>
