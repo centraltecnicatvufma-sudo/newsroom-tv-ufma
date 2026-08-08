@@ -74,8 +74,8 @@
     .btn-salvar { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 10px 20px; font-size: 14px; cursor: pointer; }
     .btn-imprimir { background: #eee; color: #333; border: none; border-radius: 6px; padding: 10px 20px; font-size: 14px; cursor: pointer; }
     .btn-imprimir:hover { background: #ddd; }
-    #layout-impressao { padding: 9px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; background: #fff; cursor: pointer; }
     .status-salvo { font-size: 13px; color: #2e8b57; align-self: center; margin-right: auto; }
+    #layout-impressao { padding: 9px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; background: #fff; cursor: pointer; }
 
     /* Corpo do VT impresso: tabela simples (sem as caixas da tela), gerada à
        parte a partir dos mesmos itens — "Padrão" é uma tabela de verdade
@@ -84,6 +84,7 @@
        testados antes ou não quebravam página, ou paravam de funcionar
        depois da 1ª. "Uma coluna" empilha, por item, o texto primeiro e as
        indicações logo abaixo. Só aparece no papel, nunca na tela. */
+    .impressao-vt { text-align: justify; }
     .impressao-vt .entrada-impressao { margin-bottom: 6px; font-size: 12px; }
     .impressao-vt .entrada-impressao strong { display: block; font-size: 11px; margin-bottom: 2px; }
     .impressao-vt p { margin: 0 0 4px; }
@@ -98,6 +99,7 @@
        tela compacta não mostra (local, data do fato, produtor, destinos,
        orientação, fontes) — só aparece no papel, nunca na tela */
     .somente-impressao { display: none; }
+    .info-impressao { text-align: justify; }
     .info-impressao .linha-info { margin-bottom: 6px; }
     .info-impressao .linha-info strong { color: #5b6472; font-weight: bold; margin-right: 4px; }
     .info-impressao .destinos-impressao span { display: inline-block; margin-right: 14px; }
@@ -137,12 +139,13 @@
       .info-pauta { display: none; }
       .somente-impressao { display: block; padding: 10px 0 14px; border-bottom: 1px solid #ccc; margin-bottom: 14px; }
 
-      .bloco { box-shadow: none; border: 1px solid #ccc; border-radius: 0; padding: 10px 0; margin-bottom: 14px; break-inside: avoid-page; }
+      .bloco { box-shadow: none; border: none; border-radius: 0; padding: 10px 0; margin-bottom: 14px; break-inside: avoid-page; }
       .bloco h2 { font-size: 13px; padding: 0 10px; border-bottom: 1px solid #eee; padding-bottom: 8px; page-break-after: avoid; }
 
       /* A tela de edição (com as caixas por item) não vai pro papel — dá
-         lugar às duas versões pré-montadas em texto simples logo abaixo,
-         só uma delas visível por vez (conforme o seletor de layout) */
+         lugar a uma das duas versões pré-montadas abaixo, conforme o
+         seletor de layout: "Padrão" (tabela 2 colunas) ou "Uma coluna"
+         (texto do item, com as indicações dele logo abaixo) */
       #lista-itens { display: none !important; }
       #bloco-corpo-vt { break-inside: auto; }
 
@@ -720,16 +723,19 @@
         </tr>
       `).join('');
 
+      // Uma coluna: o texto do item primeiro, com as indicações dele (que
+      // na tabela ficam na coluna da esquerda) logo abaixo
       document.getElementById('impressao-vt-uma-coluna').innerHTML =
         itensNumerados.map(item => entradaTexto(item) + entradaIndicacoes(item)).join('');
     }
 
-    document.getElementById('btn-imprimir').addEventListener('click', () => {
+    function executarImpressao() {
       montarImpressaoCorpoVt();
       const layout = document.getElementById('layout-impressao').value;
       document.body.classList.toggle('impressao-uma-coluna', layout === 'uma-coluna');
       window.print();
-    });
+    }
+    document.getElementById('btn-imprimir').addEventListener('click', executarImpressao);
 
     // GCs e Texto Adaptado começam recolhidos — clicar na barra revela
     document.querySelectorAll('.cabecalho-recolhivel').forEach(cabecalho => {
@@ -746,6 +752,14 @@
       await carregarPauta();
       await carregarItens();
       await carregarGcs();
+
+      // Vindo de Reportagens com o modo de impressão já escolhido (atalho
+      // do botão 🖨️ na Lista) — pula direto pro print, sem exigir clique manual
+      const modoImpressao = params.get('imprimir');
+      if (modoImpressao === 'padrao' || modoImpressao === 'uma-coluna') {
+        document.getElementById('layout-impressao').value = modoImpressao;
+        executarImpressao();
+      }
     })();
   </script>
   </div>

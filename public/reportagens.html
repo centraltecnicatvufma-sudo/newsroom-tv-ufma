@@ -41,6 +41,23 @@
     .btn-lauda { background: #336699; color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
     .btn-lauda:hover { background: #285480; }
 
+    /* Ações da Lista — mesmo padrão de botões usado na Capa de Pautas
+       (pautas.html) */
+    .acoes-lista { white-space: nowrap; }
+    .acoes-lista button { font-size: 14px; padding: 6px 10px; line-height: 1; border-radius: 6px; border: none; cursor: pointer; margin-right: 4px; }
+    .btn-imprimir-pauta { background: #5b6472; color: #fff; }
+    .btn-excluir { background: #8D0333; color: #fff; }
+
+    /* Atalho de impressão da Lauda: um botão só (ícone + seta), sem
+       precisar abrir materia.html pra escolher o layout — clique em
+       qualquer parte dele abre o menu com os dois modos já configurados lá */
+    .grupo-imprimir { position: relative; display: inline-block; }
+    .menu-imprimir-lauda { display: none; position: absolute; top: 100%; right: 0; margin-top: 4px; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.18); z-index: 20; min-width: 190px; overflow: hidden; }
+    .menu-imprimir-lauda.aberto { display: block; }
+    .menu-imprimir-lauda button { display: block; width: 100%; text-align: left; padding: 9px 12px; background: #fff; color: #1b2430; border: none; border-bottom: 1px solid #f0f0f0; font-size: 12px; cursor: pointer; white-space: nowrap; margin-right: 0; border-radius: 0; }
+    .menu-imprimir-lauda button:last-child { border-bottom: none; }
+    .menu-imprimir-lauda button:hover { background: #eef1f5; }
+
     .estado-vazio { text-align: center; color: #999; padding: 60px 20px; }
 
     .paginacao { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; background: #fff; border-top: 1px solid #eee; font-size: 13px; color: #5b6472; }
@@ -224,6 +241,38 @@
       window.location.href = 'materia.html?' + params.toString();
     }
 
+    // Abre a Lauda (materia.html) numa aba nova já no modo de impressão
+    // escolhido e já imprimindo sozinha — reaproveita o mesmo layout/lógica
+    // de lá (ver executarImpressao() em materia.html), sem duplicar a
+    // montagem do corpo do VT aqui
+    function imprimirLauda(p, modo) {
+      const params = new URLSearchParams({
+        pauta_id: p.id,
+        titulo: p.titulo || '',
+        programa: nomePrograma(p.programa_id),
+        reporter: p.reporter || '',
+        imprimir: modo
+      });
+      window.open('materia.html?' + params.toString(), '_blank');
+    }
+
+    function fecharMenusImprimirLauda() {
+      document.querySelectorAll('.menu-imprimir-lauda.aberto').forEach(m => m.classList.remove('aberto'));
+    }
+    document.addEventListener('click', fecharMenusImprimirLauda);
+
+    async function excluirPautaDaLista(id) {
+      if (!confirm('Tem certeza que deseja excluir esta pauta? Essa ação não pode ser desfeita.')) return;
+      const resp = await fetch('/pautas/' + id, { method: 'DELETE' });
+      if (resp.ok) {
+        await carregarPautas();
+        renderConteudo();
+      } else {
+        const erro = await resp.json().catch(() => ({}));
+        alert('Não foi possível excluir a pauta: ' + (erro.erro || 'erro desconhecido'));
+      }
+    }
+
     function renderTabela() {
       const filtradas = pautasFiltradas();
       const area = document.getElementById('area-tabela');
@@ -240,7 +289,7 @@
           <table class="lista-reportagens">
             <thead>
               <tr>
-                <th>Data</th><th>Título</th><th>Repórter</th><th>Programa / Quadro</th><th>Status</th><th></th>
+                <th>Data</th><th>Título</th><th>Repórter</th><th>Programa / Quadro</th><th>Status</th><th>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -251,7 +300,17 @@
                   <td>${escaparHtml(p.reporter) || '—'}</td>
                   <td>${escaparHtml(nomePrograma(p.programa_id))}</td>
                   <td><span class="status-badge status-${p.status}">${rotulosStatus[p.status] || p.status}</span></td>
-                  <td><button class="btn-lauda" data-id="${p.id}">📝 Lauda</button></td>
+                  <td class="acoes-lista">
+                    <button class="btn-lauda" data-id="${p.id}" title="Lauda">📝</button>
+                    <span class="grupo-imprimir">
+                      <button class="btn-imprimir-pauta" data-id="${p.id}" title="Imprimir Lauda">🖨️ ▾</button>
+                      <div class="menu-imprimir-lauda" data-id="${p.id}">
+                        <button data-modo="padrao" data-id="${p.id}">🖨️ Padrão (2 colunas)</button>
+                        <button data-modo="uma-coluna" data-id="${p.id}">🖨️ Uma coluna</button>
+                      </div>
+                    </span>
+                    <button class="btn-excluir" data-id="${p.id}" title="Excluir">🗑️</button>
+                  </td>
                 </tr>
               `).join('')}
             </tbody>
@@ -262,6 +321,25 @@
             const p = pautasCache.find(item => item.id === Number(btn.dataset.id));
             if (p) abrirLauda(p);
           });
+        });
+        area.querySelectorAll('.btn-imprimir-pauta').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const menu = area.querySelector(`.menu-imprimir-lauda[data-id="${btn.dataset.id}"]`);
+            const jaAberto = menu.classList.contains('aberto');
+            fecharMenusImprimirLauda();
+            if (!jaAberto) menu.classList.add('aberto');
+          });
+        });
+        area.querySelectorAll('.menu-imprimir-lauda button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const p = pautasCache.find(item => item.id === Number(btn.dataset.id));
+            if (p) imprimirLauda(p, btn.dataset.modo);
+            fecharMenusImprimirLauda();
+          });
+        });
+        area.querySelectorAll('.btn-excluir').forEach(btn => {
+          btn.addEventListener('click', () => excluirPautaDaLista(Number(btn.dataset.id)));
         });
       }
 
