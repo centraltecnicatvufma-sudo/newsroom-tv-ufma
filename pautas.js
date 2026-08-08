@@ -21,6 +21,24 @@ function avisarMudanca(req) {
   req.app.get('tempoReal')?.broadcast({ tipo: 'pautas' });
 }
 
+// Registra uma transição no histórico — usada na criação (status_anterior
+// null) e toda vez que o PATCH muda o status de fato. Alimenta os Gráficos
+// Gerenciais (banco.js: pautas_historico_status).
+function registrarHistoricoStatus(pautaId, statusAnterior, statusNovo) {
+  db.prepare(`
+    INSERT INTO pautas_historico_status (pauta_id, status_anterior, status_novo, mudado_em)
+    VALUES (?, ?, ?, ?)
+  `).run(pautaId, statusAnterior, statusNovo, new Date().toISOString());
+}
+
+// GET /pautas/historico-status -> histórico completo de transições (pros
+// Gráficos Gerenciais). Precisa vir ANTES de /:id pra não ser engolida por
+// ela (Express bateria "historico-status" como se fosse um :id)
+router.get('/historico-status', (req, res) => {
+  const lista = db.prepare('SELECT * FROM pautas_historico_status ORDER BY mudado_em ASC').all();
+  res.json(lista);
+});
+
 // GET /pautas -> lista com filtros opcionais: programa_id, status, data_fato, busca (por título)
 router.get('/', (req, res) => {
   const { programa_id, status, data_fato, busca } = req.query;
@@ -97,6 +115,8 @@ router.post('/', (req, res) => {
     });
   }
 
+  registrarHistoricoStatus(novaId, null, status || 'em_producao');
+
   const nova = db.prepare('SELECT * FROM pautas WHERE id = ?').get(novaId);
   nova.fontes = buscarFontes(novaId);
   avisarMudanca(req);
@@ -149,6 +169,10 @@ router.patch('/:id', (req, res) => {
     id
   );
 
+  if (atualizado.status !== item.status) {
+    registrarHistoricoStatus(id, item.status, atualizado.status);
+  }
+
   if (Array.isArray(req.body.fontes)) {
     db.prepare('DELETE FROM pauta_fontes WHERE pauta_id = ?').run(id);
     const inserirFonte = db.prepare(`
@@ -176,6 +200,7 @@ router.delete('/:id', (req, res) => {
     db.prepare('DELETE FROM blocos WHERE pauta_id = ?').run(id);
     db.prepare('DELETE FROM materia_itens WHERE pauta_id = ?').run(id);
     db.prepare('DELETE FROM pauta_fontes WHERE pauta_id = ?').run(id);
+    db.prepare('DELETE FROM pautas_historico_status WHERE pauta_id = ?').run(id);
     db.prepare('UPDATE sugestoes SET pauta_id = NULL WHERE pauta_id = ?').run(id);
 
     if (pauta && pauta.agenda_id) {

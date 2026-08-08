@@ -48,6 +48,22 @@ try { db.exec(`ALTER TABLE pautas ADD COLUMN deadline TEXT`); } catch (e) {}
   try { db.exec(`ALTER TABLE pautas ADD COLUMN ativo_${tipo}_pronto INTEGER DEFAULT 0`); } catch (e) {}
 });
 
+// Histórico de mudança de status da pauta — alimenta os Gráficos
+// Gerenciais (prazo de entrega, tempo parado em cada etapa, hora de
+// conclusão etc.). Uma linha por transição, incluindo a criação
+// (status_anterior = NULL). Gravado automaticamente em pautas.js, nunca
+// editado por nenhuma tela.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS pautas_historico_status (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pauta_id INTEGER NOT NULL,
+    status_anterior TEXT,
+    status_novo TEXT NOT NULL,
+    mudado_em TEXT NOT NULL,
+    FOREIGN KEY (pauta_id) REFERENCES pautas(id)
+  )
+`);
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS pauta_fontes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

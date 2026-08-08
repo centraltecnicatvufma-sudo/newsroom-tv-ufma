@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Gráficos Gerenciais — HORUS Newsroom</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+
+    .topo { background: #336699; color: #fff; padding: 14px 20px; }
+    .topo h1 { font-size: 18px; margin: 0; }
+    .topo .sub { font-size: 12px; color: #cfe0f0; margin-top: 2px; }
+
+    .filtros { display: flex; align-items: flex-end; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; flex-wrap: wrap; }
+    .filtros > div { display: flex; flex-direction: column; gap: 4px; }
+    .filtros label { font-size: 11px; color: #5b6472; }
+    .filtros select, .filtros input { padding: 7px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
+    .filtros .nota-periodo { font-size: 11px; color: #999; align-self: center; max-width: 320px; }
+
+    .conteudo { flex: 1; overflow-y: auto; }
+    .grade-graficos { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; align-items: start; }
+    .cartao-grafico { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .cartao-grafico.largo { grid-column: 1 / -1; }
+    .cartao-grafico h2 { font-size: 15px; margin: 0 0 4px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .cartao-grafico .legenda-grafico { font-size: 12px; color: #5b6472; margin-bottom: 14px; }
+    .cartao-grafico canvas { max-height: 300px; }
+    .cartao-grafico h2 select { padding: 5px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; }
+
+    .aviso-dados { font-size: 12px; color: #8D0333; background: #fdf0f3; padding: 8px 12px; border-radius: 6px; margin-bottom: 14px; }
+    .estado-vazio-grafico { text-align: center; color: #999; padding: 40px 20px; font-size: 13px; }
+
+    .duas-colunas-largo { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; align-items: start; }
+    @media (max-width: 900px) { .duas-colunas-largo, .grade-graficos { grid-template-columns: 1fr; } }
+
+    table.tabela-atraso { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.tabela-atraso th { text-align: left; padding: 6px 8px; font-size: 11px; color: #5b6472; text-transform: uppercase; border-bottom: 1px solid #eee; }
+    table.tabela-atraso td { padding: 6px 8px; border-bottom: 1px solid #f4f5f7; }
+
+    /* ---- Navegação lateral (unificada em todas as telas) ---- */
+    body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
+    .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+    .nr-sidebar .nr-logo { padding: 0 20px 20px; border-bottom: 1px solid #4d7fb3; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
+    .nr-sidebar .nr-titulo, .nr-sidebar .nr-subtitulo { font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+    .nr-sidebar .nr-subtitulo { margin-top: 4px; }
+    .nr-sidebar a, .nr-sidebar .nr-item-desabilitado { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #e8f0f7; text-decoration: none; font-size: 14px; }
+    .nr-sidebar a:hover { background: #4d7fb3; color: #fff; }
+    .nr-sidebar a.nr-ativo { background: #244d70; color: #fff; font-weight: bold; border-left: 4px solid #8D0333; padding-left: 16px; }
+    .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
+    .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
+    .nr-app { flex: 1; min-width: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+  </style>
+</head>
+<body>
+  <div class="nr-sidebar">
+    <a href="index.html" class="nr-logo">
+      <div class="nr-titulo">HORUS</div>
+      <div class="nr-subtitulo">NEWSROOM</div>
+    </a>
+    <a href="sugestoes.html">📋 Sugestões de Pauta</a>
+    <a href="pautas.html">📝 Pautas</a>
+    <a href="mapa-producao.html">🗺 Mapa de Produções</a>
+    <a href="reportagens.html">🎬 Reportagens</a>
+    <a href="espelhos.html">📽️ Espelhos</a>
+    <div class="nr-item-desabilitado">🔍 Busca Geral <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📅 Calendário <span class="nr-badge">em breve</span></div>
+    <a href="agenda.html">🗓 Agenda</a>
+    <div class="nr-item-desabilitado">👥 Escala de Equipes <span class="nr-badge">em breve</span></div>
+    <a href="teleprompter.html">🎙 Teleprompter</a>
+    <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
+    <a href="graficos.html" class="nr-ativo">📊 Gráficos Gerenciais</a>
+    <a href="relatorios.html">📄 Relatórios</a>
+    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+  </div>
+  <div class="nr-app">
+
+  <div class="topo">
+    <h1>HORUS NEWSROOM — Gráficos Gerenciais</h1>
+    <div class="sub">Produtividade, gargalos operacionais e cumprimento de prazos — enquanto o Mapa de Produções mostra o agora, aqui é a performance</div>
+  </div>
+
+  <div class="filtros">
+    <div>
+      <label>Período — de</label>
+      <input type="date" id="filtro-data-inicial">
+    </div>
+    <div>
+      <label>até</label>
+      <input type="date" id="filtro-data-final">
+    </div>
+    <span class="nota-periodo">O período filtra Prazos, Produtividade e Distribuição. Gargalos mostra sempre a situação atual (retrato de agora), como o Mapa de Produções.</span>
+  </div>
+
+  <div class="conteudo">
+    <div class="grade-graficos">
+
+      <div class="cartao-grafico largo" id="cartao-prazos">
+        <h2>⏱️ Desempenho de Prazos</h2>
+        <div class="legenda-grafico">Pautas concluídas no período, comparando a hora de conclusão com o deadline definido. Atraso aceitável = até 30min depois do prazo (mesmo limiar do cronômetro de deadline).</div>
+        <div id="aviso-prazos"></div>
+        <div class="duas-colunas-largo">
+          <div><canvas id="grafico-prazos"></canvas></div>
+          <div>
+            <table class="tabela-atraso">
+              <thead><tr><th>Editoria</th><th>Atraso médio</th><th>Pautas</th></tr></thead>
+              <tbody id="corpo-tabela-atraso"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="cartao-grafico">
+        <h2>🚧 Gargalos no Fluxo de Trabalho</h2>
+        <div class="legenda-grafico">Volume de pautas paradas em cada etapa, por editoria — agora.</div>
+        <canvas id="grafico-gargalos"></canvas>
+      </div>
+
+      <div class="cartao-grafico">
+        <h2>🏆 Produtividade
+          <select id="filtro-papel-produtividade">
+            <option value="reporter">Repórter</option>
+            <option value="cinegrafista">Cinegrafista</option>
+            <option value="produtor">Produtor</option>
+            <option value="editor_imagens">Editor de Imagens</option>
+          </select>
+        </h2>
+        <div class="legenda-grafico">Pautas concluídas no período, por profissional (top 10).</div>
+        <div id="aviso-produtividade"></div>
+        <canvas id="grafico-produtividade"></canvas>
+      </div>
+
+      <div class="cartao-grafico">
+        <h2>📈 Volume por Editoria</h2>
+        <div class="legenda-grafico">Pautas concluídas por dia, no período (top 8 editorias por volume).</div>
+        <div id="aviso-volume-editoria"></div>
+        <canvas id="grafico-volume-editoria"></canvas>
+      </div>
+
+      <div class="cartao-grafico">
+        <h2>📡 Mix de Mídia</h2>
+        <div class="legenda-grafico">Formatos/destinos marcados nas pautas do período (uma pauta pode ter mais de um).</div>
+        <canvas id="grafico-mix-canal"></canvas>
+      </div>
+
+      <div class="cartao-grafico">
+        <h2>🕑 Picos de Publicação</h2>
+        <div class="legenda-grafico">Horário do dia em que as pautas do período foram concluídas.</div>
+        <div id="aviso-picos"></div>
+        <canvas id="grafico-picos"></canvas>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const ORDEM_STATUS = ['em_producao', 'em_gravacao', 'em_edicao', 'concluida'];
+    const ROTULOS_STATUS = { em_producao: 'Em Produção', em_gravacao: 'Em Gravação', em_edicao: 'Em Edição', concluida: 'Concluída' };
+    const CORES_STATUS = { em_producao: '#C98A1F', em_gravacao: '#336699', em_edicao: '#6b3fa0', concluida: '#2e8b57' };
+    const LIMIAR_ACEITAVEL_MIN = 30; // minutos após o deadline que ainda contam como "atraso aceitável" — mesmo limiar do cronômetro de deadline (Pautas/Mapa de Produções)
+    const PALETA_LINHAS = ['#336699', '#8D0333', '#2e8b57', '#C98A1F', '#6b3fa0', '#075B91', '#5b6472', '#B85C38'];
+
+    let pautasCache = [];
+    let historicoCache = [];
+    let mapaConclusao = new Map(); // pauta_id -> data/hora (ISO) da última transição pra "concluida"
+    let graficos = {}; // nome -> instância Chart.js
+
+    function escaparHtml(texto) {
+      return String(texto == null ? '' : texto)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function formatarData(iso) {
+      if (!iso) return '—';
+      const [ano, mes, dia] = iso.split('-');
+      return (dia && mes && ano) ? `${dia}/${mes}` : iso;
+    }
+
+    function formatarDuracaoMin(min) {
+      if (min <= 0) return '0min';
+      const h = Math.floor(min / 60);
+      const m = Math.round(min % 60);
+      return (h > 0 ? h + 'h ' : '') + m + 'min';
+    }
+
+    function editoriaDaPauta(p) {
+      return (p.editoria && p.editoria.trim()) || null;
+    }
+
+    function dataConclusao(pautaId) {
+      return mapaConclusao.get(pautaId) || null;
+    }
+
+    async function carregarDados() {
+      const [respPautas, respHistorico] = await Promise.all([
+        fetch('/pautas'), fetch('/pautas/historico-status')
+      ]);
+      pautasCache = await respPautas.json();
+      historicoCache = await respHistorico.json();
+
+      mapaConclusao = new Map();
+      historicoCache.forEach(h => {
+        if (h.status_novo === 'concluida') mapaConclusao.set(h.pauta_id, h.mudado_em);
+      });
+    }
+
+    function definirPeriodoPadrao() {
+      const hoje = new Date();
+      const trintaDiasAtras = new Date(hoje.getTime() - 30 * 86400000);
+      const fmt = d => d.toISOString().slice(0, 10);
+      document.getElementById('filtro-data-inicial').value = fmt(trintaDiasAtras);
+      document.getElementById('filtro-data-final').value = fmt(hoje);
+    }
+
+    function dentroDoPeriodo(dataIso) {
+      if (!dataIso) return false;
+      const dataIni = document.getElementById('filtro-data-inicial').value;
+      const dataFim = document.getElementById('filtro-data-final').value;
+      const dataSimples = dataIso.slice(0, 10);
+      if (dataIni && dataSimples < dataIni) return false;
+      if (dataFim && dataSimples > dataFim) return false;
+      return true;
+    }
+
+    function listarDiasEntre(ini, fim) {
+      if (!ini || !fim) return [];
+      const dias = [];
+      let atual = new Date(ini + 'T00:00:00');
+      const ultimo = new Date(fim + 'T00:00:00');
+      while (atual <= ultimo && dias.length < 120) {
+        dias.push(atual.toISOString().slice(0, 10));
+        atual.setDate(atual.getDate() + 1);
+      }
+      return dias;
+    }
+
+    function criarOuAtualizarGrafico(nome, canvasId, config) {
+      const canvas = document.getElementById(canvasId);
+      if (graficos[nome]) graficos[nome].destroy();
+      graficos[nome] = new Chart(canvas, config);
+    }
+
+    function destruirGrafico(nome) {
+      if (graficos[nome]) { graficos[nome].destroy(); delete graficos[nome]; }
+    }
+
+    // ═══════════════════════ 1. Desempenho de Prazos ═══════════════════════
+    function renderDesempenhoPrazos() {
+      const concluidasComDeadline = pautasCache.filter(p => p.deadline && dataConclusao(p.id));
+      const noPeriodo = concluidasComDeadline.filter(p => dentroDoPeriodo(dataConclusao(p.id)));
+      const totalConcluidasPeriodo = pautasCache.filter(p => p.status === 'concluida' && dataConclusao(p.id) && dentroDoPeriodo(dataConclusao(p.id))).length;
+
+      const avisoEl = document.getElementById('aviso-prazos');
+      avisoEl.innerHTML = totalConcluidasPeriodo > 0
+        ? `<div class="aviso-dados">${noPeriodo.length} de ${totalConcluidasPeriodo} pautas concluídas no período têm deadline definido — só essas entram nesta análise.</div>`
+        : '';
+
+      if (noPeriodo.length === 0) {
+        destruirGrafico('prazos');
+        document.getElementById('grafico-prazos').replaceWith(Object.assign(document.createElement('div'), { className: 'estado-vazio-grafico', textContent: 'Nenhuma pauta concluída com deadline definido nesse período.', id: 'grafico-prazos-vazio' }));
+        document.getElementById('corpo-tabela-atraso').innerHTML = '';
+        return;
+      }
+      if (document.getElementById('grafico-prazos-vazio')) {
+        document.getElementById('grafico-prazos-vazio').replaceWith(Object.assign(document.createElement('canvas'), { id: 'grafico-prazos' }));
+      }
+
+      let noPrazo = 0, atrasoAceitavel = 0, estourou = 0;
+      const atrasoPorEditoria = {};
+
+      noPeriodo.forEach(p => {
+        const diffMin = (new Date(dataConclusao(p.id)).getTime() - new Date(p.deadline).getTime()) / 60000;
+        if (diffMin <= 0) noPrazo++;
+        else if (diffMin <= LIMIAR_ACEITAVEL_MIN) atrasoAceitavel++;
+        else estourou++;
+
+        const ed = editoriaDaPauta(p) || 'Sem editoria';
+        if (!atrasoPorEditoria[ed]) atrasoPorEditoria[ed] = { soma: 0, contagem: 0 };
+        atrasoPorEditoria[ed].soma += Math.max(0, diffMin);
+        atrasoPorEditoria[ed].contagem++;
+      });
+
+      criarOuAtualizarGrafico('prazos', 'grafico-prazos', {
+        type: 'doughnut',
+        data: {
+          labels: ['No prazo', `Atraso aceitável (≤${LIMIAR_ACEITAVEL_MIN}min)`, 'Estourou o prazo'],
+          datasets: [{ data: [noPrazo, atrasoAceitavel, estourou], backgroundColor: ['#2e8b57', '#C98A1F', '#8D0333'] }]
+        },
+        options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }
+      });
+
+      const linhas = Object.entries(atrasoPorEditoria)
+        .map(([ed, v]) => ({ ed, media: v.soma / v.contagem, contagem: v.contagem }))
+        .sort((a, b) => b.media - a.media);
+
+      document.getElementById('corpo-tabela-atraso').innerHTML = linhas.map(l => `
+        <tr>
+          <td>${escaparHtml(l.ed)}</td>
+          <td>${formatarDuracaoMin(l.media)}</td>
+          <td>${l.contagem}</td>
+        </tr>
+      `).join('');
+    }
+
+    // ═══════════════════════ 2. Gargalos no Fluxo ═══════════════════════
+    function renderGargalos() {
+      const editorias = [...new Set(pautasCache.map(p => editoriaDaPauta(p) || 'Sem editoria'))].sort();
+
+      if (editorias.length === 0) {
+        destruirGrafico('gargalos');
+        return;
+      }
+
+      const dados = editorias.map(ed => {
+        const doGrupo = pautasCache.filter(p => (editoriaDaPauta(p) || 'Sem editoria') === ed);
+        const linha = { editoria: ed };
+        ORDEM_STATUS.forEach(s => { linha[s] = doGrupo.filter(p => p.status === s).length; });
+        return linha;
+      });
+
+      criarOuAtualizarGrafico('gargalos', 'grafico-gargalos', {
+        type: 'bar',
+        data: {
+          labels: dados.map(d => d.editoria),
+          datasets: ORDEM_STATUS.map(s => ({
+            label: ROTULOS_STATUS[s],
+            data: dados.map(d => d[s]),
+            backgroundColor: CORES_STATUS[s]
+          }))
+        },
+        options: {
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+          scales: { x: { stacked: true, ticks: { font: { size: 10 } } }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+      });
+    }
+
+    // ═══════════════════════ 3a. Produtividade por pessoa ═══════════════════════
+    function renderProdutividade() {
+      const papel = document.getElementById('filtro-papel-produtividade').value;
+      const concluidasNoPeriodo = pautasCache.filter(p => p.status === 'concluida' && dataConclusao(p.id) && dentroDoPeriodo(dataConclusao(p.id)));
+
+      const contagem = {};
+      concluidasNoPeriodo.forEach(p => {
+        const nome = (p[papel] || '').trim() || 'Sem responsável definido';
+        contagem[nome] = (contagem[nome] || 0) + 1;
+      });
+
+      const top = Object.entries(contagem).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+      document.getElementById('aviso-produtividade').innerHTML = concluidasNoPeriodo.length === 0
+        ? '<div class="aviso-dados">Nenhuma pauta concluída no período selecionado.</div>' : '';
+
+      if (top.length === 0) { destruirGrafico('produtividade'); return; }
+
+      criarOuAtualizarGrafico('produtividade', 'grafico-produtividade', {
+        type: 'bar',
+        data: { labels: top.map(([nome]) => nome), datasets: [{ label: 'Pautas concluídas', data: top.map(([, n]) => n), backgroundColor: '#336699' }] },
+        options: {
+          indexAxis: 'y',
+          plugins: { legend: { display: false } },
+          scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+      });
+    }
+
+    // ═══════════════════════ 3b. Volume por editoria no tempo ═══════════════════════
+    function renderVolumeEditoria() {
+      const dataIni = document.getElementById('filtro-data-inicial').value;
+      const dataFim = document.getElementById('filtro-data-final').value;
+      const dias = listarDiasEntre(dataIni, dataFim);
+
+      const concluidas = pautasCache.filter(p => p.status === 'concluida' && dataConclusao(p.id) && dentroDoPeriodo(dataConclusao(p.id)));
+
+      document.getElementById('aviso-volume-editoria').innerHTML = concluidas.length === 0
+        ? '<div class="aviso-dados">Nenhuma pauta concluída no período selecionado.</div>' : '';
+
+      if (concluidas.length === 0 || dias.length === 0) { destruirGrafico('volumeEditoria'); return; }
+
+      const volumePorEditoria = {};
+      concluidas.forEach(p => {
+        const ed = editoriaDaPauta(p) || 'Sem editoria';
+        volumePorEditoria[ed] = (volumePorEditoria[ed] || 0) + 1;
+      });
+      const topEditorias = Object.entries(volumePorEditoria).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([ed]) => ed);
+
+      const series = topEditorias.map((ed, i) => ({
+        label: ed,
+        data: dias.map(dia => concluidas.filter(p => (editoriaDaPauta(p) || 'Sem editoria') === ed && dataConclusao(p.id).slice(0, 10) === dia).length),
+        borderColor: PALETA_LINHAS[i % PALETA_LINHAS.length],
+        backgroundColor: PALETA_LINHAS[i % PALETA_LINHAS.length],
+        fill: false,
+        tension: 0.25
+      }));
+
+      criarOuAtualizarGrafico('volumeEditoria', 'grafico-volume-editoria', {
+        type: 'line',
+        data: { labels: dias.map(formatarData), datasets: series },
+        options: {
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } } }
+        }
+      });
+    }
+
+    // ═══════════════════════ 4a. Mix de mídia ═══════════════════════
+    function renderMixCanal() {
+      const noPeriodo = pautasCache.filter(p => dentroDoPeriodo(p.data_fato));
+      const contagem = { tv: 0, instagram: 0, youtube: 0, site: 0 };
+      noPeriodo.forEach(p => {
+        if (p.destino_tv) contagem.tv++;
+        if (p.destino_instagram) contagem.instagram++;
+        if (p.destino_youtube) contagem.youtube++;
+        if (p.destino_site) contagem.site++;
+      });
+
+      const total = contagem.tv + contagem.instagram + contagem.youtube + contagem.site;
+      if (total === 0) { destruirGrafico('mixCanal'); return; }
+
+      criarOuAtualizarGrafico('mixCanal', 'grafico-mix-canal', {
+        type: 'doughnut',
+        data: {
+          labels: ['📺 TV Aberta', '📷 Instagram', '▶️ YouTube', '🌐 Site'],
+          datasets: [{ data: [contagem.tv, contagem.instagram, contagem.youtube, contagem.site], backgroundColor: ['#8D0333', '#C98A1F', '#336699', '#2e8b57'] }]
+        },
+        options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }
+      });
+    }
+
+    // ═══════════════════════ 4b. Picos de publicação ═══════════════════════
+    function renderPicos() {
+      const concluidas = pautasCache.filter(p => p.status === 'concluida' && dataConclusao(p.id) && dentroDoPeriodo(dataConclusao(p.id)));
+
+      document.getElementById('aviso-picos').innerHTML = concluidas.length === 0
+        ? '<div class="aviso-dados">Nenhuma pauta concluída no período selecionado.</div>' : '';
+
+      if (concluidas.length === 0) { destruirGrafico('picos'); return; }
+
+      const porHora = new Array(24).fill(0);
+      concluidas.forEach(p => {
+        const hora = new Date(dataConclusao(p.id)).getHours();
+        porHora[hora]++;
+      });
+
+      criarOuAtualizarGrafico('picos', 'grafico-picos', {
+        type: 'bar',
+        data: { labels: porHora.map((_, h) => h + 'h'), datasets: [{ label: 'Pautas concluídas', data: porHora, backgroundColor: '#336699' }] },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { ticks: { font: { size: 10 } } } }
+        }
+      });
+    }
+
+    function renderTudo() {
+      renderDesempenhoPrazos();
+      renderGargalos();
+      renderProdutividade();
+      renderVolumeEditoria();
+      renderMixCanal();
+      renderPicos();
+    }
+
+    document.getElementById('filtro-data-inicial').addEventListener('change', renderTudo);
+    document.getElementById('filtro-data-final').addEventListener('change', renderTudo);
+    document.getElementById('filtro-papel-produtividade').addEventListener('change', renderProdutividade);
+
+    (async function init() {
+      definirPeriodoPadrao();
+      await carregarDados();
+      renderTudo();
+    })();
+  </script>
+  </div>
+</body>
+</html>
