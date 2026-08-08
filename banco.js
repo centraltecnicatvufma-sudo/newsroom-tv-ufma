@@ -36,6 +36,9 @@ try { db.exec(`ALTER TABLE pautas ADD COLUMN editor_imagens TEXT`); } catch (e) 
 try { db.exec(`ALTER TABLE pautas ADD COLUMN cabeca_texto TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE pautas ADD COLUMN texto_web TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE pautas ADD COLUMN editoria TEXT`); } catch (e) {}
+// "YYYY-MM-DDTHH:MM" (mesmo formato de <input type="datetime-local">) — hora-limite
+// interna de fechamento, diferente de data_fato/hora_fato (quando o FATO acontece)
+try { db.exec(`ALTER TABLE pautas ADD COLUMN deadline TEXT`); } catch (e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS pauta_fontes (

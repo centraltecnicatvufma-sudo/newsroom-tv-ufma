@@ -28,6 +28,15 @@
     .status-em_edicao { background: #6b3fa0; }
     .status-concluida { background: #2e8b57; }
 
+    /* Cronômetro de deadline — mesmo critério de cor usado no Mapa de
+       Produções (>2h neutro, 30min-2h amarelo, <30min vermelho, atrasado
+       vermelho escuro), recalculado a cada minuto (ver atualizarContadoresDeadline) */
+    .contador-deadline { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: bold; white-space: nowrap; display: inline-block; }
+    .contador-deadline.nivel-ok { background: #eef1f5; color: #5b6472; }
+    .contador-deadline.nivel-atencao { background: #C98A1F; color: #fff; }
+    .contador-deadline.nivel-critico { background: #8D0333; color: #fff; }
+    .contador-deadline.nivel-atrasado { background: #5A021F; color: #fff; }
+
     .acoes-lista { white-space: nowrap; }
     .acoes-lista button { font-size: 14px; padding: 6px 10px; line-height: 1; border-radius: 6px; border: none; cursor: pointer; margin-right: 4px; }
     .btn-ver { background: #eee; color: #333; }
@@ -274,6 +283,44 @@
       return p ? p.nome : '—';
     }
 
+    // Cronômetro de deadline: >2h neutro, 30min-2h amarelo (atenção),
+    // <30min vermelho (crítico), passou da hora vermelho escuro (atrasado)
+    function formatarContagemDeadline(deadlineIso) {
+      if (!deadlineIso) return null;
+      const alvo = new Date(deadlineIso);
+      if (isNaN(alvo.getTime())) return null;
+
+      const diffMs = alvo.getTime() - Date.now();
+      const atrasado = diffMs < 0;
+      const diffAbsMin = Math.round(Math.abs(diffMs) / 60000);
+      const horas = Math.floor(diffAbsMin / 60);
+      const minutos = diffAbsMin % 60;
+      const texto = (horas > 0 ? horas + 'h ' : '') + minutos + 'min';
+
+      let nivel = 'ok';
+      if (atrasado) nivel = 'atrasado';
+      else if (diffAbsMin <= 30) nivel = 'critico';
+      else if (diffAbsMin <= 120) nivel = 'atencao';
+
+      return { texto: atrasado ? `⏰ Atrasado ${texto}` : `⏳ ${texto}`, nivel };
+    }
+
+    function htmlContadorDeadline(deadlineIso) {
+      const c = formatarContagemDeadline(deadlineIso);
+      if (!c) return '—';
+      return `<span class="contador-deadline nivel-${c.nivel}">${c.texto}</span>`;
+    }
+
+    // Recalcula só o texto/cor dos contadores já na tela, sem refazer o
+    // fetch nem perder o estado de nenhuma aba aberta
+    function atualizarContadoresDeadline() {
+      document.querySelectorAll('[data-deadline-de]').forEach(el => {
+        const p = pautasCache.find(item => item.id === Number(el.dataset.deadlineDe));
+        if (p) el.innerHTML = htmlContadorDeadline(p.deadline);
+      });
+    }
+    setInterval(atualizarContadoresDeadline, 30000);
+
     async function carregarPautas() {
       const conteudo = document.getElementById('conteudo');
       conteudo.innerHTML = '<p>Carregando...</p>';
@@ -302,7 +349,7 @@
           <thead>
             <tr>
               <th>ID</th><th>Título</th><th>Programa</th><th>Data / Hora</th>
-              <th>Equipe</th><th>Status</th><th>Ações</th>
+              <th>Deadline</th><th>Equipe</th><th>Status</th><th>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -312,6 +359,7 @@
                 <td>${p.titulo}</td>
                 <td>${nomePrograma(p.programa_id)}</td>
                 <td>${p.data_fato ? p.data_fato.split('-').reverse().join('/') : '—'} ${p.hora_fato ? '· ' + p.hora_fato : ''}</td>
+                <td data-deadline-de="${p.id}">${htmlContadorDeadline(p.deadline)}</td>
                 <td>
                   ${p.produtor ? `<span class="tag-equipe">🗂️ ${p.produtor}</span>` : ''}
                   ${p.reporter ? `<span class="tag-equipe">🎤 ${p.reporter}</span>` : ''}
@@ -422,6 +470,10 @@
           <div class="campo">
             <label>Hora do Fato</label>
             <input type="time" data-campo="hora-fato">
+          </div>
+          <div class="campo">
+            <label>Deadline (hora-limite de fechamento)</label>
+            <input type="datetime-local" data-campo="deadline">
           </div>
           <div class="campo">
             <label>Status da Produção</label>
@@ -544,6 +596,7 @@
       elCampo(container, 'anexos').value = '';
       elCampo(container, 'data-fato').value = '';
       elCampo(container, 'hora-fato').value = '';
+      elCampo(container, 'deadline').value = '';
       elCampo(container, 'produtor').value = '';
       elCampo(container, 'reporter').value = '';
       elCampo(container, 'cinegrafista').value = '';
@@ -571,6 +624,7 @@
       elCampo(container, 'anexos').value = p.anexos || '';
       elCampo(container, 'data-fato').value = p.data_fato || '';
       elCampo(container, 'hora-fato').value = p.hora_fato || '';
+      elCampo(container, 'deadline').value = p.deadline || '';
       elCampo(container, 'produtor').value = p.produtor || '';
       elCampo(container, 'reporter').value = p.reporter || '';
       elCampo(container, 'cinegrafista').value = p.cinegrafista || '';
@@ -598,6 +652,7 @@
         anexos: elCampo(container, 'anexos').value.trim(),
         data_fato: elCampo(container, 'data-fato').value,
         hora_fato: elCampo(container, 'hora-fato').value,
+        deadline: elCampo(container, 'deadline').value,
         produtor: elCampo(container, 'produtor').value,
         reporter: elCampo(container, 'reporter').value,
         cinegrafista: elCampo(container, 'cinegrafista').value,

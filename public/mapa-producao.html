@@ -39,6 +39,14 @@
     .card-kanban .link-abrir { font-size: 11px; color: #336699; text-decoration: none; font-weight: bold; }
     .card-kanban .link-abrir:hover { text-decoration: underline; }
 
+    /* Cronômetro de deadline: >2h neutro, 30min-2h amarelo, <30min
+       vermelho, atrasado vermelho escuro — recalculado a cada minuto */
+    .contador-deadline { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: bold; white-space: nowrap; display: inline-block; }
+    .contador-deadline.nivel-ok { background: #eef1f5; color: #5b6472; }
+    .contador-deadline.nivel-atencao { background: #C98A1F; color: #fff; }
+    .contador-deadline.nivel-critico { background: #8D0333; color: #fff; }
+    .contador-deadline.nivel-atrasado { background: #5A021F; color: #fff; }
+
     /* ---- Navegação lateral (unificada em todas as telas) ---- */
     body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
     .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
@@ -153,7 +161,7 @@
 
       const doPautas = pautasLista.map(p => ({
         origem: 'pauta', id: p.id, coluna: p.status,
-        titulo: p.titulo, editoria: p.editoria, urgencia: null,
+        titulo: p.titulo, editoria: p.editoria, urgencia: null, deadline: p.deadline,
         enviadoPor: '', reporter: p.reporter, cinegrafista: p.cinegrafista, produtor: p.produtor,
         programa: nomePrograma(p.programa_id),
         destino_tv: !!p.destino_tv, destino_instagram: !!p.destino_instagram,
@@ -194,6 +202,34 @@
       });
     }
 
+    // Cronômetro de deadline: >2h neutro, 30min-2h amarelo (atenção),
+    // <30min vermelho (crítico), passou da hora vermelho escuro (atrasado).
+    // Só pautas têm deadline (não faz sentido pra uma ideia ainda não aprovada).
+    function formatarContagemDeadline(deadlineIso) {
+      if (!deadlineIso) return null;
+      const alvo = new Date(deadlineIso);
+      if (isNaN(alvo.getTime())) return null;
+
+      const diffMs = alvo.getTime() - Date.now();
+      const atrasado = diffMs < 0;
+      const diffAbsMin = Math.round(Math.abs(diffMs) / 60000);
+      const horas = Math.floor(diffAbsMin / 60);
+      const minutos = diffAbsMin % 60;
+      const texto = (horas > 0 ? horas + 'h ' : '') + minutos + 'min';
+
+      let nivel = 'ok';
+      if (atrasado) nivel = 'atrasado';
+      else if (diffAbsMin <= 30) nivel = 'critico';
+      else if (diffAbsMin <= 120) nivel = 'atencao';
+
+      return { texto: atrasado ? `⏰ Atrasado ${texto}` : `⏳ ${texto}`, nivel };
+    }
+
+    function htmlContadorDeadline(deadlineIso) {
+      const c = formatarContagemDeadline(deadlineIso);
+      return c ? `<span class="contador-deadline nivel-${c.nivel}">${c.texto}</span>` : '';
+    }
+
     function renderCard(item) {
       const destinos = [
         item.destino_tv ? '📺' : null,
@@ -218,11 +254,23 @@
             ${item.urgencia ? `<span class="tag tag-${item.urgencia}">${rotulosUrgencia[item.urgencia] || item.urgencia}</span>` : ''}
             ${responsaveis ? `<span>${responsaveis}</span>` : ''}
             ${destinos ? `<span>${destinos}</span>` : ''}
+            ${item.deadline ? `<span data-deadline-de="${item.origem}-${item.id}">${htmlContadorDeadline(item.deadline)}</span>` : ''}
           </div>
           <a class="link-abrir" href="${item.link}" target="_blank" rel="noopener">Abrir →</a>
         </div>
       `;
     }
+
+    // Recalcula só o texto/cor dos contadores já na tela, sem refazer o
+    // fetch nem interromper o kanban (evita "piscar" a cada minuto)
+    function atualizarContadoresDeadline() {
+      document.querySelectorAll('[data-deadline-de]').forEach(el => {
+        const [origem, idTexto] = el.dataset.deadlineDe.split('-');
+        const item = itensCache.find(i => i.origem === origem && String(i.id) === idTexto);
+        if (item) el.innerHTML = htmlContadorDeadline(item.deadline);
+      });
+    }
+    setInterval(atualizarContadoresDeadline, 30000);
 
     function renderQuadro() {
       const filtrados = itensFiltrados();
