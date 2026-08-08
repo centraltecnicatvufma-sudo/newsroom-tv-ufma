@@ -146,7 +146,7 @@
     <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
     <a href="graficos.html">📊 Gráficos Gerenciais</a>
     <a href="relatorios.html">📄 Relatórios</a>
-    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+    <a href="lixeira.html">🗑 Lixeira</a>
   </div>
   <div class="nr-app">
 
@@ -446,7 +446,7 @@
     }
 
     async function excluirCard(id) {
-      if (!confirm('Tem certeza que deseja excluir esta sugestão? Essa ação não pode ser desfeita.')) return;
+      if (!confirm('Mover esta sugestão para a lixeira?')) return;
       await fetch('/sugestoes/' + id, { method: 'DELETE' });
       if (cardExpandidoId === id) cardExpandidoId = null;
       await carregarSugestoes();
@@ -711,7 +711,7 @@
 
     async function excluirSugestaoDaAba(idAba) {
       const aba = abas[idAba];
-      if (!confirm('Tem certeza que deseja excluir esta sugestão? Essa ação não pode ser desfeita.')) return;
+      if (!confirm('Mover esta sugestão para a lixeira?')) return;
       await fetch('/sugestoes/' + aba.sugestaoId, { method: 'DELETE' });
       fecharAba(idAba);
       await carregarSugestoes();

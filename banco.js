@@ -299,4 +299,21 @@ db.exec(`
   )
 `);
 
+// Lixeira — soft delete: excluir marca excluido_em (timestamp) em vez de
+// apagar a linha de vez. Toda tela de listagem passa a esconder quem tem
+// excluido_em preenchido; restaurar zera o campo; excluir definitivamente
+// (só a partir da tela Lixeira) faz o DELETE de verdade. Vale pra estes 7
+// tipos de registro — os únicos com botão de excluir hoje.
+[
+  'pautas',
+  'sugestoes',
+  'agendamentos',
+  'programas_quadros',
+  'equipe_agenda',
+  'eventos_calendario',
+  'turnos_tipo'
+].forEach(tabela => {
+  try { db.exec(`ALTER TABLE ${tabela} ADD COLUMN excluido_em TEXT`); } catch (e) {}
+});
+
 module.exports = db;

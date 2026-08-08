@@ -12,17 +12,23 @@ function avisarMudanca(req) {
 router.get('/', (req, res) => {
   const statusFiltro = req.query.status;
 
-  let query = 'SELECT * FROM sugestoes';
+  let query = 'SELECT * FROM sugestoes WHERE excluido_em IS NULL';
   const params = [];
 
   if (statusFiltro) {
-    query += ' WHERE status = ?';
+    query += ' AND status = ?';
     params.push(statusFiltro);
   }
 
   query += ' ORDER BY id DESC';
 
   const lista = db.prepare(query).all(...params);
+  res.json(lista);
+});
+
+// GET /sugestoes/lixeira -> sugestões na lixeira (soft delete)
+router.get('/lixeira', (req, res) => {
+  const lista = db.prepare('SELECT * FROM sugestoes WHERE excluido_em IS NOT NULL ORDER BY excluido_em DESC').all();
   res.json(lista);
 });
 
@@ -98,16 +104,34 @@ router.patch('/:id', (req, res) => {
   res.json(item_atualizado);
 });
 
-// DELETE /sugestoes/:id
+// DELETE /sugestoes/:id -> manda pra lixeira (soft delete)
 router.delete('/:id', (req, res) => {
   const id = Number(req.params.id);
-  const resultado = db.prepare('DELETE FROM sugestoes WHERE id = ?').run(id);
+  const resultado = db.prepare('UPDATE sugestoes SET excluido_em = ? WHERE id = ? AND excluido_em IS NULL')
+    .run(new Date().toISOString(), id);
 
   if (resultado.changes === 0) {
     return res.status(404).json({ erro: "Sugestão não encontrada" });
   }
 
   avisarMudanca(req);
+  res.status(204).send();
+});
+
+// PATCH /sugestoes/:id/restaurar -> tira da lixeira
+router.patch('/:id/restaurar', (req, res) => {
+  const id = Number(req.params.id);
+  const resultado = db.prepare('UPDATE sugestoes SET excluido_em = NULL WHERE id = ?').run(id);
+  if (resultado.changes === 0) return res.status(404).json({ erro: "Sugestão não encontrada" });
+  avisarMudanca(req);
+  res.json(db.prepare('SELECT * FROM sugestoes WHERE id = ?').get(id));
+});
+
+// DELETE /sugestoes/:id/definitivo -> apaga de vez (só a partir da Lixeira)
+router.delete('/:id/definitivo', (req, res) => {
+  const id = Number(req.params.id);
+  const resultado = db.prepare('DELETE FROM sugestoes WHERE id = ?').run(id);
+  if (resultado.changes === 0) return res.status(404).json({ erro: "Sugestão não encontrada" });
   res.status(204).send();
 });
 

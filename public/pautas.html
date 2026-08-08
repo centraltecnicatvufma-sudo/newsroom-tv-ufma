@@ -169,7 +169,7 @@
     <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
     <a href="graficos.html">📊 Gráficos Gerenciais</a>
     <a href="relatorios.html">📄 Relatórios</a>
-    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+    <a href="lixeira.html">🗑 Lixeira</a>
   </div>
   <div class="nr-app">
 
@@ -434,7 +434,7 @@
     }
 
     async function excluirPauta(id) {
-      const confirmar = confirm('Tem certeza que deseja excluir esta pauta? Essa ação não pode ser desfeita.');
+      const confirmar = confirm('Mover esta pauta para a lixeira?');
       if (!confirmar) return;
 
       const resposta = await fetch('/pautas/' + id, { method: 'DELETE' });

@@ -39,11 +39,18 @@ router.get('/historico-status', (req, res) => {
   res.json(lista);
 });
 
+// GET /pautas/lixeira -> pautas na lixeira (soft delete). Precisa vir
+// ANTES de /:id pelo mesmo motivo de /historico-status.
+router.get('/lixeira', (req, res) => {
+  const lista = db.prepare('SELECT * FROM pautas WHERE excluido_em IS NOT NULL ORDER BY excluido_em DESC').all();
+  res.json(lista);
+});
+
 // GET /pautas -> lista com filtros opcionais: programa_id, status, data_fato, busca (por título)
 router.get('/', (req, res) => {
   const { programa_id, status, data_fato, busca } = req.query;
 
-  let query = 'SELECT * FROM pautas WHERE 1=1';
+  let query = 'SELECT * FROM pautas WHERE excluido_em IS NULL';
   const params = [];
 
   if (programa_id) { query += ' AND programa_id = ?'; params.push(programa_id); }
@@ -190,11 +197,39 @@ router.patch('/:id', (req, res) => {
   res.json(item_atualizado);
 });
 
-// DELETE /pautas/:id
-// DELETE /pautas/:id
+// DELETE /pautas/:id -> manda pra lixeira (soft delete). Os registros
+// filhos (blocos, matéria, fontes) ficam intactos: se a pauta for
+// restaurada, o conteúdo volta junto.
 router.delete('/:id', (req, res) => {
   const id = Number(req.params.id);
+  const pauta = db.prepare('SELECT agenda_id FROM pautas WHERE id = ? AND excluido_em IS NULL').get(id);
+  if (!pauta) return res.status(404).json({ erro: 'Pauta não encontrada' });
+
+  db.prepare('UPDATE pautas SET excluido_em = ? WHERE id = ?').run(new Date().toISOString(), id);
+
+  if (pauta.agenda_id) {
+    db.prepare('UPDATE agendamentos SET status = ? WHERE id = ?').run('cancelado', pauta.agenda_id);
+  }
+
+  avisarMudanca(req);
+  res.status(204).send();
+});
+
+// PATCH /pautas/:id/restaurar -> tira da lixeira
+router.patch('/:id/restaurar', (req, res) => {
+  const id = Number(req.params.id);
+  const resultado = db.prepare('UPDATE pautas SET excluido_em = NULL WHERE id = ?').run(id);
+  if (resultado.changes === 0) return res.status(404).json({ erro: 'Pauta não encontrada' });
+  avisarMudanca(req);
+  res.json(db.prepare('SELECT * FROM pautas WHERE id = ?').get(id));
+});
+
+// DELETE /pautas/:id/definitivo -> apaga de vez (só a partir da Lixeira),
+// com a cascata que antes vivia no DELETE normal
+router.delete('/:id/definitivo', (req, res) => {
+  const id = Number(req.params.id);
   const pauta = db.prepare('SELECT agenda_id FROM pautas WHERE id = ?').get(id);
+  if (!pauta) return res.status(404).json({ erro: 'Pauta não encontrada' });
 
   const apagar = db.transaction((id) => {
     db.prepare('DELETE FROM blocos WHERE pauta_id = ?').run(id);
@@ -203,7 +238,7 @@ router.delete('/:id', (req, res) => {
     db.prepare('DELETE FROM pautas_historico_status WHERE pauta_id = ?').run(id);
     db.prepare('UPDATE sugestoes SET pauta_id = NULL WHERE pauta_id = ?').run(id);
 
-    if (pauta && pauta.agenda_id) {
+    if (pauta.agenda_id) {
       db.prepare('UPDATE agendamentos SET status = ? WHERE id = ?').run('cancelado', pauta.agenda_id);
     }
 
@@ -211,15 +246,11 @@ router.delete('/:id', (req, res) => {
   });
 
   try {
-    const resultado = apagar(id);
-    if (resultado.changes === 0) {
-      return res.status(404).json({ erro: 'Pauta não encontrada' });
-    }
-    avisarMudanca(req);
+    apagar(id);
     res.status(204).send();
   } catch (erro) {
-    console.error('Erro ao excluir pauta:', erro);
-    res.status(500).json({ erro: 'Não foi possível excluir a pauta', detalhe: erro.message });
+    console.error('Erro ao excluir pauta definitivamente:', erro);
+    res.status(500).json({ erro: 'Não foi possível excluir a pauta definitivamente', detalhe: erro.message });
   }
 });
 

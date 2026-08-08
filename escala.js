@@ -5,7 +5,12 @@ const db = require('./banco');
 // --- Tipos de turno ---
 
 router.get('/turnos', (req, res) => {
-  res.json(db.prepare('SELECT * FROM turnos_tipo ORDER BY hora_inicio ASC').all());
+  res.json(db.prepare('SELECT * FROM turnos_tipo WHERE excluido_em IS NULL ORDER BY hora_inicio ASC').all());
+});
+
+// GET /escala/turnos/lixeira -> tipos de turno na lixeira (soft delete)
+router.get('/turnos/lixeira', (req, res) => {
+  res.json(db.prepare('SELECT * FROM turnos_tipo WHERE excluido_em IS NOT NULL ORDER BY excluido_em DESC').all());
 });
 
 router.post('/turnos', (req, res) => {
@@ -30,6 +35,21 @@ router.patch('/turnos/:id', (req, res) => {
 });
 
 router.delete('/turnos/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const resultado = db.prepare('UPDATE turnos_tipo SET excluido_em = ? WHERE id = ? AND excluido_em IS NULL')
+    .run(new Date().toISOString(), id);
+  if (resultado.changes === 0) return res.status(404).json({ erro: 'Turno não encontrado' });
+  res.status(204).send();
+});
+
+router.patch('/turnos/:id/restaurar', (req, res) => {
+  const id = Number(req.params.id);
+  const resultado = db.prepare('UPDATE turnos_tipo SET excluido_em = NULL WHERE id = ?').run(id);
+  if (resultado.changes === 0) return res.status(404).json({ erro: 'Turno não encontrado' });
+  res.json(db.prepare('SELECT * FROM turnos_tipo WHERE id = ?').get(id));
+});
+
+router.delete('/turnos/:id/definitivo', (req, res) => {
   const id = Number(req.params.id);
   const resultado = db.prepare('DELETE FROM turnos_tipo WHERE id = ?').run(id);
   if (resultado.changes === 0) return res.status(404).json({ erro: 'Turno não encontrado' });

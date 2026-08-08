@@ -128,7 +128,7 @@
     <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
     <a href="graficos.html">📊 Gráficos Gerenciais</a>
     <a href="relatorios.html">📄 Relatórios</a>
-    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+    <a href="lixeira.html">🗑 Lixeira</a>
   </div>
   <div class="nr-app">
 
@@ -277,7 +277,7 @@
 
       document.querySelectorAll('.btn-excluir-programa').forEach(btn => {
         btn.addEventListener('click', async () => {
-          const confirmar = window.confirm('Tem certeza que deseja excluir este item?');
+          const confirmar = window.confirm('Mover este item para a lixeira?');
           if (!confirmar) return;
 
           await fetch(`/agenda/programas/${btn.dataset.id}`, { method: 'DELETE' });
@@ -365,7 +365,7 @@
 
       document.querySelectorAll('.btn-excluir-membro').forEach(btn => {
         btn.addEventListener('click', async () => {
-          const confirmar = window.confirm('Tem certeza que deseja excluir este membro?');
+          const confirmar = window.confirm('Mover este membro para a lixeira?');
           if (!confirmar) return;
 
           await fetch(`/agenda/equipe/${btn.dataset.id}`, { method: 'DELETE' });

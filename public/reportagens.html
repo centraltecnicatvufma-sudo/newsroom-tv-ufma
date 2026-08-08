@@ -119,7 +119,7 @@
     <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
     <a href="graficos.html">📊 Gráficos Gerenciais</a>
     <a href="relatorios.html">📄 Relatórios</a>
-    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+    <a href="lixeira.html">🗑 Lixeira</a>
   </div>
   <div class="nr-app">
 
@@ -262,7 +262,7 @@
     document.addEventListener('click', fecharMenusImprimirLauda);
 
     async function excluirPautaDaLista(id) {
-      if (!confirm('Tem certeza que deseja excluir esta pauta? Essa ação não pode ser desfeita.')) return;
+      if (!confirm('Mover esta pauta para a lixeira?')) return;
       const resp = await fetch('/pautas/' + id, { method: 'DELETE' });
       if (resp.ok) {
         await carregarPautas();

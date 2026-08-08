@@ -96,7 +96,7 @@
     <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
     <a href="graficos.html">📊 Gráficos Gerenciais</a>
     <a href="relatorios.html">📄 Relatórios</a>
-    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+    <a href="lixeira.html">🗑 Lixeira</a>
   </div>
   <div class="nr-app">
 
@@ -313,7 +313,7 @@
       });
       document.querySelectorAll('.btn-excluir-evento').forEach(btn => {
         btn.addEventListener('click', async () => {
-          if (!confirm('Tem certeza que deseja excluir esta efeméride?')) return;
+          if (!confirm('Mover esta efeméride para a lixeira?')) return;
           await fetch('/calendario/eventos/' + btn.dataset.id, { method: 'DELETE' });
           await carregarDados();
           renderCalendario();

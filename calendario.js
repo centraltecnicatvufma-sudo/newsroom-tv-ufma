@@ -6,7 +6,13 @@ const db = require('./banco');
 // recorrentes anuais salvos com outro ano (o front reescreve a data pro
 // ano pedido antes de exibir)
 router.get('/eventos', (req, res) => {
-  const lista = db.prepare('SELECT * FROM eventos_calendario ORDER BY data ASC').all();
+  const lista = db.prepare('SELECT * FROM eventos_calendario WHERE excluido_em IS NULL ORDER BY data ASC').all();
+  res.json(lista);
+});
+
+// GET /calendario/eventos/lixeira -> efemérides na lixeira (soft delete)
+router.get('/eventos/lixeira', (req, res) => {
+  const lista = db.prepare('SELECT * FROM eventos_calendario WHERE excluido_em IS NOT NULL ORDER BY excluido_em DESC').all();
   res.json(lista);
 });
 
@@ -45,8 +51,25 @@ router.patch('/eventos/:id', (req, res) => {
   res.json(db.prepare('SELECT * FROM eventos_calendario WHERE id = ?').get(id));
 });
 
-// DELETE /calendario/eventos/:id
+// DELETE /calendario/eventos/:id -> manda pra lixeira (soft delete)
 router.delete('/eventos/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const resultado = db.prepare('UPDATE eventos_calendario SET excluido_em = ? WHERE id = ? AND excluido_em IS NULL')
+    .run(new Date().toISOString(), id);
+  if (resultado.changes === 0) return res.status(404).json({ erro: 'Evento não encontrado' });
+  res.status(204).send();
+});
+
+// PATCH /calendario/eventos/:id/restaurar -> tira da lixeira
+router.patch('/eventos/:id/restaurar', (req, res) => {
+  const id = Number(req.params.id);
+  const resultado = db.prepare('UPDATE eventos_calendario SET excluido_em = NULL WHERE id = ?').run(id);
+  if (resultado.changes === 0) return res.status(404).json({ erro: 'Evento não encontrado' });
+  res.json(db.prepare('SELECT * FROM eventos_calendario WHERE id = ?').get(id));
+});
+
+// DELETE /calendario/eventos/:id/definitivo -> apaga de vez (só a partir da Lixeira)
+router.delete('/eventos/:id/definitivo', (req, res) => {
   const id = Number(req.params.id);
   const resultado = db.prepare('DELETE FROM eventos_calendario WHERE id = ?').run(id);
   if (resultado.changes === 0) return res.status(404).json({ erro: 'Evento não encontrado' });

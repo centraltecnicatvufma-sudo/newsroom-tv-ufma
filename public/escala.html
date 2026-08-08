@@ -109,7 +109,7 @@
     <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
     <a href="graficos.html">📊 Gráficos Gerenciais</a>
     <a href="relatorios.html">📄 Relatórios</a>
-    <div class="nr-item-desabilitado">🗑 Lixeira <span class="nr-badge">em breve</span></div>
+    <a href="lixeira.html">🗑 Lixeira</a>
   </div>
   <div class="nr-app">
 
@@ -128,8 +128,8 @@
     <div class="legenda-status">
       <span class="item-legenda-status"><span class="ponto-status" style="background:#2e8b57;"></span>Trabalhando</span>
       <span class="item-legenda-status"><span class="ponto-status" style="background:#C98A1F;"></span>Plantão</span>
-      <span class="item-legenda-status"><span class="ponto-status" style="background:#5b6472;"></span>Folga</span>
-      <span class="item-legenda-status"><span class="ponto-status" style="background:#336699;"></span>Férias</span>
+      <span class="item-legenda-status"><span class="ponto-status" style="background:#336699;"></span>Folga</span>
+      <span class="item-legenda-status"><span class="ponto-status" style="background:#8D0333;"></span>Férias</span>
     </div>
   </div>
 
@@ -199,7 +199,7 @@
   <script>
     const NOMES_DIAS = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
     const ORDEM_FUNCOES_PADRAO = ['Repórter', 'Cinegrafista', 'Editor de Imagens', 'Produtor', 'Motorista', 'Estagiário', 'Bolsista'];
-    const CORES_STATUS = { trabalhando: '#2e8b57', plantao: '#C98A1F', folga: '#5b6472', ferias: '#336699' };
+    const CORES_STATUS = { trabalhando: '#2e8b57', plantao: '#C98A1F', folga: '#336699', ferias: '#8D0333' };
     const ROTULOS_STATUS = { trabalhando: 'Trabalhando', plantao: 'Plantão', folga: 'Folga', ferias: 'Férias' };
     const LIMIAR_INTERSTICIO_HORAS = 11; // alerta simples — não substitui confirmação de RH/jurídico
     const CARGA_HORARIA_REFERENCIA = 44; // horas/semana — referência de jornada padrão, só pra sinalizar visualmente
@@ -527,7 +527,7 @@
       });
       document.querySelectorAll('.btn-excluir-turno').forEach(btn => {
         btn.addEventListener('click', async () => {
-          if (!confirm('Excluir este tipo de turno? Quem já está escalado com ele mantém a data marcada, só perde o vínculo de horário.')) return;
+          if (!confirm('Mover este tipo de turno para a lixeira? Quem já está escalado com ele mantém a data marcada, só perde o vínculo de horário.')) return;
           await fetch('/escala/turnos/' + btn.dataset.id, { method: 'DELETE' });
           turnosCache = await (await fetch('/escala/turnos')).json();
           renderListaTurnos();
