@@ -40,6 +40,14 @@ try { db.exec(`ALTER TABLE pautas ADD COLUMN editoria TEXT`); } catch (e) {}
 // interna de fechamento, diferente de data_fato/hora_fato (quando o FATO acontece)
 try { db.exec(`ALTER TABLE pautas ADD COLUMN deadline TEXT`); } catch (e) {}
 
+// Checklist de ativos multimídia — pra cada tipo, um par de flags:
+// "necessario" (a pauta exige esse ativo?) e "pronto" (já foi entregue?).
+// "pronto" só faz sentido junto de "necessario" marcado (a tela cuida disso).
+['texto', 'foto', 'video', 'audio', 'infografico'].forEach(tipo => {
+  try { db.exec(`ALTER TABLE pautas ADD COLUMN ativo_${tipo}_necessario INTEGER DEFAULT 0`); } catch (e) {}
+  try { db.exec(`ALTER TABLE pautas ADD COLUMN ativo_${tipo}_pronto INTEGER DEFAULT 0`); } catch (e) {}
+});
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS pauta_fontes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -199,5 +207,19 @@ db.exec(`
 // reconstruído), o relatório trata esse caso como "sem dado", não como zero.
 try { db.exec(`ALTER TABLE sugestoes ADD COLUMN criado_em TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE sugestoes ADD COLUMN decidido_em TEXT`); } catch (e) {}
+
+// Barra de Breaking News do Mapa de Produções — só um alerta ativo por vez
+// (ativo=1); disparar um novo desativa o anterior automaticamente. Fica
+// como tabela (não uma única linha de config) pra manter histórico de
+// quando cada alerta foi disparado e por quem.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS alertas_breaking (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mensagem TEXT NOT NULL,
+    ativo INTEGER DEFAULT 1,
+    criado_por TEXT,
+    criado_em TEXT
+  )
+`);
 
 module.exports = db;

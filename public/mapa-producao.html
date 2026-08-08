@@ -9,7 +9,36 @@
 
     .topo { background: #336699; color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
     .topo h1 { font-size: 18px; margin: 0; white-space: nowrap; }
+    .topo-direita { display: flex; align-items: center; gap: 10px; }
     .status-conexao { font-size: 12px; background: rgba(255,255,255,0.15); padding: 5px 10px; border-radius: 6px; white-space: nowrap; }
+    #btn-disparar-breaking { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 7px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+    #btn-disparar-breaking:hover { background: #6d0227; }
+
+    /* Faixa de Breaking News — só um alerta ativo por vez, disparado por
+       qualquer editor, visível instantaneamente pra quem estiver com essa
+       tela aberta (via WebSocket, ver tempo_real.js) */
+    .faixa-breaking { display: none; align-items: center; gap: 14px; background: #8D0333; color: #fff; padding: 10px 20px; font-size: 14px; animation: pulso-breaking 2.2s ease-in-out infinite; }
+    .faixa-breaking .breaking-icone { font-weight: bold; white-space: nowrap; }
+    .faixa-breaking .breaking-mensagem { flex: 1; }
+    .faixa-breaking .breaking-meta { font-size: 11px; opacity: 0.85; white-space: nowrap; }
+    .faixa-breaking button { background: rgba(255,255,255,0.2); color: #fff; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 12px; white-space: nowrap; }
+    .faixa-breaking button:hover { background: rgba(255,255,255,0.35); }
+    @keyframes pulso-breaking {
+      0%, 100% { box-shadow: inset 0 0 0 rgba(255,255,255,0); }
+      50% { box-shadow: inset 0 0 20px rgba(255,255,255,0.25); }
+    }
+
+    .overlay-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 10; }
+    .overlay-modal.aberto { display: flex; }
+    .modal-breaking { background: #fff; border-radius: 10px; padding: 24px; width: 420px; }
+    .modal-breaking h2 { font-size: 18px; margin: 0 0 4px; }
+    .modal-breaking p { font-size: 13px; color: #5b6472; margin: 0 0 14px; }
+    .modal-breaking label { font-size: 12px; color: #5b6472; display: block; margin-bottom: 4px; }
+    .modal-breaking textarea { width: 100%; min-height: 90px; padding: 9px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical; }
+    .modal-breaking .botoes-modal { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+    .modal-breaking .botoes-modal button { padding: 9px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .modal-breaking .btn-cancelar { background: #eee; color: #333; }
+    .modal-breaking .btn-confirmar { background: #8D0333; color: #fff; }
 
     .filtros { display: flex; align-items: center; gap: 10px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; flex-wrap: wrap; }
     .filtros select, .filtros input { padding: 7px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
@@ -46,6 +75,11 @@
     .contador-deadline.nivel-atencao { background: #C98A1F; color: #fff; }
     .contador-deadline.nivel-critico { background: #8D0333; color: #fff; }
     .contador-deadline.nivel-atrasado { background: #5A021F; color: #fff; }
+
+    .icones-ativos { display: inline-flex; gap: 4px; }
+    .icone-ativo { font-size: 12px; padding: 1px 4px; border-radius: 4px; }
+    .icone-ativo.pendente { background: #eef1f5; opacity: 0.45; filter: grayscale(1); }
+    .icone-ativo.pronto { background: #e0f2e6; }
 
     /* ---- Navegação lateral (unificada em todas as telas) ---- */
     body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
@@ -87,7 +121,30 @@
 
   <div class="topo">
     <h1>HORUS NEWSROOM — Mapa de Produções</h1>
-    <span class="status-conexao" id="status-conexao">🟡 Conectando...</span>
+    <div class="topo-direita">
+      <button id="btn-disparar-breaking">🚨 Disparar Breaking News</button>
+      <span class="status-conexao" id="status-conexao">🟡 Conectando...</span>
+    </div>
+  </div>
+
+  <div class="faixa-breaking" id="faixa-breaking">
+    <span class="breaking-icone">🚨 BREAKING NEWS</span>
+    <span class="breaking-mensagem" id="breaking-mensagem"></span>
+    <span class="breaking-meta" id="breaking-meta"></span>
+    <button id="btn-encerrar-breaking" title="Encerrar este alerta">✕ Encerrar</button>
+  </div>
+
+  <div class="overlay-modal" id="modal-breaking">
+    <div class="modal-breaking">
+      <h2>🚨 Disparar Breaking News</h2>
+      <p>Mostra um alerta em destaque pra todo mundo com o Mapa de Produções aberto, instantaneamente.</p>
+      <label>Mensagem</label>
+      <textarea id="campo-mensagem-breaking" placeholder="Ex: Acidente grave na BR-135, cobertura ao vivo às 14h"></textarea>
+      <div class="botoes-modal">
+        <button class="btn-cancelar" id="cancelar-breaking">Cancelar</button>
+        <button class="btn-confirmar" id="confirmar-breaking">🚨 Disparar Alerta</button>
+      </div>
+    </div>
   </div>
 
   <div class="filtros">
@@ -132,6 +189,14 @@
       em_producao: '#C98A1F', em_gravacao: '#336699', em_edicao: '#6b3fa0', concluida: '#2e8b57'
     };
     const rotulosUrgencia = { rotina: 'Rotina', relevante: 'Relevante', urgente: 'Fato do Dia / Urgente' };
+    const INFO_ATIVOS = {
+      texto: { icone: '📝', rotulo: 'Texto' },
+      foto: { icone: '📸', rotulo: 'Foto' },
+      video: { icone: '🎥', rotulo: 'Vídeo' },
+      audio: { icone: '🎙️', rotulo: 'Áudio' },
+      infografico: { icone: '📊', rotulo: 'Infográfico' }
+    };
+    const TIPOS_ATIVO = Object.keys(INFO_ATIVOS);
 
     let itensCache = [];
     let minhasPautasAtivo = false;
@@ -166,6 +231,9 @@
         programa: nomePrograma(p.programa_id),
         destino_tv: !!p.destino_tv, destino_instagram: !!p.destino_instagram,
         destino_youtube: !!p.destino_youtube, destino_site: !!p.destino_site,
+        ativos: TIPOS_ATIVO
+          .filter(tipo => p['ativo_' + tipo + '_necessario'])
+          .map(tipo => ({ tipo, pronto: !!p['ativo_' + tipo + '_pronto'] })),
         link: 'pautas.html'
       }));
 
@@ -230,6 +298,15 @@
       return c ? `<span class="contador-deadline nivel-${c.nivel}">${c.texto}</span>` : '';
     }
 
+    // Resumo em ícones do checklist de ativos — só mostra o que é
+    // necessário; colorido quando já está pronto, apagado quando pendente
+    function htmlIconesAtivos(ativos) {
+      return `<span class="icones-ativos">${ativos.map(a => {
+        const info = INFO_ATIVOS[a.tipo];
+        return `<span class="icone-ativo ${a.pronto ? 'pronto' : 'pendente'}" title="${info.rotulo}${a.pronto ? ' — pronto' : ' — pendente'}">${info.icone}</span>`;
+      }).join('')}</span>`;
+    }
+
     function renderCard(item) {
       const destinos = [
         item.destino_tv ? '📺' : null,
@@ -255,6 +332,7 @@
             ${responsaveis ? `<span>${responsaveis}</span>` : ''}
             ${destinos ? `<span>${destinos}</span>` : ''}
             ${item.deadline ? `<span data-deadline-de="${item.origem}-${item.id}">${htmlContadorDeadline(item.deadline)}</span>` : ''}
+            ${item.ativos && item.ativos.length ? htmlIconesAtivos(item.ativos) : ''}
           </div>
           <a class="link-abrir" href="${item.link}" target="_blank" rel="noopener">Abrir →</a>
         </div>
@@ -330,6 +408,7 @@
       ws.addEventListener('message', (ev) => {
         const msg = JSON.parse(ev.data);
         if (msg.tipo === 'pautas' || msg.tipo === 'sugestoes') carregarTudo();
+        if (msg.tipo === 'alerta') carregarAlertaAtivo();
       });
       ws.addEventListener('close', () => {
         atualizarStatusConexao('desconectado');
@@ -338,8 +417,52 @@
       ws.addEventListener('error', () => ws.close());
     }
 
+    // ---- Barra de Breaking News: um alerta ativo por vez, disparado por
+    // qualquer editor, propagado instantaneamente via o mesmo WebSocket
+    async function carregarAlertaAtivo() {
+      const resp = await fetch('/alertas/ativo');
+      const alerta = await resp.json();
+      const faixa = document.getElementById('faixa-breaking');
+
+      if (alerta) {
+        document.getElementById('breaking-mensagem').textContent = alerta.mensagem;
+        const quando = new Date(alerta.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('breaking-meta').textContent = (alerta.criado_por ? alerta.criado_por + ' · ' : '') + quando;
+        faixa.style.display = 'flex';
+      } else {
+        faixa.style.display = 'none';
+      }
+    }
+
+    document.getElementById('btn-disparar-breaking').addEventListener('click', () => {
+      document.getElementById('campo-mensagem-breaking').value = '';
+      document.getElementById('modal-breaking').classList.add('aberto');
+    });
+    document.getElementById('cancelar-breaking').addEventListener('click', () => {
+      document.getElementById('modal-breaking').classList.remove('aberto');
+    });
+    document.getElementById('confirmar-breaking').addEventListener('click', async () => {
+      const mensagem = document.getElementById('campo-mensagem-breaking').value.trim();
+      if (!mensagem) { alert('Escreva a mensagem do alerta.'); return; }
+      const meuNome = document.getElementById('campo-meu-nome').value.trim();
+
+      await fetch('/alertas', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mensagem, criado_por: meuNome })
+      });
+
+      document.getElementById('modal-breaking').classList.remove('aberto');
+      await carregarAlertaAtivo();
+    });
+    document.getElementById('btn-encerrar-breaking').addEventListener('click', async () => {
+      if (!confirm('Encerrar esse alerta de Breaking News?')) return;
+      await fetch('/alertas/encerrar', { method: 'PATCH' });
+      await carregarAlertaAtivo();
+    });
+
     (async function init() {
       await carregarTudo();
+      await carregarAlertaAtivo();
       conectarTempoReal();
     })();
   </script>

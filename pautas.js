@@ -6,6 +6,14 @@ function buscarFontes(pautaId) {
   return db.prepare('SELECT * FROM pauta_fontes WHERE pauta_id = ?').all(pautaId);
 }
 
+// Checklist de ativos multimídia: 10 colunas (necessario+pronto x 5 tipos,
+// ver banco.js). Gerado por código pra não repetir os 5 nomes 4 vezes
+// diferentes entre POST e PATCH.
+const TIPOS_ATIVO = ['texto', 'foto', 'video', 'audio', 'infografico'];
+function camposAtivos() {
+  return TIPOS_ATIVO.flatMap(t => [`ativo_${t}_necessario`, `ativo_${t}_pronto`]);
+}
+
 // Avisa quem estiver com o Mapa de Produções aberto que uma pauta mudou,
 // pra tela recarregar sozinha (ver tempo_real.js) — opcional porque tanto
 // faz pra essa rota se tem alguém ouvindo ou não do outro lado
@@ -53,6 +61,9 @@ router.post('/', (req, res) => {
 
   if (!titulo) return res.status(400).json({ erro: 'Título é obrigatório' });
 
+  const colunasAtivos = camposAtivos();
+  const valoresAtivos = colunasAtivos.map(c => req.body[c] ? 1 : 0);
+
   const resultado = db.prepare(`
     INSERT INTO pautas (
       sugestao_id, agenda_id, titulo, programa_id,
@@ -60,16 +71,18 @@ router.post('/', (req, res) => {
       orientacao, roteiro, local, anexos,
       produtor, reporter, cinegrafista, motorista, editor_imagens,
       equip_lapela, equip_iluminacao, equip_mochilink,
-      data_fato, hora_fato, status, editoria, deadline
+      data_fato, hora_fato, status, editoria, deadline,
+      ${colunasAtivos.join(', ')}
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${colunasAtivos.map(() => '?').join(', ')})
   `).run(
     sugestao_id || null, agenda_id || null, titulo, programa_id || null,
     destino_tv ? 1 : 0, destino_instagram ? 1 : 0, destino_youtube ? 1 : 0, destino_site ? 1 : 0,
     orientacao || '', roteiro || '', local || '', anexos || '',
     produtor || '', reporter || '', cinegrafista || '', motorista || '', editor_imagens || '',
     equip_lapela ? 1 : 0, equip_iluminacao ? 1 : 0, equip_mochilink ? 1 : 0,
-    data_fato || '', hora_fato || '', status || 'em_producao', editoria || '', deadline || ''
+    data_fato || '', hora_fato || '', status || 'em_producao', editoria || '', deadline || '',
+    ...valoresAtivos
   );
 
   const novaId = resultado.lastInsertRowid;
@@ -103,7 +116,8 @@ router.patch('/:id', (req, res) => {
     'produtor', 'reporter', 'cinegrafista', 'motorista', 'editor_imagens',
     'equip_lapela', 'equip_iluminacao', 'equip_mochilink',
     'data_fato', 'hora_fato', 'status', 'editoria', 'deadline',
-    'cabeca_texto', 'texto_web'
+    'cabeca_texto', 'texto_web',
+    ...camposAtivos()
   ];
 
   const atualizado = {};
@@ -119,7 +133,8 @@ router.patch('/:id', (req, res) => {
       produtor=?, reporter=?, cinegrafista=?, motorista=?, editor_imagens=?,
       equip_lapela=?, equip_iluminacao=?, equip_mochilink=?,
       data_fato=?, hora_fato=?, status=?, editoria=?, deadline=?,
-      cabeca_texto=?, texto_web=?
+      cabeca_texto=?, texto_web=?,
+      ${camposAtivos().map(c => c + '=?').join(', ')}
     WHERE id = ?
   `).run(
     atualizado.sugestao_id, atualizado.agenda_id, atualizado.titulo, atualizado.programa_id,
@@ -130,6 +145,7 @@ router.patch('/:id', (req, res) => {
     atualizado.equip_lapela ? 1 : 0, atualizado.equip_iluminacao ? 1 : 0, atualizado.equip_mochilink ? 1 : 0,
     atualizado.data_fato, atualizado.hora_fato, atualizado.status, atualizado.editoria, atualizado.deadline,
     atualizado.cabeca_texto, atualizado.texto_web,
+    ...camposAtivos().map(c => atualizado[c] ? 1 : 0),
     id
   );
 

@@ -37,6 +37,18 @@
     .contador-deadline.nivel-critico { background: #8D0333; color: #fff; }
     .contador-deadline.nivel-atrasado { background: #5A021F; color: #fff; }
 
+    /* Checklist de ativos multimídia — no formulário (edição, com os dois
+       checkboxes) e resumido em ícones (Capa/Mapa, ver .icones-ativos) */
+    .checklist-ativos { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+    .linha-ativo { display: flex; align-items: center; gap: 16px; font-size: 13px; }
+    .linha-ativo .rotulo-ativo { min-width: 110px; font-weight: bold; }
+    .linha-ativo label { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-weight: normal; }
+
+    .icones-ativos { display: flex; gap: 4px; flex-wrap: wrap; }
+    .icone-ativo { font-size: 13px; padding: 2px 5px; border-radius: 4px; }
+    .icone-ativo.pendente { background: #eef1f5; opacity: 0.45; filter: grayscale(1); }
+    .icone-ativo.pronto { background: #e0f2e6; }
+
     .acoes-lista { white-space: nowrap; }
     .acoes-lista button { font-size: 14px; padding: 6px 10px; line-height: 1; border-radius: 6px; border: none; cursor: pointer; margin-right: 4px; }
     .btn-ver { background: #eee; color: #333; }
@@ -208,6 +220,17 @@
       concluida: '🟢 Concluída / Pronta'
     };
 
+    // Checklist de ativos multimídia — mesmos 5 tipos usados no backend
+    // (banco.js/pautas.js: ativo_<tipo>_necessario / ativo_<tipo>_pronto)
+    const INFO_ATIVOS = {
+      texto: { icone: '📝', rotulo: 'Texto' },
+      foto: { icone: '📸', rotulo: 'Foto' },
+      video: { icone: '🎥', rotulo: 'Vídeo' },
+      audio: { icone: '🎙️', rotulo: 'Áudio' },
+      infografico: { icone: '📊', rotulo: 'Infográfico' }
+    };
+    const TIPOS_ATIVO = Object.keys(INFO_ATIVOS);
+
     function elCampo(container, nome) {
       return container.querySelector(`[data-campo="${nome}"]`);
     }
@@ -311,6 +334,18 @@
       return `<span class="contador-deadline nivel-${c.nivel}">${c.texto}</span>`;
     }
 
+    // Resumo em ícones do checklist de ativos — só mostra o que é
+    // necessário; colorido quando já está pronto, apagado quando pendente
+    function htmlIconesAtivos(p) {
+      const necessarios = TIPOS_ATIVO.filter(tipo => p['ativo_' + tipo + '_necessario']);
+      if (necessarios.length === 0) return '—';
+      return `<div class="icones-ativos">${necessarios.map(tipo => {
+        const pronto = !!p['ativo_' + tipo + '_pronto'];
+        const info = INFO_ATIVOS[tipo];
+        return `<span class="icone-ativo ${pronto ? 'pronto' : 'pendente'}" title="${info.rotulo}${pronto ? ' — pronto' : ' — pendente'}">${info.icone}</span>`;
+      }).join('')}</div>`;
+    }
+
     // Recalcula só o texto/cor dos contadores já na tela, sem refazer o
     // fetch nem perder o estado de nenhuma aba aberta
     function atualizarContadoresDeadline() {
@@ -349,7 +384,7 @@
           <thead>
             <tr>
               <th>ID</th><th>Título</th><th>Programa</th><th>Data / Hora</th>
-              <th>Deadline</th><th>Equipe</th><th>Status</th><th>Ações</th>
+              <th>Deadline</th><th>Ativos</th><th>Equipe</th><th>Status</th><th>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -360,6 +395,7 @@
                 <td>${nomePrograma(p.programa_id)}</td>
                 <td>${p.data_fato ? p.data_fato.split('-').reverse().join('/') : '—'} ${p.hora_fato ? '· ' + p.hora_fato : ''}</td>
                 <td data-deadline-de="${p.id}">${htmlContadorDeadline(p.deadline)}</td>
+                <td>${htmlIconesAtivos(p)}</td>
                 <td>
                   ${p.produtor ? `<span class="tag-equipe">🗂️ ${p.produtor}</span>` : ''}
                   ${p.reporter ? `<span class="tag-equipe">🎤 ${p.reporter}</span>` : ''}
@@ -502,6 +538,34 @@
               <label><input type="checkbox" data-campo="site"> Matéria Site</label>
               <label><input type="checkbox" data-campo="youtube"> YouTube</label>
             </div>
+            <label>Checklist de Ativos Multimídia</label>
+            <div class="checklist-ativos">
+              <div class="linha-ativo">
+                <span class="rotulo-ativo">📝 Texto</span>
+                <label><input type="checkbox" data-campo="texto-necessario"> Necessário</label>
+                <label><input type="checkbox" data-campo="texto-pronto"> Pronto</label>
+              </div>
+              <div class="linha-ativo">
+                <span class="rotulo-ativo">📸 Foto</span>
+                <label><input type="checkbox" data-campo="foto-necessario"> Necessário</label>
+                <label><input type="checkbox" data-campo="foto-pronto"> Pronto</label>
+              </div>
+              <div class="linha-ativo">
+                <span class="rotulo-ativo">🎥 Vídeo</span>
+                <label><input type="checkbox" data-campo="video-necessario"> Necessário</label>
+                <label><input type="checkbox" data-campo="video-pronto"> Pronto</label>
+              </div>
+              <div class="linha-ativo">
+                <span class="rotulo-ativo">🎙️ Áudio</span>
+                <label><input type="checkbox" data-campo="audio-necessario"> Necessário</label>
+                <label><input type="checkbox" data-campo="audio-pronto"> Pronto</label>
+              </div>
+              <div class="linha-ativo">
+                <span class="rotulo-ativo">📊 Infográfico</span>
+                <label><input type="checkbox" data-campo="infografico-necessario"> Necessário</label>
+                <label><input type="checkbox" data-campo="infografico-pronto"> Pronto</label>
+              </div>
+            </div>
             <label>Enquadramento / Ângulo da Notícia</label>
             <textarea data-campo="orientacao" placeholder="Orientação da chefia de redação..."></textarea>
             <label>Perguntas Principais / Roteiro Sugerido</label>
@@ -606,6 +670,11 @@
       elCampo(container, 'iluminacao').checked = false;
       elCampo(container, 'mochilink').checked = false;
       elCampo(container, 'status').value = 'em_producao';
+      TIPOS_ATIVO.forEach(tipo => {
+        elCampo(container, tipo + '-necessario').checked = false;
+        elCampo(container, tipo + '-pronto').checked = false;
+      });
+      sincronizarChecklistAtivos(container);
     }
 
     function preencherPainel(idAba, p) {
@@ -634,6 +703,22 @@
       elCampo(container, 'iluminacao').checked = !!p.equip_iluminacao;
       elCampo(container, 'mochilink').checked = !!p.equip_mochilink;
       elCampo(container, 'status').value = p.status || 'em_producao';
+      TIPOS_ATIVO.forEach(tipo => {
+        elCampo(container, tipo + '-necessario').checked = !!p['ativo_' + tipo + '_necessario'];
+        elCampo(container, tipo + '-pronto').checked = !!p['ativo_' + tipo + '_pronto'];
+      });
+      sincronizarChecklistAtivos(container);
+    }
+
+    // "Pronto" só faz sentido junto de "Necessário" marcado — desabilita e
+    // desmarca "Pronto" sozinho quando "Necessário" é desmarcado
+    function sincronizarChecklistAtivos(container) {
+      TIPOS_ATIVO.forEach(tipo => {
+        const necessario = elCampo(container, tipo + '-necessario');
+        const pronto = elCampo(container, tipo + '-pronto');
+        pronto.disabled = !necessario.checked;
+        if (!necessario.checked) pronto.checked = false;
+      });
     }
 
     function coletarDadosFormulario(idAba) {
@@ -662,6 +747,10 @@
         equip_iluminacao: elCampo(container, 'iluminacao').checked,
         equip_mochilink: elCampo(container, 'mochilink').checked,
         status: elCampo(container, 'status').value,
+        ...Object.fromEntries(TIPOS_ATIVO.flatMap(tipo => [
+          ['ativo_' + tipo + '_necessario', elCampo(container, tipo + '-necessario').checked],
+          ['ativo_' + tipo + '_pronto', elCampo(container, tipo + '-pronto').checked]
+        ])),
         fontes: abas[idAba].fontes
       };
     }
@@ -856,6 +945,10 @@
 
       container.querySelectorAll('[data-subaba]').forEach(btn => {
         btn.addEventListener('click', () => mudarSubAba(idAba, btn.dataset.subaba));
+      });
+
+      TIPOS_ATIVO.forEach(tipo => {
+        elCampo(container, tipo + '-necessario').addEventListener('change', () => sincronizarChecklistAtivos(container));
       });
     }
 

@@ -9,6 +9,7 @@ const blocosRouter = require('./blocos');
 const materiaRouter = require('./materia');
 const agendaRouter = require('./agenda');
 const sugestoesRouter = require('./sugestoes');
+const alertasRouter = require('./alertas');
 const { criarServidorTempoReal } = require('./tempo_real');
 
 app.use(express.json());
@@ -25,6 +26,7 @@ app.use('/blocos', blocosRouter);
 app.use('/materia', materiaRouter);
 app.use('/agenda', agendaRouter);
 app.use('/sugestoes', sugestoesRouter);
+app.use('/alertas', alertasRouter);
 
 app.get('/', (req, res) => {
   res.send('HORUS Newsroom está no ar!');
