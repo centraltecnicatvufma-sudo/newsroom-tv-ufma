@@ -106,6 +106,21 @@
     .info-impressao table.fontes-impressao { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
     .info-impressao table.fontes-impressao th, .info-impressao table.fontes-impressao td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; }
 
+    /* Pop-up de pré-visualização de impressão — mostra, dentro de um
+       iframe com "cara de folha A4", exatamente o que vai pro papel em
+       cada layout (Padrão/Uma coluna), reaproveitando o próprio CSS de
+       @media print da página (extraído via CSSOM, sem duplicar regra
+       nenhuma) aplicado sem a media query dentro do iframe. */
+    .overlay-preview { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); align-items: center; justify-content: center; z-index: 20; }
+    .overlay-preview.aberto { display: flex; }
+    .janela-preview { background: #3d4552; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; max-height: 92vh; max-width: 94vw; }
+    .cabecalho-preview { display: flex; justify-content: space-between; align-items: center; color: #fff; font-size: 13px; padding: 0 4px; }
+    .cabecalho-preview button { background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 6px; padding: 7px 14px; cursor: pointer; font-size: 13px; }
+    .cabecalho-preview button:hover { background: rgba(255,255,255,0.3); }
+    .area-folha-preview { overflow: auto; border-radius: 4px; }
+    .folha-preview { background: #fff; width: 210mm; box-shadow: 0 4px 24px rgba(0,0,0,0.4); margin: 0 auto; }
+    .folha-preview iframe { width: 100%; border: none; display: block; }
+
     /* Faixa de Breaking News — mesmo alerta visível em toda tela do
        sistema, disparado a partir do Mapa de Produções, propagado na hora
        via WebSocket (tempo_real.js) */
@@ -139,7 +154,8 @@
       .nr-sidebar, .barra-acoes, #btn-ouvir-cabeca, .btn-ouvir-item,
       .btn-remover-item, .btn-mover, .btn-maiusculas, .toggle-auto,
       .add-itens, #btn-add-gc, .btn-remover-gc, #bloco-cabeca,
-      .seta-recolher, #bloco-texto-web { display: none !important; }
+      .seta-recolher, #bloco-texto-web, .faixa-breaking,
+      .overlay-preview, #bloco-gcs { display: none !important; }
 
       body { background: #fff; }
       .nr-app { height: auto !important; overflow: visible !important; }
@@ -177,21 +193,11 @@
       #tabela-impressao-vt td.col-impressao-direita { width: 75%; }
       #tabela-impressao-vt tr { break-inside: avoid; }
 
-      #corpo-gcs { display: block !important; }
-
       /* Editor Quill: tira toda a moldura de edição, deixa só o texto */
       .ql-toolbar { display: none !important; }
       .ql-container.ql-snow { border: none !important; }
       .editor-caixa { border: none !important; min-height: 0 !important; margin: 0 10px; }
       .ql-editor { padding: 4px 0 !important; min-height: 0 !important; max-height: none !important; overflow: visible !important; }
-
-      /* Tabela de GCs: os campos são <input>, então tira a aparência de
-         campo de formulário e deixa só o valor, como texto de tabela comum */
-      #tabela-gcs { margin: 0 10px; width: calc(100% - 20px); }
-      #tabela-gcs th, #tabela-gcs td { border: 1px solid #ccc; }
-      #tabela-gcs input { border: none !important; background: transparent !important; padding: 2px !important; font-size: 12px; width: 100%; }
-      #tabela-gcs tr { break-inside: avoid; }
-      #tabela-gcs th:last-child, #tabela-gcs td:last-child { display: none; } /* era a coluna do botão ✕ remover */
 
       .status-salvo { display: none; }
     }
@@ -299,6 +305,20 @@
     </select>
     <button class="btn-imprimir" id="btn-imprimir">🖨️ Imprimir Lauda</button>
     <button class="btn-salvar" id="btn-salvar">💾 Salvar Lauda</button>
+  </div>
+
+  <div class="overlay-preview" id="modal-preview-impressao">
+    <div class="janela-preview">
+      <div class="cabecalho-preview">
+        <span id="titulo-preview-impressao">Pré-visualização</span>
+        <button id="btn-fechar-preview">✕ Fechar</button>
+      </div>
+      <div class="area-folha-preview">
+        <div class="folha-preview">
+          <iframe id="iframe-preview-impressao" title="Pré-visualização de impressão"></iframe>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
@@ -794,6 +814,63 @@
       window.print();
     }
     document.getElementById('btn-imprimir').addEventListener('click', executarImpressao);
+
+    // ---- Pré-visualização de impressão ----
+    // Pega as regras de dentro de @media print do próprio <style> desta
+    // página (via CSSOM) e devolve como regras normais, sem a media query
+    // — aplicadas dentro do iframe, isso reproduz exatamente o que sai no
+    // papel, sem duplicar nenhuma regra de CSS numa segunda folha de estilo.
+    function extrairCssImpressaoSemMediaQuery() {
+      let css = '';
+      for (const folha of document.styleSheets) {
+        let regras;
+        try { regras = folha.cssRules; } catch (e) { continue; }
+        for (const regra of regras) {
+          if (regra.type === CSSRule.MEDIA_RULE && regra.media.mediaText.includes('print')) {
+            for (const sub of regra.cssRules) css += sub.cssText + '\n';
+          } else if (regra.cssText) {
+            css += regra.cssText + '\n';
+          }
+        }
+      }
+      return css;
+    }
+
+    function mostrarPreviewImpressao(layout) {
+      montarImpressaoCorpoVt();
+      document.body.classList.toggle('impressao-uma-coluna', layout === 'uma-coluna');
+
+      // Clone "morto": sem os <script> da própria página (que ficam dentro
+      // do <body>, ver materia.html) — se fossem junto, reexecutariam
+      // dentro do iframe e apagariam o conteúdo (o init() deles não acha
+      // pauta_id na URL do iframe e mostra a tela de erro por cima de tudo)
+      const corpoClonado = document.body.cloneNode(true);
+      corpoClonado.querySelectorAll('script').forEach(el => el.remove());
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+        body { margin: 0; }
+        ${extrairCssImpressaoSemMediaQuery()}
+      </style></head>${corpoClonado.outerHTML}</html>`;
+
+      document.getElementById('titulo-preview-impressao').textContent =
+        'Pré-visualização — ' + (layout === 'uma-coluna' ? 'Uma coluna' : 'Padrão (2 colunas)');
+
+      const iframe = document.getElementById('iframe-preview-impressao');
+      iframe.style.height = '400px';
+      iframe.onload = () => {
+        const altura = iframe.contentDocument.documentElement.scrollHeight;
+        iframe.style.height = altura + 'px';
+      };
+      iframe.srcdoc = html;
+
+      document.getElementById('modal-preview-impressao').classList.add('aberto');
+    }
+
+    document.getElementById('layout-impressao').addEventListener('change', (ev) => {
+      mostrarPreviewImpressao(ev.target.value);
+    });
+    document.getElementById('btn-fechar-preview').addEventListener('click', () => {
+      document.getElementById('modal-preview-impressao').classList.remove('aberto');
+    });
 
     // GCs e Texto Adaptado começam recolhidos — clicar na barra revela
     document.querySelectorAll('.cabecalho-recolhivel').forEach(cabecalho => {
