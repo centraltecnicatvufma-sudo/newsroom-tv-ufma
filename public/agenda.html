@@ -94,6 +94,20 @@
     .btn-salvar-agendamento { margin-top: 20px; background: #8D0333; color: #fff; border: none; border-radius: 8px; padding: 12px; width: 100%; font-size: 15px; cursor: pointer; }
     .btn-voltar { background: transparent; border: none; color: #336699; cursor: pointer; font-size: 13px; margin-bottom: 12px; padding: 0; }
 
+    /* Faixa de Breaking News — mesmo alerta visível em toda tela do
+       sistema, disparado a partir do Mapa de Produções, propagado na hora
+       via WebSocket (tempo_real.js) */
+    .faixa-breaking { display: none; align-items: center; gap: 14px; background: #8D0333; color: #fff; padding: 10px 20px; font-size: 14px; animation: pulso-breaking 2.2s ease-in-out infinite; }
+    .faixa-breaking .breaking-icone { font-weight: bold; white-space: nowrap; }
+    .faixa-breaking .breaking-mensagem { flex: 1; }
+    .faixa-breaking .breaking-meta { font-size: 11px; opacity: 0.85; white-space: nowrap; }
+    .faixa-breaking button { background: rgba(255,255,255,0.2); color: #fff; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 12px; white-space: nowrap; }
+    .faixa-breaking button:hover { background: rgba(255,255,255,0.35); }
+    @keyframes pulso-breaking {
+      0%, 100% { box-shadow: inset 0 0 0 rgba(255,255,255,0); }
+      50% { box-shadow: inset 0 0 20px rgba(255,255,255,0.25); }
+    }
+
     /* ---- Navegação lateral (unificada em todas as telas) ---- */
     body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
     .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
@@ -119,7 +133,7 @@
     <a href="mapa-producao.html">🗺 Mapa de Produções</a>
     <a href="reportagens.html">🎬 Reportagens</a>
     <a href="espelhos.html">📽️ Espelhos</a>
-    <div class="nr-item-desabilitado">🔍 Busca Geral <span class="nr-badge">em breve</span></div>
+    <a href="busca.html">🔍 Busca Geral</a>
     <a href="calendario.html">📅 Calendário</a>
     <a href="agenda.html" class="nr-ativo">🗓 Agenda</a>
     <a href="escala.html">👥 Escala de Equipes</a>
@@ -134,6 +148,13 @@
 
   <div class="topo">
     <h1>HORUS NEWSROOM — Agenda</h1>
+  </div>
+
+  <div class="faixa-breaking" id="faixa-breaking">
+    <span class="breaking-icone">🚨 BREAKING NEWS</span>
+    <span class="breaking-mensagem" id="breaking-mensagem"></span>
+    <span class="breaking-meta" id="breaking-meta"></span>
+    <button id="btn-encerrar-breaking" title="Encerrar este alerta">✕ Encerrar</button>
   </div>
 
   <div class="subabas">
@@ -180,6 +201,43 @@
   </div>
 
   <script>
+    // ---- Faixa de Breaking News (mesmo alerta em todas as telas) ----
+    // Disparado a partir do Mapa de Produções; aqui só exibe e permite
+    // encerrar, propagado na hora via WebSocket (tempo_real.js).
+    async function carregarAlertaBreakingNews() {
+      const resp = await fetch('/alertas/ativo');
+      const alerta = await resp.json();
+      const faixa = document.getElementById('faixa-breaking');
+      if (!faixa) return;
+      if (alerta) {
+        document.getElementById('breaking-mensagem').textContent = alerta.mensagem;
+        const quando = new Date(alerta.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('breaking-meta').textContent = (alerta.criado_por ? alerta.criado_por + ' · ' : '') + quando;
+        faixa.style.display = 'flex';
+      } else {
+        faixa.style.display = 'none';
+      }
+    }
+
+    document.getElementById('btn-encerrar-breaking')?.addEventListener('click', async () => {
+      if (!confirm('Encerrar esse alerta de Breaking News?')) return;
+      await fetch('/alertas/encerrar', { method: 'PATCH' });
+      await carregarAlertaBreakingNews();
+    });
+
+    (function conectarBreakingNews() {
+      const protocolo = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocolo}//${location.host}/ws/tempo-real`);
+      ws.addEventListener('message', (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (msg.tipo === 'alerta') carregarAlertaBreakingNews();
+      });
+      ws.addEventListener('close', () => setTimeout(conectarBreakingNews, 3000));
+      ws.addEventListener('error', () => ws.close());
+    })();
+
+    carregarAlertaBreakingNews();
+
     let abaAtiva = 'relatorio';
     let idEmEdicaoGlobal = null;
 
@@ -509,12 +567,17 @@
     }
 
     // Vindo do Calendário (?data=YYYY-MM-DD) — abre direto na aba "Por Dia"
-    // já no dia clicado, em vez de cair na Agenda Semanal por padrão
+    // já no dia clicado, em vez de cair na Agenda Semanal por padrão.
+    // Vindo da Busca Geral (?aba=programas ou ?aba=equipe) — abre direto na
+    // aba certa, já que Programas e Equipe não são específicos de um dia.
     const paramsUrl = new URLSearchParams(location.search);
     const dataUrl = paramsUrl.get('data');
+    const abaUrl = paramsUrl.get('aba');
     if (dataUrl) {
       diaSelecionado = new Date(dataUrl + 'T12:00:00');
       trocarAba('agenda');
+    } else if (abaUrl === 'programas' || abaUrl === 'equipe') {
+      trocarAba(abaUrl);
     } else {
       trocarAba('relatorio');
     }

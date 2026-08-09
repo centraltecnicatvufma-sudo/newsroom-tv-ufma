@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Busca Geral — HORUS Newsroom</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+
+    .topo { background: #336699; color: #fff; padding: 18px 20px; }
+    .topo h1 { font-size: 18px; margin: 0 0 12px; }
+    .caixa-busca { position: relative; max-width: 640px; }
+    .caixa-busca input {
+      width: 100%; padding: 12px 16px 12px 40px; border-radius: 8px; border: none;
+      font-size: 15px; font-family: inherit;
+    }
+    .caixa-busca input:focus { outline: 2px solid #C98A1F; }
+    .caixa-busca .icone-lupa { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 15px; opacity: 0.6; }
+
+    .conteudo { flex: 1; overflow-y: auto; padding: 20px; }
+    .largura-maxima { max-width: 900px; margin: 0 auto; }
+
+    .contador-resultados { font-size: 12px; color: #5b6472; margin-bottom: 16px; }
+
+    .grupo-resultado { margin-bottom: 22px; }
+    .grupo-resultado h2 { font-size: 13px; color: #336699; margin: 0 0 8px; display: flex; align-items: center; gap: 6px; }
+    .grupo-resultado h2 .contagem-grupo { font-size: 11px; color: #5b6472; font-weight: normal; }
+
+    table.tabela-simples { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    table.tabela-simples tbody tr { cursor: pointer; }
+    table.tabela-simples tbody tr:hover { background: #f4f8fc; }
+    table.tabela-simples td { padding: 10px 14px; font-size: 13px; border-top: 1px solid #f0f0f0; vertical-align: middle; }
+    table.tabela-simples tr:first-child td { border-top: none; }
+    .nome-resultado { font-weight: bold; color: #1b2430; }
+    .sub-resultado { color: #5b6472; font-size: 12px; }
+    .seta-resultado { text-align: right; color: #336699; font-size: 13px; white-space: nowrap; }
+
+    .aviso-mais { font-size: 11px; color: #999; padding: 8px 14px; background: #fafbfc; }
+
+    .estado-inicial, .estado-vazio { text-align: center; color: #999; padding: 60px 20px; font-size: 14px; }
+
+    /* Faixa de Breaking News — mesmo alerta visível em toda tela do
+       sistema, disparado a partir do Mapa de Produções, propagado na hora
+       via WebSocket (tempo_real.js) */
+    .faixa-breaking { display: none; align-items: center; gap: 14px; background: #8D0333; color: #fff; padding: 10px 20px; font-size: 14px; animation: pulso-breaking 2.2s ease-in-out infinite; }
+    .faixa-breaking .breaking-icone { font-weight: bold; white-space: nowrap; }
+    .faixa-breaking .breaking-mensagem { flex: 1; }
+    .faixa-breaking .breaking-meta { font-size: 11px; opacity: 0.85; white-space: nowrap; }
+    .faixa-breaking button { background: rgba(255,255,255,0.2); color: #fff; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 12px; white-space: nowrap; }
+    .faixa-breaking button:hover { background: rgba(255,255,255,0.35); }
+    @keyframes pulso-breaking {
+      0%, 100% { box-shadow: inset 0 0 0 rgba(255,255,255,0); }
+      50% { box-shadow: inset 0 0 20px rgba(255,255,255,0.25); }
+    }
+
+    /* ---- Navegação lateral (unificada em todas as telas) ---- */
+    body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
+    .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+    .nr-sidebar .nr-logo { padding: 0 20px 20px; border-bottom: 1px solid #4d7fb3; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
+    .nr-sidebar .nr-titulo, .nr-sidebar .nr-subtitulo { font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+    .nr-sidebar .nr-subtitulo { margin-top: 4px; }
+    .nr-sidebar a, .nr-sidebar .nr-item-desabilitado { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #e8f0f7; text-decoration: none; font-size: 14px; }
+    .nr-sidebar a:hover { background: #4d7fb3; color: #fff; }
+    .nr-sidebar a.nr-ativo { background: #244d70; color: #fff; font-weight: bold; border-left: 4px solid #8D0333; padding-left: 16px; }
+    .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
+    .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
+    .nr-app { flex: 1; min-width: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+  </style>
+</head>
+<body>
+  <div class="nr-sidebar">
+    <a href="index.html" class="nr-logo">
+      <div class="nr-titulo">HORUS</div>
+      <div class="nr-subtitulo">NEWSROOM</div>
+    </a>
+    <a href="sugestoes.html">📋 Sugestões de Pauta</a>
+    <a href="pautas.html">📝 Pautas</a>
+    <a href="mapa-producao.html">🗺 Mapa de Produções</a>
+    <a href="reportagens.html">🎬 Reportagens</a>
+    <a href="espelhos.html">📽️ Espelhos</a>
+    <a href="busca.html" class="nr-ativo">🔍 Busca Geral</a>
+    <a href="calendario.html">📅 Calendário</a>
+    <a href="agenda.html">🗓 Agenda</a>
+    <a href="escala.html">👥 Escala de Equipes</a>
+    <a href="teleprompter.html">🎙 Teleprompter</a>
+    <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
+    <a href="graficos.html">📊 Gráficos Gerenciais</a>
+    <a href="relatorios.html">📄 Relatórios</a>
+    <a href="lixeira.html">🗑 Lixeira</a>
+  </div>
+  <div class="nr-app">
+
+  <div class="topo">
+    <h1>HORUS NEWSROOM — Busca Geral</h1>
+    <div class="caixa-busca">
+      <span class="icone-lupa">🔍</span>
+      <input type="text" id="input-busca" placeholder="Buscar por título, nome, local, editoria..." autofocus>
+    </div>
+  </div>
+
+  <div class="faixa-breaking" id="faixa-breaking">
+    <span class="breaking-icone">🚨 BREAKING NEWS</span>
+    <span class="breaking-mensagem" id="breaking-mensagem"></span>
+    <span class="breaking-meta" id="breaking-meta"></span>
+    <button id="btn-encerrar-breaking" title="Encerrar este alerta">✕ Encerrar</button>
+  </div>
+
+  <div class="conteudo">
+    <div class="largura-maxima" id="area-resultados">
+      <div class="estado-inicial">Digite ao menos 2 letras pra buscar em Pautas, Sugestões, Agenda, Programas, Efemérides e Espelhos.</div>
+    </div>
+  </div>
+
+  <script>
+    // ---- Faixa de Breaking News (mesmo alerta em todas as telas) ----
+    // Disparado a partir do Mapa de Produções; aqui só exibe e permite
+    // encerrar, propagado na hora via WebSocket (tempo_real.js).
+    async function carregarAlertaBreakingNews() {
+      const resp = await fetch('/alertas/ativo');
+      const alerta = await resp.json();
+      const faixa = document.getElementById('faixa-breaking');
+      if (!faixa) return;
+      if (alerta) {
+        document.getElementById('breaking-mensagem').textContent = alerta.mensagem;
+        const quando = new Date(alerta.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('breaking-meta').textContent = (alerta.criado_por ? alerta.criado_por + ' · ' : '') + quando;
+        faixa.style.display = 'flex';
+      } else {
+        faixa.style.display = 'none';
+      }
+    }
+
+    document.getElementById('btn-encerrar-breaking')?.addEventListener('click', async () => {
+      if (!confirm('Encerrar esse alerta de Breaking News?')) return;
+      await fetch('/alertas/encerrar', { method: 'PATCH' });
+      await carregarAlertaBreakingNews();
+    });
+
+    (function conectarBreakingNews() {
+      const protocolo = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocolo}//${location.host}/ws/tempo-real`);
+      ws.addEventListener('message', (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (msg.tipo === 'alerta') carregarAlertaBreakingNews();
+      });
+      ws.addEventListener('close', () => setTimeout(conectarBreakingNews, 3000));
+      ws.addEventListener('error', () => ws.close());
+    })();
+
+    carregarAlertaBreakingNews();
+
+    const LIMITE_POR_GRUPO = 15;
+
+    function escaparHtml(texto) {
+      return String(texto == null ? '' : texto)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function formatarDataBR(iso) {
+      if (!iso) return '';
+      const [ano, mes, dia] = iso.slice(0, 10).split('-');
+      return (dia && mes && ano) ? `${dia}/${mes}/${ano}` : '';
+    }
+
+    // Remove acento pra "sao luis" achar "São Luís"
+    function normalizar(texto) {
+      return String(texto == null ? '' : texto)
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .toLowerCase();
+    }
+
+    // Cada recurso já foi carregado em alguma outra tela deste sistema —
+    // a Busca Geral só reaproveita os mesmos endpoints, sem rota nova no
+    // backend. "campos" é o que entra na busca; "destino" é pra onde o
+    // clique leva (reaproveitando os deep-links que já existem: pautas.html
+    // ?abrir=, agenda.html ?data=/?aba=, espelho.html ?espelho_id=).
+    const RECURSOS_BUSCA = [
+      {
+        tipo: 'Pauta', emoji: '📝', url: '/pautas',
+        campos: p => [p.titulo, p.orientacao, p.local, p.reporter, p.cinegrafista, p.produtor, p.editoria],
+        titulo: p => p.titulo || '(sem título)',
+        subtitulo: p => [p.editoria, formatarDataBR(p.data_fato)].filter(Boolean).join(' · '),
+        destino: p => `pautas.html?abrir=${p.id}`
+      },
+      {
+        tipo: 'Sugestão', emoji: '📋', url: '/sugestoes',
+        campos: s => [s.titulo, s.resumo, s.local, s.enviado_por, s.editoria],
+        titulo: s => s.titulo || '(sem título)',
+        subtitulo: s => [s.editoria, s.enviado_por].filter(Boolean).join(' · '),
+        destino: s => `sugestoes.html?abrir=${s.id}`
+      },
+      {
+        tipo: 'Agendamento', emoji: '🗓', url: '/agenda',
+        campos: a => [a.programa_nome, a.local, a.equipe, a.observacao],
+        titulo: a => a.programa_nome || 'Agendamento',
+        subtitulo: a => [formatarDataBR(a.data), a.hora, a.local].filter(Boolean).join(' · '),
+        destino: a => `agenda.html?data=${a.data}`
+      },
+      {
+        tipo: 'Programa/Quadro', emoji: '🎬', url: '/agenda/programas',
+        campos: p => [p.nome, p.tipo],
+        titulo: p => p.nome,
+        subtitulo: p => p.tipo || '',
+        destino: () => `agenda.html?aba=programas`
+      },
+      {
+        tipo: 'Efeméride', emoji: '📅', url: '/calendario/eventos',
+        campos: e => [e.titulo, e.observacao],
+        titulo: e => e.titulo,
+        subtitulo: e => formatarDataBR(e.data),
+        destino: () => `calendario.html`
+      },
+      {
+        tipo: 'Espelho', emoji: '📽️', url: '/espelhos',
+        campos: e => [e.programa],
+        titulo: e => e.programa || 'Espelho',
+        subtitulo: e => formatarDataBR(e.data),
+        destino: e => `espelho.html?espelho_id=${e.id}`
+      }
+    ];
+
+    let indice = []; // { tipo, emoji, titulo, subtitulo, destino, textoBusca }
+
+    async function carregarIndice() {
+      const respostas = await Promise.all(RECURSOS_BUSCA.map(r => fetch(r.url).then(res => res.json())));
+      indice = [];
+      respostas.forEach((lista, i) => {
+        const recurso = RECURSOS_BUSCA[i];
+        lista.forEach(item => {
+          indice.push({
+            tipo: recurso.tipo,
+            emoji: recurso.emoji,
+            titulo: recurso.titulo(item),
+            subtitulo: recurso.subtitulo(item),
+            destino: recurso.destino(item),
+            textoBusca: normalizar(recurso.campos(item).filter(Boolean).join(' '))
+          });
+        });
+      });
+    }
+
+    function buscar(termo) {
+      const alvo = normalizar(termo.trim());
+      if (alvo.length < 2) return null;
+      return indice.filter(item => item.textoBusca.includes(alvo));
+    }
+
+    function agruparPorTipo(resultados) {
+      const ordemTipos = RECURSOS_BUSCA.map(r => r.tipo);
+      const grupos = {};
+      resultados.forEach(r => {
+        if (!grupos[r.tipo]) grupos[r.tipo] = [];
+        grupos[r.tipo].push(r);
+      });
+      return ordemTipos.filter(t => grupos[t]).map(t => ({ tipo: t, emoji: grupos[t][0].emoji, itens: grupos[t] }));
+    }
+
+    function renderResultados(termo) {
+      const area = document.getElementById('area-resultados');
+      const resultados = buscar(termo);
+
+      if (resultados === null) {
+        area.innerHTML = '<div class="estado-inicial">Digite ao menos 2 letras pra buscar em Pautas, Sugestões, Agenda, Programas, Efemérides e Espelhos.</div>';
+        return;
+      }
+
+      if (resultados.length === 0) {
+        area.innerHTML = '<div class="estado-vazio">Nenhum resultado pra "' + escaparHtml(termo.trim()) + '".</div>';
+        return;
+      }
+
+      const grupos = agruparPorTipo(resultados);
+
+      area.innerHTML =
+        `<div class="contador-resultados">${resultados.length} resultado${resultados.length === 1 ? '' : 's'} em ${grupos.length} tipo${grupos.length === 1 ? '' : 's'}</div>` +
+        grupos.map(g => `
+          <div class="grupo-resultado">
+            <h2>${g.emoji} ${g.tipo} <span class="contagem-grupo">(${g.itens.length})</span></h2>
+            <table class="tabela-simples">
+              <tbody>
+                ${g.itens.slice(0, LIMITE_POR_GRUPO).map((item, i) => `
+                  <tr data-destino="${escaparHtml(item.destino)}">
+                    <td>
+                      <div class="nome-resultado">${escaparHtml(item.titulo)}</div>
+                      ${item.subtitulo ? `<div class="sub-resultado">${escaparHtml(item.subtitulo)}</div>` : ''}
+                    </td>
+                    <td class="seta-resultado">Abrir →</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            ${g.itens.length > LIMITE_POR_GRUPO ? `<div class="aviso-mais">+${g.itens.length - LIMITE_POR_GRUPO} resultado(s) a mais — refine a busca pra ver todos.</div>` : ''}
+          </div>
+        `).join('');
+
+      area.querySelectorAll('tr[data-destino]').forEach(tr => {
+        tr.addEventListener('click', () => { window.location.href = tr.dataset.destino; });
+      });
+    }
+
+    let timeoutBusca = null;
+    document.getElementById('input-busca').addEventListener('input', (ev) => {
+      clearTimeout(timeoutBusca);
+      const termo = ev.target.value;
+      timeoutBusca = setTimeout(() => renderResultados(termo), 150);
+    });
+
+    (async function init() {
+      await carregarIndice();
+      const inicial = document.getElementById('input-busca').value;
+      if (inicial) renderResultados(inicial);
+    })();
+  </script>
+  </div>
+</body>
+</html>
