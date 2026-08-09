@@ -128,6 +128,7 @@
     <button id="aba-funil">🗂️ Funil de Sugestões</button>
     <button id="aba-pontualidade">⏱️ Pontualidade do Espelho</button>
     <button id="aba-cobertura">📂 Cobertura por Editoria</button>
+    <button id="aba-exclusoes">🗑️ Exclusões</button>
   </div>
 
   <!-- ═══════════ PRODUTIVIDADE ═══════════ -->
@@ -249,6 +250,32 @@
     </div>
   </div>
 
+  <!-- ═══════════ EXCLUSÕES ═══════════ -->
+  <div id="painel-exclusoes" style="display:none;">
+    <div class="filtros">
+      <div>
+        <label>Excluído — de</label>
+        <input type="date" id="exclusoes-data-de">
+      </div>
+      <div>
+        <label>até</label>
+        <input type="date" id="exclusoes-data-ate">
+      </div>
+      <div>
+        <label>Tipo</label>
+        <select id="exclusoes-tipo"><option value="">Todos</option></select>
+      </div>
+      <button class="btn-limpar" id="btn-limpar-exclusoes">Limpar filtros</button>
+    </div>
+
+    <div class="conteudo">
+      <div class="largura-maxima">
+        <div class="cartoes-resumo" id="cartoes-exclusoes"></div>
+        <div id="tabela-exclusoes">Carregando...</div>
+      </div>
+    </div>
+  </div>
+
   <script>
     function escaparHtml(texto) {
       return String(texto == null ? '' : texto)
@@ -272,9 +299,20 @@
       funil: { titulo: 'HORUS NEWSROOM — Funil de Sugestões', sub: 'Do envio à decisão: quantas sugestões avançam, quem envia, quanto tempo leva' },
       pontualidade: { titulo: 'HORUS NEWSROOM — Pontualidade do Espelho', sub: 'Quantas edições fecharam no tempo, estouraram ou sobrou buraco' },
       cobertura: { titulo: 'HORUS NEWSROOM — Cobertura por Editoria', sub: 'Quantas pautas cada editoria produziu, com recorte de período' },
+      exclusoes: { titulo: 'HORUS NEWSROOM — Exclusões', sub: 'O que está na Lixeira hoje, por tipo e por quando foi excluído' },
     };
 
-    const ABAS = ['produtividade', 'funil', 'pontualidade', 'cobertura'];
+    const ABAS = ['produtividade', 'funil', 'pontualidade', 'cobertura', 'exclusoes'];
+
+    // Lista oficial de editorias — a mesma usada nos dropdowns de Pautas e
+    // Sugestões (pautas.html, sugestoes.html) e no Calendário. Usada aqui
+    // pra garantir que TODAS apareçam no Funil e na Cobertura, mesmo com 0
+    // itens — antes só entravam as editorias que já tinham algo lançado.
+    const LISTA_EDITORIAS = [
+      'Arte e Cultura', 'Cidade', 'Ciência e Tecnologia', 'Comportamento e Sociedade',
+      'Direitos Humanos e Inclusão', 'Economia e Trabalho', 'Esporte e Lazer', 'Educação',
+      'Meio Ambiente', 'Política', 'Saúde', 'Segurança e Justiça', 'Especial', 'UFMA', 'Outra'
+    ];
     ABAS.forEach(aba => document.getElementById('aba-' + aba).addEventListener('click', () => mudarAba(aba)));
 
     function mudarAba(aba) {
@@ -463,12 +501,15 @@
 
     let sugestoesCache = [];
 
-    // Construída a partir dos dados reais, não de uma lista fixa — o texto
-    // livre em "Editoria" já divergiu do dropdown padrão em uso real
-    // (existem sugestões com "UFMA", "Cultura", "Acadêmico" fora da lista
-    // original), então um filtro fixo deixaria essas de fora silenciosamente.
+    // União da lista oficial (LISTA_EDITORIAS) com o que existir de fato nos
+    // dados — o texto livre em "Editoria" já divergiu do dropdown padrão em
+    // uso real (existem sugestões com "UFMA", "Cultura", "Acadêmico" fora da
+    // lista original), então um filtro só com a lista oficial deixaria essas
+    // de fora silenciosamente, e um filtro só com os dados escondia as
+    // editorias que ainda não tiveram nenhuma sugestão.
     function preencherFiltroEditoria() {
-      const editorias = [...new Set(sugestoesCache.map(s => (s.editoria || '').trim()).filter(Boolean))].sort();
+      const daBase = sugestoesCache.map(s => (s.editoria || '').trim()).filter(Boolean);
+      const editorias = [...new Set([...LISTA_EDITORIAS, ...daBase])];
       const select = document.getElementById('funil-editoria');
       select.innerHTML = '<option value="">Todas</option>' + editorias.map(e => `<option value="${escaparHtml(e)}">${escaparHtml(e)}</option>`).join('');
     }
@@ -565,8 +606,13 @@
       `;
     }
 
-    function agruparSugestoesPor(sugestoes, campo, valorPadrao) {
+    function agruparSugestoesPor(sugestoes, campo, valorPadrao, listaCompleta) {
       const grupos = {};
+      if (listaCompleta) {
+        listaCompleta.forEach(chave => {
+          grupos[chave] = { nome: chave, total: 0, aprovada: 0, arquivada: 0, decididas: 0, itens: [] };
+        });
+      }
       sugestoes.forEach(s => {
         const chave = (s[campo] || '').trim() || valorPadrao;
         if (!grupos[chave]) grupos[chave] = { nome: chave, total: 0, aprovada: 0, arquivada: 0, decididas: 0, itens: [] };
@@ -625,7 +671,7 @@
       renderAvisoFunil(filtradas);
       renderResumoFunil(filtradas);
       renderFunilVisual(filtradas);
-      renderTabelaAgrupada('tabela-editorias', '📂 Por Editoria', agruparSugestoesPor(filtradas, 'editoria', SEM_EDITORIA));
+      renderTabelaAgrupada('tabela-editorias', '📂 Por Editoria', agruparSugestoesPor(filtradas, 'editoria', SEM_EDITORIA, LISTA_EDITORIAS));
       renderTabelaAgrupada('tabela-remetentes', '✍️ Por Quem Enviou', agruparSugestoesPor(filtradas, 'enviado_por', SEM_REMETENTE));
     }
 
@@ -812,7 +858,8 @@
     }
 
     function preencherFiltroEditoriaCobertura() {
-      const editorias = [...new Set(pautasComEditoria().map(p => p.editoria).filter(e => e !== SEM_EDITORIA_PAUTA))].sort();
+      const daBase = pautasComEditoria().map(p => p.editoria).filter(e => e !== SEM_EDITORIA_PAUTA);
+      const editorias = [...new Set([...LISTA_EDITORIAS, ...daBase])];
       const select = document.getElementById('cobertura-editoria');
       select.innerHTML = '<option value="">Todas</option>' + editorias.map(e => `<option value="${escaparHtml(e)}">${escaparHtml(e)}</option>`).join('');
     }
@@ -860,8 +907,13 @@
       `;
     }
 
-    function agruparPautasPorEditoria(pautas) {
+    function agruparPautasPorEditoria(pautas, listaCompleta) {
       const grupos = {};
+      if (listaCompleta) {
+        listaCompleta.forEach(chave => {
+          grupos[chave] = { nome: chave, total: 0, porStatus: { em_producao: 0, em_gravacao: 0, em_edicao: 0, concluida: 0 }, itens: [] };
+        });
+      }
       pautas.forEach(p => {
         if (!grupos[p.editoria]) {
           grupos[p.editoria] = { nome: p.editoria, total: 0, porStatus: { em_producao: 0, em_gravacao: 0, em_edicao: 0, concluida: 0 }, itens: [] };
@@ -925,7 +977,7 @@
       const filtradas = coberturaFiltrada();
       renderAvisoCobertura(filtradas);
       renderResumoCobertura(filtradas);
-      renderTabelaCobertura(agruparPautasPorEditoria(filtradas));
+      renderTabelaCobertura(agruparPautasPorEditoria(filtradas, LISTA_EDITORIAS));
     }
 
     document.getElementById('cobertura-data-de').addEventListener('change', atualizarCobertura);
@@ -938,15 +990,125 @@
       atualizarCobertura();
     });
 
+    // ═══════════════════════ EXCLUSÕES ═══════════════════════
+    // Reaproveita os endpoints /lixeira criados pra tela lixeira.html — este
+    // relatório é só leitura/analítico (por tipo, por período); restaurar e
+    // excluir definitivamente continuam sendo feitos na própria Lixeira.
+    const RECURSOS_EXCLUSAO = [
+      { tipo: 'Pauta', emoji: '📝', url: '/pautas', titulo: p => p.titulo || '(sem título)' },
+      { tipo: 'Sugestão', emoji: '📋', url: '/sugestoes', titulo: s => s.titulo || '(sem título)' },
+      { tipo: 'Agendamento', emoji: '🗓', url: '/agenda', titulo: a => (a.programa_nome || 'Agendamento') + (a.data ? ' — ' + formatarData(a.data) : '') },
+      { tipo: 'Programa/Quadro', emoji: '🎬', url: '/agenda/programas', titulo: p => p.nome },
+      { tipo: 'Membro de Equipe', emoji: '👥', url: '/agenda/equipe', titulo: m => m.nome },
+      { tipo: 'Efeméride', emoji: '📅', url: '/calendario/eventos', titulo: e => e.titulo },
+      { tipo: 'Turno', emoji: '⏱️', url: '/escala/turnos', titulo: t => `${t.nome} (${t.hora_inicio}–${t.hora_fim})` }
+    ];
+
+    let exclusoesCache = [];
+
+    async function carregarExclusoes() {
+      const respostas = await Promise.all(RECURSOS_EXCLUSAO.map(r => fetch(r.url + '/lixeira').then(res => res.json())));
+      exclusoesCache = [];
+      respostas.forEach((lista, i) => {
+        const recurso = RECURSOS_EXCLUSAO[i];
+        lista.forEach(item => {
+          exclusoesCache.push({ tipo: recurso.tipo, emoji: recurso.emoji, titulo: recurso.titulo(item), excluido_em: item.excluido_em });
+        });
+      });
+    }
+
+    function preencherFiltroTipoExclusao() {
+      const select = document.getElementById('exclusoes-tipo');
+      select.innerHTML = '<option value="">Todos</option>' +
+        RECURSOS_EXCLUSAO.map(r => `<option value="${r.tipo}">${r.emoji} ${r.tipo}</option>`).join('');
+    }
+
+    function exclusoesFiltradas() {
+      const dataDe = document.getElementById('exclusoes-data-de').value;
+      const dataAte = document.getElementById('exclusoes-data-ate').value;
+      const tipo = document.getElementById('exclusoes-tipo').value;
+
+      return exclusoesCache.filter(e => {
+        const dataExclusao = (e.excluido_em || '').slice(0, 10);
+        if (dataDe && dataExclusao < dataDe) return false;
+        if (dataAte && dataExclusao > dataAte) return false;
+        if (tipo && e.tipo !== tipo) return false;
+        return true;
+      });
+    }
+
+    function renderResumoExclusoes(itens) {
+      const porTipo = {};
+      itens.forEach(e => { porTipo[e.tipo] = (porTipo[e.tipo] || 0) + 1; });
+      const tipoMaisExcluido = Object.entries(porTipo).sort((a, b) => b[1] - a[1])[0];
+
+      document.getElementById('cartoes-exclusoes').innerHTML = `
+        <div class="cartao-resumo">
+          <div class="valor">${itens.length}</div>
+          <div class="rotulo">Itens na lixeira</div>
+        </div>
+        <div class="cartao-resumo alerta">
+          <div class="valor">${tipoMaisExcluido ? tipoMaisExcluido[1] : 0}</div>
+          <div class="rotulo">${tipoMaisExcluido ? tipoMaisExcluido[0] : '—'} (tipo mais excluído)</div>
+        </div>
+      `;
+    }
+
+    function renderTabelaExclusoes(itens) {
+      const area = document.getElementById('tabela-exclusoes');
+      if (itens.length === 0) {
+        area.innerHTML = '<div class="estado-vazio">Nenhum item na lixeira para esse período/filtro.<br><a href="lixeira.html" style="color:#336699;">Ver Lixeira →</a></div>';
+        return;
+      }
+
+      const ordenados = itens.slice().sort((a, b) => (b.excluido_em || '').localeCompare(a.excluido_em || ''));
+
+      area.innerHTML = `
+        <table class="tabela-relatorio">
+          <thead><tr><th>Tipo</th><th>Item</th><th style="width:170px;">Excluído em</th></tr></thead>
+          <tbody>
+            ${ordenados.map(e => `
+              <tr>
+                <td><span class="status-mini" style="background:#5b6472;">${e.emoji} ${escaparHtml(e.tipo)}</span></td>
+                <td>${escaparHtml(e.titulo)}</td>
+                <td>${formatarData(e.excluido_em)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div style="text-align:right; margin-top:10px;">
+          <a href="lixeira.html" style="color:#336699; font-size:13px;">Restaurar ou excluir definitivamente na Lixeira →</a>
+        </div>
+      `;
+    }
+
+    function atualizarExclusoes() {
+      const filtrados = exclusoesFiltradas();
+      renderResumoExclusoes(filtrados);
+      renderTabelaExclusoes(filtrados);
+    }
+
+    document.getElementById('exclusoes-data-de').addEventListener('change', atualizarExclusoes);
+    document.getElementById('exclusoes-data-ate').addEventListener('change', atualizarExclusoes);
+    document.getElementById('exclusoes-tipo').addEventListener('change', atualizarExclusoes);
+    document.getElementById('btn-limpar-exclusoes').addEventListener('click', () => {
+      document.getElementById('exclusoes-data-de').value = '';
+      document.getElementById('exclusoes-data-ate').value = '';
+      document.getElementById('exclusoes-tipo').value = '';
+      atualizarExclusoes();
+    });
+
     (async function init() {
-      await Promise.all([carregarProgramas(), carregarPautas(), carregarSugestoes(), carregarEspelhos()]);
+      await Promise.all([carregarProgramas(), carregarPautas(), carregarSugestoes(), carregarEspelhos(), carregarExclusoes()]);
       preencherFiltroEditoria();
       preencherFiltroProgramaEspelho();
       preencherFiltroEditoriaCobertura();
+      preencherFiltroTipoExclusao();
       atualizarProdutividade();
       atualizarFunil();
       atualizarPontualidade();
       atualizarCobertura();
+      atualizarExclusoes();
     })();
   </script>
   </div>
