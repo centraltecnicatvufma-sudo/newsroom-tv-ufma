@@ -213,9 +213,9 @@
 
     carregarAlertaBreakingNews();
 
-    const ORDEM_STATUS = ['em_producao', 'em_gravacao', 'em_edicao', 'concluida'];
-    const ROTULOS_STATUS = { em_producao: 'Em Produção', em_gravacao: 'Em Gravação', em_edicao: 'Em Edição', concluida: 'Concluída' };
-    const CORES_STATUS = { em_producao: '#C98A1F', em_gravacao: '#336699', em_edicao: '#6b3fa0', concluida: '#2e8b57' };
+    const ORDEM_STATUS = ['em_producao', 'em_gravacao', 'em_edicao', 'aguardando_revisao', 'concluida'];
+    const ROTULOS_STATUS = { em_producao: 'Em Produção', em_gravacao: 'Em Gravação', em_edicao: 'Em Edição', aguardando_revisao: 'Aguardando Revisão', concluida: 'Concluída' };
+    const CORES_STATUS = { em_producao: '#C98A1F', em_gravacao: '#336699', em_edicao: '#6b3fa0', aguardando_revisao: '#B85C38', concluida: '#2e8b57' };
     const LIMIAR_ACEITAVEL_MIN = 30; // minutos após o deadline que ainda contam como "atraso aceitável" — mesmo limiar do cronômetro de deadline (Pautas/Mapa de Produções)
     const PALETA_LINHAS = ['#336699', '#8D0333', '#2e8b57', '#C98A1F', '#6b3fa0', '#075B91', '#5b6472', '#B85C38'];
 

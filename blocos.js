@@ -4,10 +4,13 @@ const db = require('./banco');
 
 // Fluxo de status do espelho, na ordem em que a redação percorre — mesmo
 // vocabulário de status da Pauta (em_producao/em_gravacao/em_edicao/
-// concluida). Sugestão é a única etapa do pipeline com classificação
-// própria; a partir da Pauta, tudo (inclusive o Bloco) usa os mesmos 4
-// status, sem tradução entre vocabulários diferentes.
-const ORDEM_STATUS = ['em_producao', 'em_gravacao', 'em_edicao', 'concluida'];
+// aguardando_revisao/concluida). Sugestão é a única etapa do pipeline com
+// classificação própria; a partir da Pauta, tudo (inclusive o Bloco) usa
+// os mesmos status, sem tradução entre vocabulários diferentes.
+// "aguardando_revisao" só é selecionável a partir da tela Edição de
+// Vídeo (ver public/edicao-video.html) — nenhuma outra tela deixa
+// escolher esse status.
+const ORDEM_STATUS = ['em_producao', 'em_gravacao', 'em_edicao', 'aguardando_revisao', 'concluida'];
 const STATUS_INICIAL = 'em_producao';
 
 // Entidades HTML que aparecem em texto colado de sites, Word ou e-mail.

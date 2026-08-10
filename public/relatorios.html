@@ -58,6 +58,7 @@
     .status-mini-em_producao, .status-mini-nova { background: #C98A1F; }
     .status-mini-em_gravacao, .status-mini-em_analise { background: #075B91; }
     .status-mini-em_edicao { background: #6b3fa0; }
+    .status-mini-aguardando_revisao { background: #B85C38; }
     .status-mini-concluida, .status-mini-aprovada { background: #2e8b57; }
     .status-mini-arquivada { background: #5A021F; }
 
@@ -386,9 +387,10 @@
     // ═══════════════════════ PRODUTIVIDADE ═══════════════════════
     const labelStatusPauta = {
       em_producao: 'Em Produção', em_gravacao: 'Em Gravação',
-      em_edicao: 'Gravado / Em Edição', concluida: 'Concluída'
+      em_edicao: 'Gravado / Em Edição', aguardando_revisao: 'Aguardando Revisão',
+      concluida: 'Concluída'
     };
-    const ordemStatusPauta = ['em_producao', 'em_gravacao', 'em_edicao', 'concluida'];
+    const ordemStatusPauta = ['em_producao', 'em_gravacao', 'em_edicao', 'aguardando_revisao', 'concluida'];
     const SEM_RESPONSAVEL = '— (sem responsável definido) —';
 
     let pautasCache = [];
@@ -424,7 +426,7 @@
       pautas.forEach(p => {
         const nome = (p[campoPapel] || '').trim() || SEM_RESPONSAVEL;
         if (!grupos[nome]) {
-          grupos[nome] = { nome, total: 0, porStatus: { em_producao: 0, em_gravacao: 0, em_edicao: 0, concluida: 0 }, itens: [] };
+          grupos[nome] = { nome, total: 0, porStatus: { em_producao: 0, em_gravacao: 0, em_edicao: 0, aguardando_revisao: 0, concluida: 0 }, itens: [] };
         }
         grupos[nome].total++;
         const status = ordemStatusPauta.includes(p.status) ? p.status : 'em_producao';
@@ -970,12 +972,12 @@
       const grupos = {};
       if (listaCompleta) {
         listaCompleta.forEach(chave => {
-          grupos[chave] = { nome: chave, total: 0, porStatus: { em_producao: 0, em_gravacao: 0, em_edicao: 0, concluida: 0 }, itens: [] };
+          grupos[chave] = { nome: chave, total: 0, porStatus: { em_producao: 0, em_gravacao: 0, em_edicao: 0, aguardando_revisao: 0, concluida: 0 }, itens: [] };
         });
       }
       pautas.forEach(p => {
         if (!grupos[p.editoria]) {
-          grupos[p.editoria] = { nome: p.editoria, total: 0, porStatus: { em_producao: 0, em_gravacao: 0, em_edicao: 0, concluida: 0 }, itens: [] };
+          grupos[p.editoria] = { nome: p.editoria, total: 0, porStatus: { em_producao: 0, em_gravacao: 0, em_edicao: 0, aguardando_revisao: 0, concluida: 0 }, itens: [] };
         }
         grupos[p.editoria].total++;
         const status = ordemStatusPauta.includes(p.status) ? p.status : 'em_producao';

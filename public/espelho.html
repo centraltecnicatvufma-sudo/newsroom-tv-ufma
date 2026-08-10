@@ -53,6 +53,7 @@
     .status-em_producao { background: #C98A1F; }
     .status-em_gravacao { background: #336699; }
     .status-em_edicao { background: #6b3fa0; }
+    .status-aguardando_revisao { background: #B85C38; }
     .status-concluida { background: #2e8b57; }
 
     table.rundown tbody tr { cursor: grab; }
@@ -270,12 +271,13 @@
 
     // Mesmo vocabulário de status da Pauta — Sugestão é a única etapa do
     // pipeline com classificação própria; a partir da Pauta, Bloco segue
-    // os mesmos 4 status, herdados automaticamente (ver cascata em
+    // os mesmos status, herdados automaticamente (ver cascata em
     // pautas.js) — aqui é só exibição, sem edição (ver ligarAcoesDaTabela).
     const labelStatus = {
       em_producao: 'Em Produção',
       em_gravacao: 'Em Gravação',
       em_edicao: 'Em Edição',
+      aguardando_revisao: 'Aguardando Revisão',
       concluida: 'Concluída'
     };
 
