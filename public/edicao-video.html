@@ -154,14 +154,18 @@
       await carregarAlertaBreakingNews();
     });
 
-    (function conectarBreakingNews() {
+    (function conectarTempoReal() {
       const protocolo = location.protocol === 'https:' ? 'wss:' : 'ws:';
       const ws = new WebSocket(`${protocolo}//${location.host}/ws/tempo-real`);
-      ws.addEventListener('message', (ev) => {
+      ws.addEventListener('message', async (ev) => {
         const msg = JSON.parse(ev.data);
         if (msg.tipo === 'alerta') carregarAlertaBreakingNews();
+        // Qualquer alteração de pauta (Cabeça, itens da Lauda, status, Tempo
+        // do Vídeo...) já dispara esse sinal (ver avisarMudanca em
+        // pautas.js) — recarrega sozinho, sem precisar de F5
+        if (msg.tipo === 'pautas') { await carregarPautas(); renderTabela(); }
       });
-      ws.addEventListener('close', () => setTimeout(conectarBreakingNews, 3000));
+      ws.addEventListener('close', () => setTimeout(conectarTempoReal, 3000));
       ws.addEventListener('error', () => ws.close());
     })();
 
@@ -216,14 +220,16 @@
       programasCache = await resp.json();
     }
 
-    // Só pautas com bloco de vídeo de verdade (Reportagem/Standup/Nota
-    // Coberta/VT/Escalada/Teaser — ver blocos_video_qtd em pautas.js) —
-    // Nota Seca e Vivo, por exemplo, nunca precisam de Tempo do Vídeo,
-    // então não fazem sentido aparecer aqui
+    // Vínculo é ter conteúdo pra editar/cronometrar — item de matéria
+    // (materia_itens_qtd) OU Cabeça com duração (cabeca_duracao_segundos,
+    // ver materia.html) — não estar relacionada num Espelho. Pauta cria,
+    // Matéria/Edição de Vídeo/Espelho enxergam tudo a partir daí. A soma
+    // de duracao_estimada_segundos (Cabeça + VT) continua igual, calculada
+    // direto em pautas.js — só o critério de QUEM aparece na lista mudou.
     async function carregarPautas() {
       const resp = await fetch('/pautas');
       const todas = await resp.json();
-      pautasCache = todas.filter(p => p.blocos_video_qtd > 0);
+      pautasCache = todas.filter(p => p.materia_itens_qtd > 0 || p.cabeca_duracao_segundos > 0);
     }
 
     function pautasFiltradas() {

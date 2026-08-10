@@ -6,26 +6,22 @@ function buscarFontes(pautaId) {
   return db.prepare('SELECT * FROM pauta_fontes WHERE pauta_id = ?').all(pautaId);
 }
 
-// Tipos de bloco que representam vídeo editado de verdade — os únicos que
-// exigem Tempo do Vídeo preenchido antes de "Concluída" (ver validarTempoVideo
-// mais abaixo). Nota Seca e Vivo ficam de fora de propósito: não têm VT
-// editado pra cronometrar. Lista fixa (sem interpolação de dado externo),
-// por isso vai direto na string SQL sem parametrizar.
-const TIPOS_BLOCO_VIDEO_SQL = "'reportagem','standup','nota_coberta','vt','escalada','teaser'";
-
 // SELECT base reaproveitado por GET / e GET /:id — acrescenta dois campos
 // calculados que nenhuma tabela guarda direto:
 // - duracao_estimada_segundos: Cabeça (pautas.cabeca_duracao_segundos) +
 //   soma de todos os itens do Corpo do VT (materia_itens.duracao_segundos)
-// - blocos_video_qtd: quantos blocos de vídeo (ver TIPOS_BLOCO_VIDEO_SQL)
-//   essa pauta tem em algum Espelho — usado pra saber se Tempo do Vídeo é
-//   obrigatório e pra filtrar a tela de Edição de Vídeo
+// - materia_itens_qtd: quantos itens a Lauda dessa pauta tem (OFF/SONORA/
+//   PASSAGEM/ARTE/SOBE_SOM, com texto ou não) — critério de "tem vídeo pra
+//   editar" pra tudo que vem depois da Pauta (Edição de Vídeo, obrigar
+//   Tempo do Vídeo antes de Concluída). Decisão explícita: o vínculo NÃO é
+//   estar num Espelho — é ter matéria escrita. Pauta cria; Matéria, Edição
+//   de Vídeo e Espelho enxergam tudo a partir daí.
 const SELECT_PAUTAS = `
   SELECT pautas.*,
     (COALESCE(pautas.cabeca_duracao_segundos, 0) + COALESCE((
       SELECT SUM(duracao_segundos) FROM materia_itens WHERE materia_itens.pauta_id = pautas.id
     ), 0)) AS duracao_estimada_segundos,
-    (SELECT COUNT(*) FROM blocos WHERE blocos.pauta_id = pautas.id AND blocos.tipo IN (${TIPOS_BLOCO_VIDEO_SQL})) AS blocos_video_qtd
+    (SELECT COUNT(*) FROM materia_itens WHERE materia_itens.pauta_id = pautas.id) AS materia_itens_qtd
   FROM pautas
 `;
 
@@ -177,17 +173,18 @@ router.patch('/:id', (req, res) => {
   });
 
   // Tempo do Vídeo (real, pós-edição) é obrigatório antes de virar
-  // Concluída — mas só pra pautas com bloco de vídeo de verdade (Nota Seca
-  // e Vivo, por exemplo, nunca vão ter isso preenchido e não deveriam
-  // travar aqui). Verifica direto no banco, não confia em nada vindo do
-  // front, porque a validação real tem que valer pra qualquer caminho que
-  // chegue nesse PATCH (Kanban de Reportagens, formulário de Pautas, etc.)
+  // Concluída — mas só pra pautas que têm matéria escrita de verdade
+  // (Nota Seca, por exemplo, se resume à Cabeça e nunca tem item de
+  // matéria, então não deveria travar aqui). Verifica direto no banco,
+  // não confia em nada vindo do front, porque a validação real tem que
+  // valer pra qualquer caminho que chegue nesse PATCH (Kanban de
+  // Reportagens, Edição de Vídeo, formulário de Pautas, etc.)
   if (atualizado.status === 'concluida' && !atualizado.tempo_video_segundos) {
-    const temBlocoVideo = db.prepare(
-      `SELECT COUNT(*) AS c FROM blocos WHERE pauta_id = ? AND tipo IN (${TIPOS_BLOCO_VIDEO_SQL})`
+    const temItensMateria = db.prepare(
+      'SELECT COUNT(*) AS c FROM materia_itens WHERE pauta_id = ?'
     ).get(id).c > 0;
 
-    if (temBlocoVideo) {
+    if (temItensMateria) {
       return res.status(400).json({
         erro: 'Tempo do Vídeo é obrigatório antes de marcar como Concluída',
         campo: 'tempo_video_segundos'
