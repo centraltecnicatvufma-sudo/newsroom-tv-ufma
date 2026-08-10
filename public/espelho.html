@@ -250,14 +250,21 @@
       await carregarAlertaBreakingNews();
     });
 
-    (function conectarBreakingNews() {
+    (function conectarTempoReal() {
       const protocolo = location.protocol === 'https:' ? 'wss:' : 'ws:';
       const ws = new WebSocket(`${protocolo}//${location.host}/ws/tempo-real`);
-      ws.addEventListener('message', (ev) => {
+      ws.addEventListener('message', async (ev) => {
         const msg = JSON.parse(ev.data);
         if (msg.tipo === 'alerta') carregarAlertaBreakingNews();
+        // Mudança de status/Tempo do Vídeo em Reportagens ou Edição de
+        // Vídeo cascateia pro Bloco (ver pautas.js) e muda o Tempo
+        // exibido aqui (duracaoEfetivaBloco) — recarrega sozinho, sem F5
+        if (msg.tipo === 'pautas') {
+          await carregarPautasParaModal();
+          await carregarEspelho();
+        }
       });
-      ws.addEventListener('close', () => setTimeout(conectarBreakingNews, 3000));
+      ws.addEventListener('close', () => setTimeout(conectarTempoReal, 3000));
       ws.addEventListener('error', () => ws.close());
     })();
 

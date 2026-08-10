@@ -99,7 +99,7 @@
 
   <div class="topo">
     <h1>HORUS NEWSROOM — Edição de Vídeo</h1>
-    <div class="sub">Informe o tempo real do vídeo e clique no status para avançar: Em Edição → Aguardando Revisão → Concluída.</div>
+    <div class="sub">Informe o tempo real do vídeo — salvar aqui já marca a pauta como Concluída. Clique no status pra alternar entre Aguardando Revisão e Concluída.</div>
   </div>
 
   <div class="faixa-breaking" id="faixa-breaking">
@@ -179,11 +179,11 @@
     };
 
     // Esta tela é a ÚNICA que deixa escolher "Aguardando Revisão" — o
-    // clique no badge cicla só a etapa final (Em Edição → Aguardando
-    // Revisão → Concluída); Em Produção/Em Gravação não são controladas
-    // aqui (isso é papel de Reportagens), então o badge fica só
-    // informativo nesses dois casos.
-    const CICLO_STATUS_BADGE = ['em_edicao', 'aguardando_revisao', 'concluida'];
+    // clique no badge alterna só entre Aguardando Revisão e Concluída.
+    // Em Produção/Em Gravação/Em Edição não são controlados aqui (isso é
+    // papel de Reportagens), então o badge fica só informativo nesses
+    // casos — clicável só quando já está num desses dois status.
+    const CICLO_STATUS_BADGE = ['aguardando_revisao', 'concluida'];
 
     let pautasCache = [];
     let programasCache = [];
@@ -289,7 +289,7 @@
                   <div class="linha-tempo-video">
                     <input type="text" class="campo-tempo-video" data-id="${p.id}" placeholder="mm:ss"
                       value="${p.tempo_video_segundos ? formatarMMSS(p.tempo_video_segundos) : ''}">
-                    <button class="btn-salvar-tempo" data-id="${p.id}" title="Salva o tempo do vídeo">💾 Salvar</button>
+                    <button class="btn-salvar-tempo" data-id="${p.id}" title="Salva o tempo e marca a pauta como Concluída">✅ Salvar e Concluir</button>
                   </div>
                 </td>
                 <td><button class="btn-lauda-video" data-id="${p.id}">📝 Lauda</button></td>
@@ -316,14 +316,14 @@
     function statusBadgeHtml(p) {
       const clicavel = CICLO_STATUS_BADGE.includes(p.status);
       return `<span class="status-badge status-${p.status}${clicavel ? ' clicavel' : ''}"
-        ${clicavel ? `data-id="${p.id}" title="Clique para avançar o status"` : ''}>${rotulosStatus[p.status] || p.status}</span>`;
+        ${clicavel ? `data-id="${p.id}" title="Clique para alternar entre Aguardando Revisão e Concluída"` : ''}>${rotulosStatus[p.status] || p.status}</span>`;
     }
 
-    // Avança um passo no ciclo Em Edição → Aguardando Revisão → Concluída
-    // (e volta pro início) — é a ÚNICA forma de marcar Aguardando Revisão
-    // no sistema inteiro. Concluída continua exigindo Tempo do Vídeo
-    // preenchido (validação já existe em pautas.js); se faltar, o backend
-    // recusa e o alert abaixo avisa, sem sujeira de lógica duplicada aqui.
+    // Alterna entre Aguardando Revisão e Concluída — é a ÚNICA forma de
+    // marcar Aguardando Revisão no sistema inteiro. Concluída continua
+    // exigindo Tempo do Vídeo preenchido (validação já existe em
+    // pautas.js); se faltar, o backend recusa e o alert abaixo avisa,
+    // sem sujeira de lógica duplicada aqui.
     async function avancarStatusClicado(id) {
       const pauta = pautasCache.find(p => p.id === Number(id));
       if (!pauta) return;
@@ -352,10 +352,14 @@
       const segundos = interpretarMMSS(campo.value);
       if (segundos === null) { alert('Digite o tempo no formato mm:ss (ex: 02:30).'); return; }
 
+      // Salvar o Tempo do Vídeo aqui SEMPRE marca a pauta como Concluída,
+      // não importa em qual status ela estava antes (Em Gravação, Em
+      // Edição, Aguardando Revisão...) — é o sinal final de que o vídeo
+      // está pronto, revisado e com o tempo confirmado.
       const resp = await fetch('/pautas/' + id, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tempo_video_segundos: segundos })
+        body: JSON.stringify({ tempo_video_segundos: segundos, status: 'concluida' })
       });
 
       if (!resp.ok) {
