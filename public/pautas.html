@@ -418,6 +418,16 @@
     }
     setInterval(atualizarContadoresDeadline, 30000);
 
+    // Ordem de prioridade: data do fato mais recente primeiro; empatando
+    // (mesma data, ou nenhuma das duas tem data), ordem alfabética pelo
+    // Título. Mesma regra em Pautas, Reportagens e Edição de Vídeo —
+    // Sugestões de Pauta fica de fora de propósito (só ordem de cadastro).
+    function compararPautas(a, b) {
+      const porData = (b.data_fato || '').localeCompare(a.data_fato || '');
+      if (porData !== 0) return porData;
+      return (a.titulo || '').localeCompare(b.titulo || '', 'pt-BR', { sensitivity: 'base' });
+    }
+
     async function carregarPautas() {
       const conteudo = document.getElementById('conteudo');
       conteudo.innerHTML = '<p>Carregando...</p>';
@@ -435,6 +445,7 @@
 
       const resposta = await fetch('/pautas?' + params.toString());
       pautasCache = await resposta.json();
+      pautasCache.sort(compararPautas);
 
       if (pautasCache.length === 0) {
         conteudo.innerHTML = '<p style="text-align:center; color:#999;">Nenhuma pauta encontrada.</p>';

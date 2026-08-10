@@ -304,6 +304,15 @@
       pautasCache = await resp.json();
     }
 
+    // Ordem de prioridade: data do fato mais recente primeiro; empatando,
+    // ordem alfabética pelo Título. Mesma regra em Pautas, Reportagens e
+    // Edição de Vídeo.
+    function compararPautas(a, b) {
+      const porData = (b.data_fato || '').localeCompare(a.data_fato || '');
+      if (porData !== 0) return porData;
+      return (a.titulo || '').localeCompare(b.titulo || '', 'pt-BR', { sensitivity: 'base' });
+    }
+
     function pautasFiltradas() {
       const dataIni = document.getElementById('filtro-data-inicial').value;
       const dataFim = document.getElementById('filtro-data-final').value;
@@ -318,7 +327,7 @@
           if (busca && !(p.titulo || '').toLowerCase().includes(busca)) return false;
           return true;
         })
-        .sort((a, b) => (b.data_fato || '').localeCompare(a.data_fato || ''));
+        .sort(compararPautas);
     }
 
     function abrirLauda(p) {

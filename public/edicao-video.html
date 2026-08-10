@@ -232,6 +232,16 @@
       pautasCache = todas.filter(p => p.materia_itens_qtd > 0 || p.cabeca_duracao_segundos > 0);
     }
 
+    // Ordem de prioridade: data do fato mais recente primeiro; empatando,
+    // ordem alfabética pelo Título. Mesma regra em Pautas, Reportagens e
+    // Edição de Vídeo — quem está "Pendente" continua destacado na linha
+    // (ver linha-pendente), só não vem mais agrupado no topo à parte.
+    function compararPautas(a, b) {
+      const porData = (b.data_fato || '').localeCompare(a.data_fato || '');
+      if (porData !== 0) return porData;
+      return (a.titulo || '').localeCompare(b.titulo || '', 'pt-BR', { sensitivity: 'base' });
+    }
+
     function pautasFiltradas() {
       const status = document.getElementById('filtro-status').value;
       const busca = document.getElementById('filtro-busca').value.trim().toLowerCase();
@@ -242,13 +252,7 @@
           if (busca && !(p.titulo || '').toLowerCase().includes(busca)) return false;
           return true;
         })
-        .sort((a, b) => {
-          // Pendentes (sem tempo do vídeo) primeiro, depois mais recentes
-          const pendenteA = !a.tempo_video_segundos ? 0 : 1;
-          const pendenteB = !b.tempo_video_segundos ? 0 : 1;
-          if (pendenteA !== pendenteB) return pendenteA - pendenteB;
-          return (b.data_fato || '').localeCompare(a.data_fato || '');
-        });
+        .sort(compararPautas);
     }
 
     function renderTabela() {
