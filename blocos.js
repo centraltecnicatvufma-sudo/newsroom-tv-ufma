@@ -2,9 +2,13 @@ const express = require('express');
 const router = express.Router();
 const db = require('./banco');
 
-// Fluxo de status do espelho, na ordem em que a redação percorre
-const ORDEM_STATUS = ['produzindo_vt', 'edicao', 'revisao', 'pronto'];
-const STATUS_INICIAL = 'produzindo_vt';
+// Fluxo de status do espelho, na ordem em que a redação percorre — mesmo
+// vocabulário de status da Pauta (em_producao/em_gravacao/em_edicao/
+// concluida). Sugestão é a única etapa do pipeline com classificação
+// própria; a partir da Pauta, tudo (inclusive o Bloco) usa os mesmos 4
+// status, sem tradução entre vocabulários diferentes.
+const ORDEM_STATUS = ['em_producao', 'em_gravacao', 'em_edicao', 'concluida'];
+const STATUS_INICIAL = 'em_producao';
 
 // Entidades HTML que aparecem em texto colado de sites, Word ou e-mail.
 // Sem isso o teleprompter mostraria "cabe&ccedil;a" no ar.
@@ -253,14 +257,17 @@ router.patch('/:id/status', (req, res) => {
     return res.status(400).json({ erro: "Status inválido" });
   }
 
-  // Regra de permissão: editor só pode mover para "aguardando revisão"
-  if (perfil === 'editor' && novo_status !== 'revisao') {
-    return res.status(403).json({ erro: "Editor só pode mudar o status para 'aguardando revisão'" });
+  // Regra de permissão: editor só pode mover pra "Em Edição" — marcar como
+  // Concluída fica pra quem tem visão do todo (chefe de redação/produtor),
+  // até porque isso já esbarra na obrigatoriedade do Tempo do Vídeo (ver
+  // pautas.js)
+  if (perfil === 'editor' && novo_status !== 'em_edicao') {
+    return res.status(403).json({ erro: "Editor só pode mudar o status para 'Em Edição'" });
   }
 
   // Ao entrar em edição, registra quem pegou o material
   let editorAtual = bloco.editor_atual;
-  if (novo_status === 'edicao' && !editorAtual) {
+  if (novo_status === 'em_edicao' && !editorAtual) {
     editorAtual = req.body.usuario || 'Editor não informado';
   }
 

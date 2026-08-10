@@ -36,6 +36,21 @@ try { db.exec(`ALTER TABLE pautas ADD COLUMN editor_imagens TEXT`); } catch (e) 
 try { db.exec(`ALTER TABLE pautas ADD COLUMN cabeca_texto TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE pautas ADD COLUMN texto_web TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE pautas ADD COLUMN editoria TEXT`); } catch (e) {}
+
+// Duração da Cabeça do Apresentador — mesmo padrão automático/manual que
+// cada item do Corpo do VT já tem (materia_itens.duracao_segundos/
+// duracao_automatica), só que guardado direto na pauta porque a Cabeça não
+// é um materia_itens, é campo único (pautas.cabeca_texto). Somada ao total
+// do Corpo do VT, forma o tempo estimado da matéria (ver pautas.js).
+try { db.exec(`ALTER TABLE pautas ADD COLUMN cabeca_duracao_segundos INTEGER DEFAULT 0`); } catch (e) {}
+try { db.exec(`ALTER TABLE pautas ADD COLUMN cabeca_duracao_automatica INTEGER DEFAULT 1`); } catch (e) {}
+
+// Tempo do Vídeo — duração REAL, cronometrada depois de editado e revisado
+// (diferente de duracao_estimada_segundos, que é só a estimativa de leitura
+// do texto). Preenchido na tela Edição de Vídeo; obrigatório antes de uma
+// pauta com bloco de vídeo (Reportagem/Standup/Nota Coberta/VT/Escalada/
+// Teaser) virar "Concluída" (ver validação em pautas.js).
+try { db.exec(`ALTER TABLE pautas ADD COLUMN tempo_video_segundos INTEGER`); } catch (e) {}
 // "YYYY-MM-DDTHH:MM" (mesmo formato de <input type="datetime-local">) — hora-limite
 // interna de fechamento, diferente de data_fato/hora_fato (quando o FATO acontece)
 try { db.exec(`ALTER TABLE pautas ADD COLUMN deadline TEXT`); } catch (e) {}
@@ -131,6 +146,16 @@ db.exec(`
   UPDATE blocos SET status = 'produzindo_vt'
   WHERE status IS NULL OR status NOT IN ('produzindo_vt', 'edicao', 'revisao', 'pronto')
 `);
+
+// Migração: o status do bloco passa a usar o MESMO vocabulário de status
+// da Pauta (em_producao/em_gravacao/em_edicao/concluida) — Sugestão é a
+// única etapa do fluxo com classificação própria; a partir da Pauta, tudo
+// segue os mesmos 4 status (decisão explícita, pra não ter duas
+// classificações diferentes convivendo no mesmo pipeline). "revisao" não
+// tem equivalente do lado da Pauta — dobra pra "em_edicao".
+db.exec(`UPDATE blocos SET status = 'em_producao' WHERE status = 'produzindo_vt'`);
+db.exec(`UPDATE blocos SET status = 'em_edicao' WHERE status IN ('edicao', 'revisao')`);
+db.exec(`UPDATE blocos SET status = 'concluida' WHERE status = 'pronto'`);
 
 // Item sem bloco definido pertence ao Bloco 1
 db.exec(`UPDATE blocos SET bloco = 1 WHERE bloco IS NULL OR bloco < 1`);

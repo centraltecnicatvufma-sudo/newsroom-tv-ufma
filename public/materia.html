@@ -213,6 +213,7 @@
     <a href="pautas.html">📝 Pautas</a>
     <a href="mapa-producao.html">🗺 Mapa de Produções</a>
     <a href="reportagens.html">🎬 Reportagens</a>
+    <a href="edicao-video.html">🎞️ Edição de Vídeo</a>
     <a href="espelhos.html">📽️ Espelhos</a>
     <a href="busca.html">🔍 Busca Geral</a>
     <a href="calendario.html">📅 Calendário</a>
@@ -246,6 +247,14 @@
   <div class="conteudo">
     <div class="bloco" id="bloco-cabeca">
       <h2>🎤 Cabeça do Apresentador (vai para o Teleprompter) <button id="btn-ouvir-cabeca" style="font-size:12px; padding:4px 10px; border-radius:6px; border:1px solid #ddd; background:#fafafa; cursor:pointer; margin-left:8px;">🗣️ Ouvir</button></h2>
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+        <label class="toggle-auto" title="Duração automática pelo texto (desligue pra digitar o tempo na mão)">
+          <input type="checkbox" id="chk-auto-cabeca" checked>
+          <span class="toggle-trilho"></span>
+        </label>
+        <input type="text" id="campo-duracao-cabeca" class="campo-duracao" value="00:00" readonly>
+        <span style="font-size:11px; color:#5b6472;">tempo de leitura da Cabeça</span>
+      </div>
       <div id="editor-cabeca" class="editor-caixa"></div>
     </div>
 
@@ -259,7 +268,7 @@
           <button data-tipo="ARTE">+ ARTE</button>
           <button data-tipo="SOBE_SOM">+ SOBE SOM</button>
         </div>
-        <div class="total-vt">⏱️ Total: <strong id="total-vt">00:00</strong></div>
+        <div class="total-vt">⏱️ Total (Cabeça + VT): <strong id="total-vt">00:00</strong></div>
       </div>
       <div id="lista-itens"></div>
 
@@ -367,6 +376,11 @@
     const itensMeta = {}; // id do item -> { duracao_segundos, duracao_automatica }
     let itensCache = []; // último retorno de GET /materia, na ordem — usado pra achar vizinho ao reordenar
 
+    // Duração da Cabeça — mesmo par automático/manual que cada item do
+    // Corpo do VT tem, só que único (a Cabeça não é um materia_itens),
+    // por isso fica num objeto à parte em vez de dentro de itensMeta
+    const cabecaMeta = { duracao_segundos: 0, duracao_automatica: true };
+
     let gcsCache = [];
 
     const labelTipo = { OFF: 'OFF', SONORA: 'SONORA', PASSAGEM: 'PASSAGEM', ARTE: 'ARTE', SOBE_SOM: 'SOBE SOM' };
@@ -405,7 +419,8 @@
     }
 
     function atualizarTotalVt() {
-      const total = Object.values(itensMeta).reduce((soma, m) => soma + (m.duracao_segundos || 0), 0);
+      const totalItens = Object.values(itensMeta).reduce((soma, m) => soma + (m.duracao_segundos || 0), 0);
+      const total = (cabecaMeta.duracao_segundos || 0) + totalItens;
       const el = document.getElementById('total-vt');
       if (el) el.textContent = formatarMMSS(total);
     }
@@ -496,6 +511,42 @@
       quillCabeca.root.setAttribute('spellcheck', 'true');
       if (p.cabeca_texto) quillCabeca.root.innerHTML = p.cabeca_texto;
       document.getElementById('btn-ouvir-cabeca').addEventListener('click', () => falarTexto(quillCabeca));
+
+      cabecaMeta.duracao_segundos = p.cabeca_duracao_segundos || 0;
+      cabecaMeta.duracao_automatica = p.cabeca_duracao_automatica === undefined ? true : !!p.cabeca_duracao_automatica;
+      const chkAutoCabeca = document.getElementById('chk-auto-cabeca');
+      const campoDuracaoCabeca = document.getElementById('campo-duracao-cabeca');
+      chkAutoCabeca.checked = cabecaMeta.duracao_automatica;
+      campoDuracaoCabeca.value = formatarMMSS(cabecaMeta.duracao_segundos);
+      campoDuracaoCabeca.readOnly = cabecaMeta.duracao_automatica;
+
+      quillCabeca.on('text-change', () => {
+        if (!cabecaMeta.duracao_automatica) return;
+        cabecaMeta.duracao_segundos = calcularSegundosAutomaticos(quillCabeca);
+        campoDuracaoCabeca.value = formatarMMSS(cabecaMeta.duracao_segundos);
+        atualizarTotalVt();
+      });
+
+      chkAutoCabeca.addEventListener('change', () => {
+        cabecaMeta.duracao_automatica = chkAutoCabeca.checked;
+        if (chkAutoCabeca.checked) {
+          cabecaMeta.duracao_segundos = calcularSegundosAutomaticos(quillCabeca);
+          campoDuracaoCabeca.value = formatarMMSS(cabecaMeta.duracao_segundos);
+          campoDuracaoCabeca.readOnly = true;
+        } else {
+          campoDuracaoCabeca.readOnly = false;
+        }
+        atualizarTotalVt();
+      });
+
+      campoDuracaoCabeca.addEventListener('change', () => {
+        if (cabecaMeta.duracao_automatica) return;
+        const segundos = interpretarMMSS(campoDuracaoCabeca.value);
+        if (segundos === null) { campoDuracaoCabeca.value = formatarMMSS(cabecaMeta.duracao_segundos); return; }
+        cabecaMeta.duracao_segundos = segundos;
+        campoDuracaoCabeca.value = formatarMMSS(segundos);
+        atualizarTotalVt();
+      });
 
       quillWeb = new Quill('#editor-web', { theme: 'snow' });
       quillWeb.root.setAttribute('spellcheck', 'true');
@@ -704,7 +755,9 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cabeca_texto: quillCabeca.root.innerHTML,
-          texto_web: quillWeb.root.innerHTML
+          texto_web: quillWeb.root.innerHTML,
+          cabeca_duracao_segundos: cabecaMeta.duracao_segundos,
+          cabeca_duracao_automatica: cabecaMeta.duracao_automatica
         })
       });
 

@@ -108,6 +108,7 @@
     .form-pauta-campos .campo.campo-titulo { flex: 2; min-width: 260px; }
     .form-pauta-campos label { font-size: 11px; color: #5b6472; text-transform: uppercase; }
     .form-pauta-campos input, .form-pauta-campos select { padding: 7px 9px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+    .form-pauta-campos select:disabled { background: #f4f5f7; color: #5b6472; cursor: not-allowed; opacity: 1; -webkit-appearance: none; appearance: none; }
 
     .form-pauta-subabas { display: flex; padding: 0 24px; background: #fff; border-bottom: 1px solid #eee; }
     .form-pauta-subabas button { padding: 10px 6px; margin-right: 24px; background: transparent; border: none; border-bottom: 3px solid transparent; font-size: 13px; color: #5b6472; cursor: pointer; }
@@ -173,6 +174,7 @@
     <a href="pautas.html" class="nr-ativo">📝 Pautas</a>
     <a href="mapa-producao.html">🗺 Mapa de Produções</a>
     <a href="reportagens.html">🎬 Reportagens</a>
+    <a href="edicao-video.html">🎞️ Edição de Vídeo</a>
     <a href="espelhos.html">📽️ Espelhos</a>
     <a href="busca.html">🔍 Busca Geral</a>
     <a href="calendario.html">📅 Calendário</a>
@@ -571,8 +573,8 @@
             <input type="datetime-local" data-campo="deadline">
           </div>
           <div class="campo">
-            <label>Status da Produção</label>
-            <select data-campo="status">
+            <label>Status da Produção 🔒</label>
+            <select data-campo="status" disabled title="Status só muda a partir de Reportagens — a Pauta nasce e permanece Em Produção aqui">
               <option value="em_producao">🟡 Em Produção</option>
               <option value="em_gravacao">🔵 Em Gravação</option>
               <option value="em_edicao">🟣 Gravado / Em Edição</option>

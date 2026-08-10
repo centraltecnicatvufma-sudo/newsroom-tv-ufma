@@ -123,6 +123,7 @@
     <a href="pautas.html">📝 Pautas</a>
     <a href="mapa-producao.html">🗺 Mapa de Produções</a>
     <a href="reportagens.html" class="nr-ativo">🎬 Reportagens</a>
+    <a href="edicao-video.html">🎞️ Edição de Vídeo</a>
     <a href="espelhos.html">📽️ Espelhos</a>
     <a href="busca.html">🔍 Busca Geral</a>
     <a href="calendario.html">📅 Calendário</a>
@@ -257,6 +258,11 @@
       return (dia && mes && ano) ? `${dia}/${mes}/${ano}` : iso;
     }
 
+    function formatarMMSS(segundosTotais) {
+      const s = Math.max(0, Number(segundosTotais) || 0);
+      return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+    }
+
     function nomePrograma(id) {
       const p = programasCache.find(pr => pr.id === id);
       return p ? p.nome : '—';
@@ -347,7 +353,10 @@
           <table class="lista-reportagens">
             <thead>
               <tr>
-                <th>Data</th><th>Título</th><th>Repórter</th><th>Programa / Quadro</th><th>Status</th><th>Ações</th>
+                <th>Data</th><th>Título</th><th>Repórter</th><th>Programa / Quadro</th><th>Status</th>
+                <th title="Cabeça + Corpo do VT, estimado pelo texto da Lauda">⏱️ Estimado</th>
+                <th title="Duração real, cronometrada após edição e revisão">🎬 Tempo do Vídeo</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -358,6 +367,8 @@
                   <td>${escaparHtml(p.reporter) || '—'}</td>
                   <td>${escaparHtml(nomePrograma(p.programa_id))}</td>
                   <td><span class="status-badge status-${p.status}">${rotulosStatus[p.status] || p.status}</span></td>
+                  <td>${p.duracao_estimada_segundos ? formatarMMSS(p.duracao_estimada_segundos) : '—'}</td>
+                  <td>${p.tempo_video_segundos ? formatarMMSS(p.tempo_video_segundos) : '—'}</td>
                   <td class="acoes-lista">
                     <button class="btn-lauda" data-id="${p.id}" title="Lauda">📝</button>
                     <span class="grupo-imprimir">
@@ -426,6 +437,7 @@
                     <span>📅 ${formatarData(p.data_fato)}</span>
                     <span>🎤 ${escaparHtml(p.reporter) || '—'}</span>
                     <span>📺 ${escaparHtml(nomePrograma(p.programa_id))}</span>
+                    <span>⏱️ ${p.duracao_estimada_segundos ? formatarMMSS(p.duracao_estimada_segundos) : '—'}${p.tempo_video_segundos ? ' · 🎬 ' + formatarMMSS(p.tempo_video_segundos) : ''}</span>
                   </div>
                   <button class="btn-lauda" data-id="${p.id}">📝 Lauda</button>
                 </div>
@@ -470,11 +482,20 @@
           const pauta = pautasCache.find(p => String(p.id) === id);
           if (!pauta || pauta.status === novoStatus) return;
 
-          await fetch('/pautas/' + id, {
+          const resp = await fetch('/pautas/' + id, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: novoStatus })
           });
+
+          if (!resp.ok) {
+            const erro = await resp.json().catch(() => ({}));
+            alert(erro.erro || 'Não foi possível mover a pauta para esse status.');
+          }
+
+          // Recarrega sempre — se o PATCH falhou (ex.: Tempo do Vídeo
+          // faltando pra ir pra Concluída), o card volta pra coluna de
+          // origem sozinho, porque o status no banco não mudou
           await carregarPautas();
           renderQuadro();
         });

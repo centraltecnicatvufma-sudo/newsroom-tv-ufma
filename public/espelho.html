@@ -49,11 +49,11 @@
     .tipo-vht_abertura { background: #5A021F; }
     .tipo-encerramento { background: #1e293b; }
 
-    .status-badge { font-size: 11px; padding: 3px 10px; border-radius: 4px; color: #fff; cursor: pointer; border: none; white-space: nowrap; width: 100%; }
-    .status-produzindo_vt { background: #6b3fa0; }
-    .status-edicao { background: #075B91; }
-    .status-revisao { background: #C98A1F; }
-    .status-pronto { background: #2e8b57; }
+    .status-badge { font-size: 11px; padding: 3px 10px; border-radius: 4px; color: #fff; border: none; white-space: nowrap; width: 100%; display: inline-block; text-align: center; box-sizing: border-box; }
+    .status-em_producao { background: #C98A1F; }
+    .status-em_gravacao { background: #336699; }
+    .status-em_edicao { background: #6b3fa0; }
+    .status-concluida { background: #2e8b57; }
 
     table.rundown tbody tr { cursor: grab; }
     table.rundown tbody tr.arrastando { opacity: 0.4; }
@@ -155,6 +155,7 @@
     <a href="pautas.html">📝 Pautas</a>
     <a href="mapa-producao.html">🗺 Mapa de Produções</a>
     <a href="reportagens.html">🎬 Reportagens</a>
+    <a href="edicao-video.html">🎞️ Edição de Vídeo</a>
     <a href="espelhos.html" class="nr-ativo">📽️ Espelhos</a>
     <a href="busca.html">🔍 Busca Geral</a>
     <a href="calendario.html">📅 Calendário</a>
@@ -267,13 +268,16 @@
     let blocosCache = [];
     let itemEditandoId = null; // null = criando; com id = editando
 
+    // Mesmo vocabulário de status da Pauta — Sugestão é a única etapa do
+    // pipeline com classificação própria; a partir da Pauta, Bloco segue
+    // os mesmos 4 status, herdados automaticamente (ver cascata em
+    // pautas.js) — aqui é só exibição, sem edição (ver ligarAcoesDaTabela).
     const labelStatus = {
-      produzindo_vt: 'Produzindo VT',
-      edicao: 'Em Edição',
-      revisao: 'Aguardando Revisão',
-      pronto: 'Pronto'
+      em_producao: 'Em Produção',
+      em_gravacao: 'Em Gravação',
+      em_edicao: 'Em Edição',
+      concluida: 'Concluída'
     };
-    const ordemStatus = ['produzindo_vt', 'edicao', 'revisao', 'pronto'];
 
     const labelTipo = {
       reportagem: 'Reportagem', standup: 'Standup', nota_coberta: 'Nota Coberta', vt: 'VT',
@@ -304,6 +308,20 @@
       return String(texto == null ? '' : texto)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // Tempo do bloco: depois que o vídeo foi editado e revisado, o tempo
+    // REAL (Cabeça + Tempo do Vídeo do editor) é mais preciso que a
+    // duração digitada/estimada na hora de montar o item — passa a valer
+    // sozinho assim que existir. Antes disso, continua usando o que foi
+    // preenchido no item (duracao_estimada), manual ou pré-preenchido a
+    // partir da Lauda.
+    function duracaoEfetivaBloco(b) {
+      const pauta = b.pauta_id ? pautasCache.find(p => p.id === b.pauta_id) : null;
+      if (pauta && pauta.tempo_video_segundos) {
+        return (pauta.cabeca_duracao_segundos || 0) + pauta.tempo_video_segundos;
+      }
+      return b.duracao_estimada || 0;
     }
 
     // ---- Carregamento ----
@@ -346,7 +364,7 @@
 
     function renderStatsTempo(espelho, blocos) {
       const alvo = espelho.duracao_total_prevista || 0;
-      const atual = blocos.reduce((soma, b) => soma + (b.duracao_estimada || 0), 0);
+      const atual = blocos.reduce((soma, b) => soma + duracaoEfetivaBloco(b), 0);
       const diferenca = alvo - atual;
 
       const TOLERANCIA = 30;
@@ -410,6 +428,11 @@
       if (pauta) {
         document.getElementById('mi-titulo').value = pauta.titulo || '';
         document.getElementById('mi-reporter').value = pauta.reporter || '';
+        // Pré-preenche com Cabeça + Corpo do VT da Lauda (se já tiver
+        // conteúdo escrito) — só um ponto de partida, continua editável
+        if (pauta.duracao_estimada_segundos) {
+          document.getElementById('mi-duracao').value = paraMMSS(pauta.duracao_estimada_segundos);
+        }
       }
     });
 
@@ -487,7 +510,7 @@
         <div class="bloco-grupo" data-bloco="${num}">
           <div class="bloco-grupo-titulo">
             <span>📌 BLOCO ${num}</span>
-            <span class="tempo-bloco">Tempo Bloco: ${formatarTempo(grupos[num].reduce((s, b) => s + (b.duracao_estimada || 0), 0))}</span>
+            <span class="tempo-bloco">Tempo Bloco: ${formatarTempo(grupos[num].reduce((s, b) => s + duracaoEfetivaBloco(b), 0))}</span>
           </div>
           <table class="rundown">
             <thead>
@@ -510,8 +533,8 @@
                   <td class="titulo-item" title="${escaparHtml(b.titulo)}">${escaparHtml(b.titulo)}</td>
                   <td>${escaparHtml(b.reporter || b.responsavel || '—')}</td>
                   <td>${b.lauda_status ? `<span class="lauda-badge lauda-${b.lauda_status}">${b.lauda_status === 'pronta' ? '🟢 Pronta' : b.lauda_status === 'redacao' ? '🟡 Redação' : '🔴 Pendente'}</span>` : '—'}</td>
-                  <td draggable="false"><button class="status-badge status-${b.status}" data-id="${b.id}" data-status="${b.status}">${labelStatus[b.status] || b.status}</button></td>
-                  <td class="dur">${formatarTempo(b.duracao_estimada)}</td>
+                  <td draggable="false"><span class="status-badge status-${b.status}" title="Status herdado da Pauta — muda em Reportagens/Edição de Vídeo">${labelStatus[b.status] || b.status}</span></td>
+                  <td class="dur">${formatarTempo(duracaoEfetivaBloco(b))}</td>
                   <td class="acoes-rundown" draggable="false">
                     ${b.cabeca_desatualizada ? `<button class="btn-sincronizar aviso-cabeca" data-id="${b.id}" title="A Cabeça da Lauda mudou depois — clique para atualizar o texto do teleprompter">🔄</button>` : ''}
                     <button class="btn-editar-item" data-id="${b.id}" title="Editar item">✏️</button>
@@ -531,17 +554,9 @@
     }
 
     function ligarAcoesDaTabela() {
-      document.querySelectorAll('.status-badge').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const proximo = ordemStatus[(ordemStatus.indexOf(btn.dataset.status) + 1) % ordemStatus.length];
-          await fetch(`/blocos/${btn.dataset.id}/status`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ novo_status: proximo, perfil: 'chefe_redacao' })
-          });
-          carregarEspelho();
-        });
-      });
+      // Status do bloco é somente leitura aqui — herda da Pauta (ver
+      // cascata em pautas.js). Muda em Reportagens (fluxo normal) ou em
+      // Edição de Vídeo (marca Concluída ao salvar o Tempo do Vídeo).
 
       document.querySelectorAll('.btn-editar-item').forEach(btn => {
         btn.addEventListener('click', () => abrirModalEditarItem(Number(btn.dataset.id)));
@@ -667,8 +682,13 @@
     }
 
     preencherSelectTipo();
-    carregarPautasParaModal();
-    carregarEspelho();
+    // pautasCache precisa estar pronto ANTES da primeira renderização do
+    // rundown — duracaoEfetivaBloco() consulta pautasCache pra saber se já
+    // tem Tempo do Vídeo real (ver função acima)
+    (async function init() {
+      await carregarPautasParaModal();
+      await carregarEspelho();
+    })();
   </script>
   </div>
 </body>

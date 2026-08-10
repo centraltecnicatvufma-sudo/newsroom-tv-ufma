@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Edição de Vídeo — HORUS Newsroom</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+
+    .topo { background: #336699; color: #fff; padding: 14px 20px; }
+    .topo h1 { font-size: 18px; margin: 0; }
+    .topo .sub { font-size: 12px; color: #cfe0f0; margin-top: 2px; }
+
+    .filtros { display: flex; align-items: flex-end; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; flex-wrap: wrap; }
+    .filtros > div { display: flex; flex-direction: column; gap: 4px; }
+    .filtros label { font-size: 11px; color: #5b6472; }
+    .filtros select, .filtros input { padding: 7px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
+    .filtros .campo-busca { min-width: 220px; flex: 1; }
+    .contador-pendentes { font-size: 12px; color: #8D0333; font-weight: bold; margin-left: auto; align-self: center; }
+
+    .conteudo { flex: 1; overflow-y: auto; padding: 20px; }
+
+    table.lista-video { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    table.lista-video th { background: #eef1f5; text-align: left; padding: 10px 12px; font-size: 12px; color: #5b6472; text-transform: uppercase; }
+    table.lista-video td { padding: 10px 12px; font-size: 13px; border-top: 1px solid #f0f0f0; vertical-align: middle; }
+    table.lista-video tr.linha-pendente { background: #fdf3e3; }
+
+    .status-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; color: #fff; font-weight: bold; white-space: nowrap; }
+    .status-em_producao { background: #C98A1F; }
+    .status-em_gravacao { background: #336699; }
+    .status-em_edicao { background: #6b3fa0; }
+    .status-concluida { background: #2e8b57; }
+
+    .badge-pendente { font-size: 10px; background: #8D0333; color: #fff; padding: 2px 7px; border-radius: 4px; white-space: nowrap; margin-left: 6px; }
+
+    .linha-tempo-video { display: flex; align-items: center; gap: 6px; }
+    .campo-tempo-video { width: 70px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; text-align: center; }
+    .btn-salvar-tempo { background: #2e8b57; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+    .btn-salvar-tempo:hover { background: #256e45; }
+    .btn-lauda-video { background: #336699; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+
+    .estado-vazio { text-align: center; color: #999; padding: 60px 20px; }
+
+    /* Faixa de Breaking News — mesmo alerta visível em toda tela do
+       sistema, disparado a partir do Mapa de Produções, propagado na hora
+       via WebSocket (tempo_real.js) */
+    .faixa-breaking { display: none; align-items: center; gap: 14px; background: #8D0333; color: #fff; padding: 10px 20px; font-size: 14px; animation: pulso-breaking 2.2s ease-in-out infinite; }
+    .faixa-breaking .breaking-icone { font-weight: bold; white-space: nowrap; }
+    .faixa-breaking .breaking-mensagem { flex: 1; }
+    .faixa-breaking .breaking-meta { font-size: 11px; opacity: 0.85; white-space: nowrap; }
+    .faixa-breaking button { background: rgba(255,255,255,0.2); color: #fff; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 12px; white-space: nowrap; }
+    .faixa-breaking button:hover { background: rgba(255,255,255,0.35); }
+    @keyframes pulso-breaking {
+      0%, 100% { box-shadow: inset 0 0 0 rgba(255,255,255,0); }
+      50% { box-shadow: inset 0 0 20px rgba(255,255,255,0.25); }
+    }
+
+    /* ---- Navegação lateral (unificada em todas as telas) ---- */
+    body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
+    .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+    .nr-sidebar .nr-logo { padding: 0 20px 20px; border-bottom: 1px solid #4d7fb3; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
+    .nr-sidebar .nr-titulo, .nr-sidebar .nr-subtitulo { font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+    .nr-sidebar .nr-subtitulo { margin-top: 4px; }
+    .nr-sidebar a, .nr-sidebar .nr-item-desabilitado { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #e8f0f7; text-decoration: none; font-size: 14px; }
+    .nr-sidebar a:hover { background: #4d7fb3; color: #fff; }
+    .nr-sidebar a.nr-ativo { background: #244d70; color: #fff; font-weight: bold; border-left: 4px solid #8D0333; padding-left: 16px; }
+    .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
+    .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
+    .nr-app { flex: 1; min-width: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+  </style>
+</head>
+<body>
+  <div class="nr-sidebar">
+    <a href="index.html" class="nr-logo">
+      <div class="nr-titulo">HORUS</div>
+      <div class="nr-subtitulo">NEWSROOM</div>
+    </a>
+    <a href="sugestoes.html">📋 Sugestões de Pauta</a>
+    <a href="pautas.html">📝 Pautas</a>
+    <a href="mapa-producao.html">🗺 Mapa de Produções</a>
+    <a href="reportagens.html">🎬 Reportagens</a>
+    <a href="edicao-video.html" class="nr-ativo">🎞️ Edição de Vídeo</a>
+    <a href="espelhos.html">📽️ Espelhos</a>
+    <a href="busca.html">🔍 Busca Geral</a>
+    <a href="calendario.html">📅 Calendário</a>
+    <a href="agenda.html">🗓 Agenda</a>
+    <a href="escala.html">👥 Escala de Equipes</a>
+    <a href="teleprompter.html">🎙 Teleprompter</a>
+    <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
+    <a href="graficos.html">📊 Gráficos Gerenciais</a>
+    <a href="relatorios.html">📄 Relatórios</a>
+    <a href="lixeira.html">🗑 Lixeira</a>
+  </div>
+  <div class="nr-app">
+
+  <div class="topo">
+    <h1>HORUS NEWSROOM — Edição de Vídeo</h1>
+    <div class="sub">Informe o tempo real do vídeo depois de editado e revisado — salvar aqui já marca a pauta como Concluída.</div>
+  </div>
+
+  <div class="faixa-breaking" id="faixa-breaking">
+    <span class="breaking-icone">🚨 BREAKING NEWS</span>
+    <span class="breaking-mensagem" id="breaking-mensagem"></span>
+    <span class="breaking-meta" id="breaking-meta"></span>
+    <button id="btn-encerrar-breaking" title="Encerrar este alerta">✕ Encerrar</button>
+  </div>
+
+  <div class="filtros">
+    <div>
+      <label>Status</label>
+      <select id="filtro-status">
+        <option value="">Todos</option>
+        <option value="em_producao">🟡 Em Produção</option>
+        <option value="em_gravacao">🔵 Em Gravação</option>
+        <option value="em_edicao">🟣 Gravado / Em Edição</option>
+        <option value="concluida">🟢 Concluída</option>
+      </select>
+    </div>
+    <div class="campo-busca">
+      <label>Buscar</label>
+      <input type="text" id="filtro-busca" placeholder="🔍 Buscar por título...">
+    </div>
+    <span class="contador-pendentes" id="contador-pendentes"></span>
+  </div>
+
+  <div class="conteudo">
+    <div id="area-tabela">Carregando...</div>
+  </div>
+
+  <script>
+    // ---- Faixa de Breaking News (mesmo alerta em todas as telas) ----
+    async function carregarAlertaBreakingNews() {
+      const resp = await fetch('/alertas/ativo');
+      const alerta = await resp.json();
+      const faixa = document.getElementById('faixa-breaking');
+      if (!faixa) return;
+      if (alerta) {
+        document.getElementById('breaking-mensagem').textContent = alerta.mensagem;
+        const quando = new Date(alerta.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('breaking-meta').textContent = (alerta.criado_por ? alerta.criado_por + ' · ' : '') + quando;
+        faixa.style.display = 'flex';
+      } else {
+        faixa.style.display = 'none';
+      }
+    }
+
+    document.getElementById('btn-encerrar-breaking')?.addEventListener('click', async () => {
+      if (!confirm('Encerrar esse alerta de Breaking News?')) return;
+      await fetch('/alertas/encerrar', { method: 'PATCH' });
+      await carregarAlertaBreakingNews();
+    });
+
+    (function conectarBreakingNews() {
+      const protocolo = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocolo}//${location.host}/ws/tempo-real`);
+      ws.addEventListener('message', (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (msg.tipo === 'alerta') carregarAlertaBreakingNews();
+      });
+      ws.addEventListener('close', () => setTimeout(conectarBreakingNews, 3000));
+      ws.addEventListener('error', () => ws.close());
+    })();
+
+    carregarAlertaBreakingNews();
+
+    // ---- Edição de Vídeo ----
+    const rotulosStatus = {
+      em_producao: '🟡 Em Produção', em_gravacao: '🔵 Em Gravação',
+      em_edicao: '🟣 Gravado / Em Edição', concluida: '🟢 Concluída'
+    };
+
+    let pautasCache = [];
+    let programasCache = [];
+
+    function escaparHtml(texto) {
+      return String(texto == null ? '' : texto)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function formatarData(iso) {
+      if (!iso) return '—';
+      const [ano, mes, dia] = iso.split('-');
+      return (dia && mes && ano) ? `${dia}/${mes}/${ano}` : iso;
+    }
+
+    function formatarMMSS(segundosTotais) {
+      const s = Math.max(0, Number(segundosTotais) || 0);
+      return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+    }
+
+    function interpretarMMSS(texto) {
+      const m = String(texto || '').trim().match(/^(\d{1,3}):([0-5]?\d)$/);
+      if (!m) return null;
+      return Number(m[1]) * 60 + Number(m[2]);
+    }
+
+    function nomePrograma(id) {
+      const p = programasCache.find(pr => pr.id === id);
+      return p ? p.nome : '—';
+    }
+
+    async function carregarProgramas() {
+      const resp = await fetch('/agenda/programas');
+      programasCache = await resp.json();
+    }
+
+    // Só pautas com bloco de vídeo de verdade (Reportagem/Standup/Nota
+    // Coberta/VT/Escalada/Teaser — ver blocos_video_qtd em pautas.js) —
+    // Nota Seca e Vivo, por exemplo, nunca precisam de Tempo do Vídeo,
+    // então não fazem sentido aparecer aqui
+    async function carregarPautas() {
+      const resp = await fetch('/pautas');
+      const todas = await resp.json();
+      pautasCache = todas.filter(p => p.blocos_video_qtd > 0);
+    }
+
+    function pautasFiltradas() {
+      const status = document.getElementById('filtro-status').value;
+      const busca = document.getElementById('filtro-busca').value.trim().toLowerCase();
+
+      return pautasCache
+        .filter(p => {
+          if (status && p.status !== status) return false;
+          if (busca && !(p.titulo || '').toLowerCase().includes(busca)) return false;
+          return true;
+        })
+        .sort((a, b) => {
+          // Pendentes (sem tempo do vídeo) primeiro, depois mais recentes
+          const pendenteA = !a.tempo_video_segundos ? 0 : 1;
+          const pendenteB = !b.tempo_video_segundos ? 0 : 1;
+          if (pendenteA !== pendenteB) return pendenteA - pendenteB;
+          return (b.data_fato || '').localeCompare(a.data_fato || '');
+        });
+    }
+
+    function renderTabela() {
+      const filtradas = pautasFiltradas();
+      const area = document.getElementById('area-tabela');
+
+      const pendentes = pautasCache.filter(p => !p.tempo_video_segundos && p.status !== 'concluida').length;
+      document.getElementById('contador-pendentes').textContent =
+        pendentes > 0 ? `⚠️ ${pendentes} sem Tempo do Vídeo` : '';
+
+      if (filtradas.length === 0) {
+        area.innerHTML = '<div class="estado-vazio">Nenhuma pauta com vídeo encontrada para esse filtro.</div>';
+        return;
+      }
+
+      area.innerHTML = `
+        <table class="lista-video">
+          <thead>
+            <tr>
+              <th>Data</th><th>Título</th><th>Repórter</th><th>Programa / Quadro</th><th>Status</th>
+              <th title="Cabeça + Corpo do VT, estimado pelo texto da Lauda">⏱️ Estimado</th>
+              <th>🎬 Tempo do Vídeo</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtradas.map(p => `
+              <tr data-id="${p.id}" class="${!p.tempo_video_segundos ? 'linha-pendente' : ''}">
+                <td>${formatarData(p.data_fato)}</td>
+                <td>${escaparHtml(p.titulo)}</td>
+                <td>${escaparHtml(p.reporter) || '—'}</td>
+                <td>${escaparHtml(nomePrograma(p.programa_id))}</td>
+                <td>
+                  <span class="status-badge status-${p.status}">${rotulosStatus[p.status] || p.status}</span>
+                  ${!p.tempo_video_segundos ? '<span class="badge-pendente">Pendente</span>' : ''}
+                </td>
+                <td>${p.duracao_estimada_segundos ? formatarMMSS(p.duracao_estimada_segundos) : '—'}</td>
+                <td>
+                  <div class="linha-tempo-video">
+                    <input type="text" class="campo-tempo-video" data-id="${p.id}" placeholder="mm:ss"
+                      value="${p.tempo_video_segundos ? formatarMMSS(p.tempo_video_segundos) : ''}">
+                    <button class="btn-salvar-tempo" data-id="${p.id}" title="Salva o tempo e marca a pauta como Concluída">✅ Salvar e Concluir</button>
+                  </div>
+                </td>
+                <td><button class="btn-lauda-video" data-id="${p.id}">📝 Lauda</button></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+
+      area.querySelectorAll('.btn-salvar-tempo').forEach(btn => {
+        btn.addEventListener('click', () => salvarTempoVideo(btn.dataset.id));
+      });
+      area.querySelectorAll('.btn-lauda-video').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const p = pautasCache.find(item => item.id === Number(btn.dataset.id));
+          if (p) window.location.href = 'materia.html?pauta_id=' + p.id + '&titulo=' + encodeURIComponent(p.titulo || '');
+        });
+      });
+    }
+
+    async function salvarTempoVideo(id) {
+      const campo = document.querySelector(`.campo-tempo-video[data-id="${id}"]`);
+      const segundos = interpretarMMSS(campo.value);
+      if (segundos === null) { alert('Digite o tempo no formato mm:ss (ex: 02:30).'); return; }
+
+      // Salvar o Tempo do Vídeo aqui já marca a pauta como Concluída — é
+      // o sinal de que o vídeo foi editado e revisado, não sobra mais
+      // nenhuma etapa manual depois disso
+      const resp = await fetch('/pautas/' + id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tempo_video_segundos: segundos, status: 'concluida' })
+      });
+
+      if (!resp.ok) {
+        const erro = await resp.json().catch(() => ({}));
+        alert(erro.erro || 'Não foi possível salvar o Tempo do Vídeo.');
+        return;
+      }
+
+      await carregarPautas();
+      renderTabela();
+    }
+
+    document.getElementById('filtro-status').addEventListener('change', renderTabela);
+    document.getElementById('filtro-busca').addEventListener('input', () => {
+      clearTimeout(window._buscaTimeout);
+      window._buscaTimeout = setTimeout(renderTabela, 300);
+    });
+
+    (async function init() {
+      await Promise.all([carregarProgramas(), carregarPautas()]);
+      renderTabela();
+    })();
+  </script>
+  </div>
+</body>
+</html>

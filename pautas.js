@@ -6,6 +6,29 @@ function buscarFontes(pautaId) {
   return db.prepare('SELECT * FROM pauta_fontes WHERE pauta_id = ?').all(pautaId);
 }
 
+// Tipos de bloco que representam vídeo editado de verdade — os únicos que
+// exigem Tempo do Vídeo preenchido antes de "Concluída" (ver validarTempoVideo
+// mais abaixo). Nota Seca e Vivo ficam de fora de propósito: não têm VT
+// editado pra cronometrar. Lista fixa (sem interpolação de dado externo),
+// por isso vai direto na string SQL sem parametrizar.
+const TIPOS_BLOCO_VIDEO_SQL = "'reportagem','standup','nota_coberta','vt','escalada','teaser'";
+
+// SELECT base reaproveitado por GET / e GET /:id — acrescenta dois campos
+// calculados que nenhuma tabela guarda direto:
+// - duracao_estimada_segundos: Cabeça (pautas.cabeca_duracao_segundos) +
+//   soma de todos os itens do Corpo do VT (materia_itens.duracao_segundos)
+// - blocos_video_qtd: quantos blocos de vídeo (ver TIPOS_BLOCO_VIDEO_SQL)
+//   essa pauta tem em algum Espelho — usado pra saber se Tempo do Vídeo é
+//   obrigatório e pra filtrar a tela de Edição de Vídeo
+const SELECT_PAUTAS = `
+  SELECT pautas.*,
+    (COALESCE(pautas.cabeca_duracao_segundos, 0) + COALESCE((
+      SELECT SUM(duracao_segundos) FROM materia_itens WHERE materia_itens.pauta_id = pautas.id
+    ), 0)) AS duracao_estimada_segundos,
+    (SELECT COUNT(*) FROM blocos WHERE blocos.pauta_id = pautas.id AND blocos.tipo IN (${TIPOS_BLOCO_VIDEO_SQL})) AS blocos_video_qtd
+  FROM pautas
+`;
+
 // Checklist de ativos multimídia: 10 colunas (necessario+pronto x 5 tipos,
 // ver banco.js). Gerado por código pra não repetir os 5 nomes 4 vezes
 // diferentes entre POST e PATCH.
@@ -50,7 +73,7 @@ router.get('/lixeira', (req, res) => {
 router.get('/', (req, res) => {
   const { programa_id, status, data_fato, busca } = req.query;
 
-  let query = 'SELECT * FROM pautas WHERE excluido_em IS NULL';
+  let query = SELECT_PAUTAS + ' WHERE pautas.excluido_em IS NULL';
   const params = [];
 
   if (programa_id) { query += ' AND programa_id = ?'; params.push(programa_id); }
@@ -67,7 +90,7 @@ router.get('/', (req, res) => {
 // GET /pautas/:id -> detalhe + fontes
 router.get('/:id', (req, res) => {
   const id = Number(req.params.id);
-  const pauta = db.prepare('SELECT * FROM pautas WHERE id = ?').get(id);
+  const pauta = db.prepare(SELECT_PAUTAS + ' WHERE pautas.id = ?').get(id);
   if (!pauta) return res.status(404).json({ erro: 'Pauta não encontrada' });
   pauta.fontes = buscarFontes(id);
   res.json(pauta);
@@ -144,6 +167,7 @@ router.patch('/:id', (req, res) => {
     'equip_lapela', 'equip_iluminacao', 'equip_mochilink',
     'data_fato', 'hora_fato', 'status', 'editoria', 'deadline',
     'cabeca_texto', 'texto_web',
+    'cabeca_duracao_segundos', 'cabeca_duracao_automatica', 'tempo_video_segundos',
     ...camposAtivos()
   ];
 
@@ -151,6 +175,25 @@ router.patch('/:id', (req, res) => {
   campos.forEach(c => {
     atualizado[c] = req.body[c] !== undefined ? req.body[c] : item[c];
   });
+
+  // Tempo do Vídeo (real, pós-edição) é obrigatório antes de virar
+  // Concluída — mas só pra pautas com bloco de vídeo de verdade (Nota Seca
+  // e Vivo, por exemplo, nunca vão ter isso preenchido e não deveriam
+  // travar aqui). Verifica direto no banco, não confia em nada vindo do
+  // front, porque a validação real tem que valer pra qualquer caminho que
+  // chegue nesse PATCH (Kanban de Reportagens, formulário de Pautas, etc.)
+  if (atualizado.status === 'concluida' && !atualizado.tempo_video_segundos) {
+    const temBlocoVideo = db.prepare(
+      `SELECT COUNT(*) AS c FROM blocos WHERE pauta_id = ? AND tipo IN (${TIPOS_BLOCO_VIDEO_SQL})`
+    ).get(id).c > 0;
+
+    if (temBlocoVideo) {
+      return res.status(400).json({
+        erro: 'Tempo do Vídeo é obrigatório antes de marcar como Concluída',
+        campo: 'tempo_video_segundos'
+      });
+    }
+  }
 
   db.prepare(`
     UPDATE pautas SET
@@ -161,6 +204,7 @@ router.patch('/:id', (req, res) => {
       equip_lapela=?, equip_iluminacao=?, equip_mochilink=?,
       data_fato=?, hora_fato=?, status=?, editoria=?, deadline=?,
       cabeca_texto=?, texto_web=?,
+      cabeca_duracao_segundos=?, cabeca_duracao_automatica=?, tempo_video_segundos=?,
       ${camposAtivos().map(c => c + '=?').join(', ')}
     WHERE id = ?
   `).run(
@@ -172,12 +216,20 @@ router.patch('/:id', (req, res) => {
     atualizado.equip_lapela ? 1 : 0, atualizado.equip_iluminacao ? 1 : 0, atualizado.equip_mochilink ? 1 : 0,
     atualizado.data_fato, atualizado.hora_fato, atualizado.status, atualizado.editoria, atualizado.deadline,
     atualizado.cabeca_texto, atualizado.texto_web,
+    atualizado.cabeca_duracao_segundos || 0, atualizado.cabeca_duracao_automatica ? 1 : 0, atualizado.tempo_video_segundos || null,
     ...camposAtivos().map(c => atualizado[c] ? 1 : 0),
     id
   );
 
   if (atualizado.status !== item.status) {
     registrarHistoricoStatus(id, item.status, atualizado.status);
+
+    // Todo bloco do Espelho vinculado a essa pauta herda o status — Bloco
+    // usa o mesmo vocabulário da Pauta (ver blocos.js), então é atribuição
+    // direta, sem tradução. Sempre sincroniza, mesmo sobrescrevendo uma
+    // mudança de status feita direto no Espelho (decisão explícita: mais
+    // simples e previsível do que tentar preservar avanço manual seletivamente).
+    db.prepare('UPDATE blocos SET status = ? WHERE pauta_id = ?').run(atualizado.status, id);
   }
 
   if (Array.isArray(req.body.fontes)) {
@@ -191,7 +243,7 @@ router.patch('/:id', (req, res) => {
     });
   }
 
-  const item_atualizado = db.prepare('SELECT * FROM pautas WHERE id = ?').get(id);
+  const item_atualizado = db.prepare(SELECT_PAUTAS + ' WHERE pautas.id = ?').get(id);
   item_atualizado.fontes = buscarFontes(id);
   avisarMudanca(req);
   res.json(item_atualizado);
