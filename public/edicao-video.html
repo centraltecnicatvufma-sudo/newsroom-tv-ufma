@@ -38,9 +38,11 @@
 
     .linha-tempo-video { display: flex; align-items: center; gap: 6px; }
     .campo-tempo-video { width: 70px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; text-align: center; }
-    .btn-salvar-tempo { background: #2e8b57; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+    /* Só ícone, sem texto — mesmo padrão de botões de ação de Pautas/
+       Reportagens (título vira o rótulo acessível, via atributo title). */
+    .btn-salvar-tempo { background: #2e8b57; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; font-size: 14px; line-height: 1; cursor: pointer; }
     .btn-salvar-tempo:hover { background: #256e45; }
-    .btn-lauda-video { background: #336699; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+    .btn-lauda-video { background: #336699; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; font-size: 14px; line-height: 1; cursor: pointer; }
 
     .estado-vazio { text-align: center; color: #999; padding: 60px 20px; }
 
@@ -293,10 +295,10 @@
                   <div class="linha-tempo-video">
                     <input type="text" class="campo-tempo-video" data-id="${p.id}" placeholder="mm:ss"
                       value="${p.tempo_video_segundos ? formatarMMSS(p.tempo_video_segundos) : ''}">
-                    <button class="btn-salvar-tempo" data-id="${p.id}" title="Salva o tempo e marca a pauta como Concluída">✅ Salvar e Concluir</button>
+                    <button class="btn-salvar-tempo" data-id="${p.id}" title="Salva o tempo e marca a pauta como Concluída">✅</button>
                   </div>
                 </td>
-                <td><button class="btn-lauda-video" data-id="${p.id}">📝 Lauda</button></td>
+                <td><button class="btn-lauda-video" data-id="${p.id}" title="Lauda">📝</button></td>
               </tr>
             `).join('')}
           </tbody>

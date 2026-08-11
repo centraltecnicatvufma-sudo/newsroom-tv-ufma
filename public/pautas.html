@@ -7,14 +7,20 @@
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
 
-    .topo { background: #336699; color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .topo { background: #336699; color: #fff; padding: 14px 20px; }
     .topo h1 { font-size: 18px; margin: 0; white-space: nowrap; }
-    .topo input { flex: 1; max-width: 320px; padding: 8px 10px; border-radius: 6px; border: none; font-size: 13px; }
-    .topo button { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-size: 13px; white-space: nowrap; }
-    .topo button#btn-imprimir-grade { background: #5b6472; }
 
-    .filtros { display: flex; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; }
-    .filtros select, .filtros input { padding: 6px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
+    /* Busca + Nova Pauta + Imprimir Grade agora ficam na mesma faixa dos
+       filtros de Programa/Status/Data (mesmo padrão de reportagens.html:
+       .grupo-busca-visao — aqui é .grupo-busca-acoes — empurrado pra
+       direita com margin-left:auto), em vez de ficarem soltos no .topo. */
+    .filtros { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; flex-wrap: wrap; }
+    .filtros select, .filtros input[type="date"] { padding: 6px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
+
+    .grupo-busca-acoes { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 280px; margin-left: auto; }
+    .grupo-busca-acoes input[type="text"] { flex: 1; min-width: 160px; padding: 7px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
+    .grupo-busca-acoes button { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 7px 14px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+    .grupo-busca-acoes button#btn-imprimir-grade { background: #5b6472; }
 
     .conteudo { flex: 1; overflow-y: auto; padding: 20px; }
 
@@ -295,11 +301,6 @@
   <div class="painel-doc ativo" id="painel-capa">
     <div class="topo">
       <h1>HORUS NEWSROOM — Pautas</h1>
-      <input type="text" id="busca-pauta" placeholder="🔍 Buscar pauta...">
-      <div style="display:flex; flex-direction:column; gap:6px;">
-        <button id="btn-nova-pauta">+ Nova Pauta</button>
-        <button id="btn-imprimir-grade" title="Imprime a grade do dia selecionado no filtro de data">🖨️ Imprimir Grade</button>
-      </div>
     </div>
 
     <div class="faixa-breaking" id="faixa-breaking">
@@ -319,6 +320,11 @@
         <option value="concluida">🟢 Concluída / Pronta</option>
       </select>
       <input type="date" id="filtro-data">
+      <div class="grupo-busca-acoes">
+        <input type="text" id="busca-pauta" placeholder="🔍 Buscar pauta...">
+        <button id="btn-nova-pauta">+ Nova Pauta</button>
+        <button id="btn-imprimir-grade" title="Imprime a grade do dia selecionado no filtro de data">🖨️ Imprimir Grade</button>
+      </div>
     </div>
 
     <div class="conteudo" id="conteudo">

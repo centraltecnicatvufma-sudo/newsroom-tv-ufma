@@ -7,10 +7,15 @@
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
 
-    .topo { background: #336699; color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .topo { background: #336699; color: #fff; padding: 14px 20px; }
     .topo h1 { font-size: 18px; margin: 0; white-space: nowrap; }
-    .topo-direita { display: flex; align-items: center; gap: 10px; }
-    .status-conexao { font-size: 12px; background: rgba(255,255,255,0.15); padding: 5px 10px; border-radius: 6px; white-space: nowrap; }
+    /* Disparar Breaking News + status de conexão agora ficam na mesma
+       faixa dos filtros (Canal/Urgência/Busca/Minhas Pautas), empurrados
+       pra direita — mesmo padrão de reposicionamento já aplicado em
+       pautas.html/sugestoes.html. */
+    .topo-direita { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .topo-direita button { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 7px 14px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+    .status-conexao { font-size: 12px; background: #eef1f5; color: #5b6472; padding: 5px 10px; border-radius: 6px; white-space: nowrap; }
     #btn-disparar-breaking { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 7px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
     #btn-disparar-breaking:hover { background: #6d0227; }
 
@@ -122,10 +127,6 @@
 
   <div class="topo">
     <h1>HORUS NEWSROOM — Mapa de Produções</h1>
-    <div class="topo-direita">
-      <button id="btn-disparar-breaking">🚨 Disparar Breaking News</button>
-      <span class="status-conexao" id="status-conexao">🟡 Conectando...</span>
-    </div>
   </div>
 
   <div class="faixa-breaking" id="faixa-breaking">
@@ -165,6 +166,10 @@
     <input type="text" id="filtro-busca" placeholder="🔍 Buscar por título...">
     <input type="text" id="campo-meu-nome" placeholder="Seu nome (pra Minhas Pautas)...">
     <button id="btn-minhas-pautas" title="Mostra só o que tem seu nome como repórter, cinegrafista, produtor ou quem enviou a sugestão">👤 Minhas Pautas</button>
+    <div class="topo-direita">
+      <button id="btn-disparar-breaking">🚨 Disparar Breaking News</button>
+      <span class="status-conexao" id="status-conexao">🟡 Conectando...</span>
+    </div>
   </div>
 
   <div class="conteudo">

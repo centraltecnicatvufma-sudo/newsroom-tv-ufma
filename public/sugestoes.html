@@ -7,13 +7,19 @@
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
 
-    .topo { background: #336699; color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .topo { background: #336699; color: #fff; padding: 14px 20px; }
     .topo h1 { font-size: 18px; margin: 0; white-space: nowrap; }
-    .topo input { flex: 1; max-width: 320px; padding: 8px 10px; border-radius: 6px; border: none; font-size: 13px; }
-    .topo button { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-size: 13px; white-space: nowrap; }
 
-    .filtros { display: flex; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; }
-    .filtros select, .filtros input { padding: 6px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
+    /* Busca + Nova Sugestão agora ficam na mesma faixa dos filtros de
+       Status/Editoria (mesmo padrão de reportagens.html/pautas.html:
+       grupo de busca+ações empurrado pra direita com margin-left:auto),
+       em vez de ficarem soltos no .topo. */
+    .filtros { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #eee; flex-wrap: wrap; }
+    .filtros select, .filtros input[type="date"] { padding: 6px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
+
+    .grupo-busca-acoes { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 280px; margin-left: auto; }
+    .grupo-busca-acoes input[type="text"] { flex: 1; min-width: 160px; padding: 7px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
+    .grupo-busca-acoes button { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 7px 14px; cursor: pointer; font-size: 13px; white-space: nowrap; }
 
     .conteudo { flex: 1; overflow-y: auto; padding: 20px; }
 
@@ -170,8 +176,6 @@
   <div class="painel-doc ativo" id="painel-capa">
     <div class="topo">
       <h1>HORUS NEWSROOM — Sugestões de Pauta</h1>
-      <input type="text" id="busca-sugestao" placeholder="🔍 Buscar sugestão...">
-      <button id="btn-nova-sugestao">+ Nova Sugestão</button>
     </div>
 
     <div class="faixa-breaking" id="faixa-breaking">
@@ -207,6 +211,10 @@
         <option value="UFMA">UFMA</option>
         <option value="Outra">Outra</option>
       </select>
+      <div class="grupo-busca-acoes">
+        <input type="text" id="busca-sugestao" placeholder="🔍 Buscar sugestão...">
+        <button id="btn-nova-sugestao">+ Nova Sugestão</button>
+      </div>
     </div>
 
     <div class="conteudo">
