@@ -46,6 +46,10 @@
       .horus-chat-autor-form select { width: 100%; padding: 9px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; margin-bottom: 10px; }
       .horus-chat-autor-form button { width: 100%; background: #336699; color: #fff; border: none; border-radius: 6px; padding: 9px; font-size: 13px; cursor: pointer; }
 
+      .horus-chat-quemsou { padding: 6px 16px; font-size: 11px; color: #5b6472; background: #eef1f5; border-bottom: 1px solid #e2e2e2; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+      .horus-chat-quemsou strong { color: #1b2430; }
+      .horus-chat-quemsou button { background: none; border: none; color: #336699; font-size: 11px; cursor: pointer; text-decoration: underline; padding: 0; }
+
       .horus-chat-mensagens { flex: 1; overflow-y: auto; padding: 12px; background: #f4f5f7; display: flex; flex-direction: column; gap: 8px; }
       .horus-chat-vazio { text-align: center; color: #999; font-size: 12px; margin-top: 20px; }
       .horus-chat-msg { background: #fff; border-radius: 8px; padding: 8px 10px; font-size: 13px; max-width: 88%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
@@ -78,6 +82,10 @@
         <select id="horus-chat-select-autor"></select>
         <button type="button" id="horus-chat-confirmar-autor">Entrar no chat</button>
       </div>
+      <div class="horus-chat-quemsou" id="horus-chat-quemsou" style="display:none">
+        <span>Você: <strong id="horus-chat-nome-atual"></strong></span>
+        <button type="button" id="horus-chat-trocar-autor">Trocar</button>
+      </div>
       <div class="horus-chat-mensagens" id="horus-chat-mensagens" style="display:none"></div>
       <div class="horus-chat-footer" id="horus-chat-footer" style="display:none">
         <input type="text" id="horus-chat-input" placeholder="Escreva sua mensagem...">
@@ -89,6 +97,7 @@
 
     document.getElementById('horus-chat-fechar').addEventListener('click', fechar);
     document.getElementById('horus-chat-confirmar-autor').addEventListener('click', confirmarAutor);
+    document.getElementById('horus-chat-trocar-autor').addEventListener('click', mostrarPassoAutor);
     document.getElementById('horus-chat-enviar').addEventListener('click', enviarMensagem);
     document.getElementById('horus-chat-input').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') enviarMensagem();
@@ -113,6 +122,7 @@
   async function mostrarPassoAutor() {
     document.getElementById('horus-chat-mensagens').style.display = 'none';
     document.getElementById('horus-chat-footer').style.display = 'none';
+    document.getElementById('horus-chat-quemsou').style.display = 'none';
     const form = document.getElementById('horus-chat-autor-form');
     form.style.display = 'block';
 
@@ -120,6 +130,11 @@
     const select = document.getElementById('horus-chat-select-autor');
     select.innerHTML = '<option value="">Selecione...</option>' +
       membros.map(m => `<option value="${m.nome}">${m.nome} (${m.funcao})</option>`).join('');
+
+    // pré-seleciona quem já estava conversando, pra "Trocar" não obrigar a
+    // rolar a lista toda de novo caso seja só pra conferir/confirmar
+    const atual = nomeAutorAtual();
+    if (atual && membros.some(m => m.nome === atual)) select.value = atual;
   }
 
   function confirmarAutor() {
@@ -163,6 +178,8 @@
   async function mostrarChat() {
     document.getElementById('horus-chat-mensagens').style.display = 'flex';
     document.getElementById('horus-chat-footer').style.display = 'flex';
+    document.getElementById('horus-chat-quemsou').style.display = 'flex';
+    document.getElementById('horus-chat-nome-atual').textContent = nomeAutorAtual();
 
     const resp = await fetch('/chat/pauta/' + pautaAtual);
     mensagensAtuais = await resp.json();

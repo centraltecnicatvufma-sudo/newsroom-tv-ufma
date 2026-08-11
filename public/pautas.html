@@ -112,9 +112,12 @@
        impressão de uma Pauta individual (#impressao-pauta, que também é
        .somente-impressao) e a Grade apareçam juntas na mesma impressão. */
     #impressao-grade { display: none; }
+    /* Título fica solto, fora de qualquer moldura/tabela — só o espaço
+       duplo abaixo dele separa do início da grade. */
+    .titulo-grade { font-size: 16px; font-weight: bold; margin: 0 0 2em; }
     .tabela-grade { width: 100%; border-collapse: collapse; }
-    .tabela-grade th, .tabela-grade td { padding: 6px 10px; font-size: 12px; text-align: left; }
-    .tabela-grade th { background: #e0e0e0; text-transform: uppercase; border-bottom: 1.5px solid #000; }
+    .tabela-grade th, .tabela-grade td { padding: 6px 10px; font-size: 12px; text-align: left; border: 1px solid #000; }
+    .tabela-grade th { background: #e0e0e0; text-transform: uppercase; }
     .tabela-grade tbody tr:nth-child(even) { background: #f6f6f6; }
     .rodape-grade { display: flex; justify-content: space-between; font-size: 10px; color: #333; margin-top: 6px; }
 
@@ -326,6 +329,7 @@
   <div class="somente-impressao impressao-pauta" id="impressao-pauta"></div>
 
   <div class="somente-impressao" id="impressao-grade">
+    <div class="titulo-grade" id="titulo-impressao-grade"></div>
     <table class="tabela-grade">
       <thead><tr><th>Data</th><th>Título</th><th>Programa</th><th>Produtor</th></tr></thead>
       <tbody id="corpo-impressao-grade"></tbody>
@@ -1274,16 +1278,25 @@
     }
 
     // Grade do dia — folha em formato de relatório com as pautas do dia
-    // selecionado no filtro de data, sempre o dia inteiro (ignora os
-    // filtros de programa/status/busca que só valem pra tela, não pro
-    // impresso). Layout inspirado num modelo de grade impressa que a
-    // redação já usa em outro sistema, com DATA/TÍTULO/PROGRAMA/PRODUTOR.
+    // selecionado no filtro de data, respeitando também Programa e Status
+    // se estiverem selecionados na tela (busca por texto continua de fora
+    // — filtro livre demais pra fazer sentido numa grade impressa).
+    // Layout inspirado num modelo de grade impressa que a redação já usa
+    // em outro sistema, com DATA/TÍTULO/PROGRAMA/PRODUTOR.
     async function executarImpressaoGrade() {
       const dataFiltro = document.getElementById('filtro-data').value;
       if (!dataFiltro) { alert('Selecione uma data no filtro antes de imprimir a grade.'); return; }
 
-      const resp = await fetch('/pautas?data_fato=' + dataFiltro);
+      const params = new URLSearchParams({ data_fato: dataFiltro });
+      const programaFiltro = document.getElementById('filtro-programa').value;
+      const statusFiltro = document.getElementById('filtro-status').value;
+      if (programaFiltro) params.set('programa_id', programaFiltro);
+      if (statusFiltro) params.set('status', statusFiltro);
+
+      const resp = await fetch('/pautas?' + params.toString());
       const pautasDoDia = (await resp.json()).sort(compararPautas);
+
+      document.getElementById('titulo-impressao-grade').textContent = 'Pautas ' + formatarDataImpressao(dataFiltro);
 
       document.getElementById('corpo-impressao-grade').innerHTML = pautasDoDia.length
         ? pautasDoDia.map(p => `
