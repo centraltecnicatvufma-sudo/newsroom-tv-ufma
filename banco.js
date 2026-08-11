@@ -33,6 +33,13 @@ try { db.exec(`ALTER TABLE pautas ADD COLUMN agenda_id INTEGER`); } catch (e) {}
 try { db.exec(`ALTER TABLE pautas ADD COLUMN produtor TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE pautas ADD COLUMN editor_imagens TEXT`); } catch (e) {}
 
+// Tipo do material (VT, ST, Sonora, Ao Vivo, Nota Coberta...), exibido na
+// tabela de cabeçalho da Pauta junto com Título e Data.
+try { db.exec(`ALTER TABLE pautas ADD COLUMN tipo TEXT`); } catch (e) {}
+// Texto livre — coluna esquerda do corpo da Pauta, sem título/rótulo fixo,
+// ao lado das caixas de texto tituladas (Enquadramento, Roteiro, extras).
+try { db.exec(`ALTER TABLE pautas ADD COLUMN texto_livre TEXT`); } catch (e) {}
+
 try { db.exec(`ALTER TABLE pautas ADD COLUMN cabeca_texto TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE pautas ADD COLUMN texto_web TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE pautas ADD COLUMN editoria TEXT`); } catch (e) {}
@@ -87,6 +94,23 @@ db.exec(`
     cargo TEXT,
     contato TEXT,
     horario_confirmado TEXT,
+    FOREIGN KEY (pauta_id) REFERENCES pautas(id)
+  )
+`);
+
+// Caixas de texto extras da Pauta — além de "Enquadramento" e "Roteiro"
+// (que continuam como campos fixos: pautas.orientacao/roteiro, sem
+// migração, pra não mexer em conteúdo já existente), o repórter/produtor
+// pode adicionar quantas quiser, cada uma com título editável. Mesmo
+// padrão de pauta_fontes: substituído por inteiro a cada salvamento
+// (ver pautas.js).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS pauta_textos_extra (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pauta_id INTEGER NOT NULL,
+    ordem INTEGER,
+    titulo TEXT,
+    texto TEXT,
     FOREIGN KEY (pauta_id) REFERENCES pautas(id)
   )
 `);

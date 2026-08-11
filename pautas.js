@@ -6,6 +6,27 @@ function buscarFontes(pautaId) {
   return db.prepare('SELECT * FROM pauta_fontes WHERE pauta_id = ?').all(pautaId);
 }
 
+// Caixas de texto extras (além de Enquadramento/Roteiro, que continuam
+// campos fixos da pauta) — ver banco.js: pauta_textos_extra.
+function buscarTextosExtra(pautaId) {
+  return db.prepare('SELECT * FROM pauta_textos_extra WHERE pauta_id = ? ORDER BY ordem ASC, id ASC').all(pautaId);
+}
+
+// Substitui todas as caixas de texto extras de uma pauta pelas enviadas —
+// mesmo padrão de substituir-por-inteiro já usado pra fontes, mais simples
+// que tentar diferenciar quais mudaram/foram removidas.
+function salvarTextosExtra(pautaId, textosExtra) {
+  db.prepare('DELETE FROM pauta_textos_extra WHERE pauta_id = ?').run(pautaId);
+  if (!Array.isArray(textosExtra)) return;
+  const inserir = db.prepare(`
+    INSERT INTO pauta_textos_extra (pauta_id, ordem, titulo, texto)
+    VALUES (?, ?, ?, ?)
+  `);
+  textosExtra.forEach((t, indice) => {
+    inserir.run(pautaId, indice + 1, t.titulo || '', t.texto || '');
+  });
+}
+
 // SELECT base reaproveitado por GET / e GET /:id — acrescenta dois campos
 // calculados que nenhuma tabela guarda direto:
 // - duracao_estimada_segundos: Cabeça (pautas.cabeca_duracao_segundos) +
@@ -89,6 +110,7 @@ router.get('/:id', (req, res) => {
   const pauta = db.prepare(SELECT_PAUTAS + ' WHERE pautas.id = ?').get(id);
   if (!pauta) return res.status(404).json({ erro: 'Pauta não encontrada' });
   pauta.fontes = buscarFontes(id);
+  pauta.textos_extra = buscarTextosExtra(id);
   res.json(pauta);
 });
 
@@ -97,10 +119,10 @@ router.post('/', (req, res) => {
   const {
     sugestao_id, agenda_id, titulo, programa_id,
     destino_tv, destino_instagram, destino_youtube, destino_site,
-    orientacao, roteiro, local, anexos,
+    orientacao, roteiro, local, anexos, tipo, texto_livre,
     produtor, reporter, cinegrafista, motorista, editor_imagens,
     equip_lapela, equip_iluminacao, equip_mochilink,
-    data_fato, hora_fato, status, editoria, deadline, fontes
+    data_fato, hora_fato, status, editoria, deadline, fontes, textos_extra
   } = req.body;
 
   if (!titulo) return res.status(400).json({ erro: 'Título é obrigatório' });
@@ -112,17 +134,17 @@ router.post('/', (req, res) => {
     INSERT INTO pautas (
       sugestao_id, agenda_id, titulo, programa_id,
       destino_tv, destino_instagram, destino_youtube, destino_site,
-      orientacao, roteiro, local, anexos,
+      orientacao, roteiro, local, anexos, tipo, texto_livre,
       produtor, reporter, cinegrafista, motorista, editor_imagens,
       equip_lapela, equip_iluminacao, equip_mochilink,
       data_fato, hora_fato, status, editoria, deadline,
       ${colunasAtivos.join(', ')}
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${colunasAtivos.map(() => '?').join(', ')})
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${colunasAtivos.map(() => '?').join(', ')})
   `).run(
     sugestao_id || null, agenda_id || null, titulo, programa_id || null,
     destino_tv ? 1 : 0, destino_instagram ? 1 : 0, destino_youtube ? 1 : 0, destino_site ? 1 : 0,
-    orientacao || '', roteiro || '', local || '', anexos || '',
+    orientacao || '', roteiro || '', local || '', anexos || '', tipo || '', texto_livre || '',
     produtor || '', reporter || '', cinegrafista || '', motorista || '', editor_imagens || '',
     equip_lapela ? 1 : 0, equip_iluminacao ? 1 : 0, equip_mochilink ? 1 : 0,
     data_fato || '', hora_fato || '', status || 'em_producao', editoria || '', deadline || '',
@@ -141,10 +163,12 @@ router.post('/', (req, res) => {
     });
   }
 
+  salvarTextosExtra(novaId, textos_extra);
   registrarHistoricoStatus(novaId, null, status || 'em_producao');
 
   const nova = db.prepare('SELECT * FROM pautas WHERE id = ?').get(novaId);
   nova.fontes = buscarFontes(novaId);
+  nova.textos_extra = buscarTextosExtra(novaId);
   avisarMudanca(req);
   res.status(201).json(nova);
 });
@@ -158,7 +182,7 @@ router.patch('/:id', (req, res) => {
   const campos = [
     'sugestao_id', 'agenda_id', 'titulo', 'programa_id',
     'destino_tv', 'destino_instagram', 'destino_youtube', 'destino_site',
-    'orientacao', 'roteiro', 'local', 'anexos',
+    'orientacao', 'roteiro', 'local', 'anexos', 'tipo', 'texto_livre',
     'produtor', 'reporter', 'cinegrafista', 'motorista', 'editor_imagens',
     'equip_lapela', 'equip_iluminacao', 'equip_mochilink',
     'data_fato', 'hora_fato', 'status', 'editoria', 'deadline',
@@ -196,7 +220,7 @@ router.patch('/:id', (req, res) => {
     UPDATE pautas SET
       sugestao_id=?, agenda_id=?, titulo=?, programa_id=?,
       destino_tv=?, destino_instagram=?, destino_youtube=?, destino_site=?,
-      orientacao=?, roteiro=?, local=?, anexos=?,
+      orientacao=?, roteiro=?, local=?, anexos=?, tipo=?, texto_livre=?,
       produtor=?, reporter=?, cinegrafista=?, motorista=?, editor_imagens=?,
       equip_lapela=?, equip_iluminacao=?, equip_mochilink=?,
       data_fato=?, hora_fato=?, status=?, editoria=?, deadline=?,
@@ -208,7 +232,7 @@ router.patch('/:id', (req, res) => {
     atualizado.sugestao_id, atualizado.agenda_id, atualizado.titulo, atualizado.programa_id,
     atualizado.destino_tv ? 1 : 0, atualizado.destino_instagram ? 1 : 0,
     atualizado.destino_youtube ? 1 : 0, atualizado.destino_site ? 1 : 0,
-    atualizado.orientacao, atualizado.roteiro, atualizado.local, atualizado.anexos,
+    atualizado.orientacao, atualizado.roteiro, atualizado.local, atualizado.anexos, atualizado.tipo, atualizado.texto_livre,
     atualizado.produtor, atualizado.reporter, atualizado.cinegrafista, atualizado.motorista, atualizado.editor_imagens,
     atualizado.equip_lapela ? 1 : 0, atualizado.equip_iluminacao ? 1 : 0, atualizado.equip_mochilink ? 1 : 0,
     atualizado.data_fato, atualizado.hora_fato, atualizado.status, atualizado.editoria, atualizado.deadline,
@@ -240,8 +264,13 @@ router.patch('/:id', (req, res) => {
     });
   }
 
+  if (Array.isArray(req.body.textos_extra)) {
+    salvarTextosExtra(id, req.body.textos_extra);
+  }
+
   const item_atualizado = db.prepare(SELECT_PAUTAS + ' WHERE pautas.id = ?').get(id);
   item_atualizado.fontes = buscarFontes(id);
+  item_atualizado.textos_extra = buscarTextosExtra(id);
   avisarMudanca(req);
   res.json(item_atualizado);
 });
@@ -284,6 +313,7 @@ router.delete('/:id/definitivo', (req, res) => {
     db.prepare('DELETE FROM blocos WHERE pauta_id = ?').run(id);
     db.prepare('DELETE FROM materia_itens WHERE pauta_id = ?').run(id);
     db.prepare('DELETE FROM pauta_fontes WHERE pauta_id = ?').run(id);
+    db.prepare('DELETE FROM pauta_textos_extra WHERE pauta_id = ?').run(id);
     db.prepare('DELETE FROM pautas_historico_status WHERE pauta_id = ?').run(id);
     db.prepare('UPDATE sugestoes SET pauta_id = NULL WHERE pauta_id = ?').run(id);
 
