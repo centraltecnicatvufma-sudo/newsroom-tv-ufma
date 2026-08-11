@@ -37,9 +37,22 @@
         background: #336699; color: #fff; padding: 14px 16px; display: flex;
         align-items: center; justify-content: space-between; gap: 10px; flex-shrink: 0;
       }
-      .horus-chat-header .chat-title { font-size: 14px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .horus-chat-header .chat-title { font-size: 14px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+      .horus-chat-header .chat-header-botoes { display: flex; gap: 6px; flex-shrink: 0; }
       .horus-chat-header button { background: rgba(255,255,255,0.2); color: #fff; border: none; border-radius: 6px; width: 26px; height: 26px; cursor: pointer; font-size: 13px; flex-shrink: 0; }
       .horus-chat-header button:hover { background: rgba(255,255,255,0.35); }
+
+      .horus-chat-historico-menu {
+        display: none; position: absolute; top: 48px; right: 16px; background: #fff;
+        border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+        z-index: 901; min-width: 220px; max-width: 280px; max-height: 240px; overflow-y: auto;
+      }
+      .horus-chat-historico-menu.aberto { display: block; }
+      .horus-chat-historico-menu button { display: block; width: 100%; text-align: left; padding: 9px 12px; background: #fff; color: #1b2430; border: none; border-bottom: 1px solid #f0f0f0; font-size: 12px; cursor: pointer; white-space: normal; height: auto; border-radius: 0; }
+      .horus-chat-historico-menu button:last-child { border-bottom: none; }
+      .horus-chat-historico-menu button:hover { background: #eef1f5; }
+      .horus-chat-historico-menu button.atual { font-weight: bold; color: #336699; }
+      .horus-chat-historico-menu .horus-chat-historico-vazio { padding: 14px 12px; font-size: 12px; color: #999; text-align: center; }
 
       .horus-chat-autor-form { padding: 20px 16px; }
       .horus-chat-autor-form label { display: block; font-size: 12px; color: #5b6472; margin-bottom: 6px; }
@@ -75,8 +88,12 @@
     div.innerHTML = `
       <div class="horus-chat-header">
         <span class="chat-title" id="horus-chat-titulo">💬 Chat</span>
-        <button type="button" id="horus-chat-fechar" title="Fechar">✕</button>
+        <div class="chat-header-botoes">
+          <button type="button" id="horus-chat-historico-btn" title="Chats abertos anteriormente">🕐</button>
+          <button type="button" id="horus-chat-fechar" title="Fechar">✕</button>
+        </div>
       </div>
+      <div class="horus-chat-historico-menu" id="horus-chat-historico-menu"></div>
       <div class="horus-chat-autor-form" id="horus-chat-autor-form" style="display:none">
         <label>Quem é você?</label>
         <select id="horus-chat-select-autor"></select>
@@ -101,6 +118,52 @@
     document.getElementById('horus-chat-enviar').addEventListener('click', enviarMensagem);
     document.getElementById('horus-chat-input').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') enviarMensagem();
+    });
+    document.getElementById('horus-chat-historico-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menu = document.getElementById('horus-chat-historico-menu');
+      const jaAberto = menu.classList.contains('aberto');
+      fecharMenuHistorico();
+      if (!jaAberto) { renderHistorico(); menu.classList.add('aberto'); }
+    });
+    document.addEventListener('click', fecharMenuHistorico);
+  }
+
+  // Chats de Pauta já abertos nesta sessão do navegador (em memória, não
+  // persiste entre reloads) — mais recente primeiro, sem duplicar pauta
+  // (reabrir uma que já estava na lista só sobe ela pro topo de novo).
+  let historico = [];
+  const MAX_HISTORICO = 8;
+
+  function registrarHistorico(pautaId, titulo) {
+    historico = historico.filter(h => h.pautaId !== pautaId);
+    historico.unshift({ pautaId, titulo: titulo || ('Pauta #P-' + pautaId) });
+    if (historico.length > MAX_HISTORICO) historico.length = MAX_HISTORICO;
+  }
+
+  function fecharMenuHistorico() {
+    document.getElementById('horus-chat-historico-menu')?.classList.remove('aberto');
+  }
+
+  function renderHistorico() {
+    const menu = document.getElementById('horus-chat-historico-menu');
+    if (!historico.length) {
+      menu.innerHTML = '<div class="horus-chat-historico-vazio">Nenhum outro chat aberto ainda nesta sessão.</div>';
+      return;
+    }
+
+    menu.innerHTML = historico.map(h => `
+      <button type="button" class="${h.pautaId === pautaAtual ? 'atual' : ''}"></button>
+    `).join('');
+
+    const botoes = menu.querySelectorAll('button');
+    botoes.forEach((btn, i) => { btn.textContent = historico[i].titulo; });
+    botoes.forEach((btn, i) => {
+      btn.addEventListener('click', () => {
+        fecharMenuHistorico();
+        const h = historico[i];
+        abrir(h.pautaId, h.titulo);
+      });
     });
   }
 
@@ -222,8 +285,10 @@
     if (!pautaId) return;
     injetarPainel();
     pautaAtual = pautaId;
+    registrarHistorico(pautaId, tituloPauta);
     document.getElementById('horus-chat-titulo').textContent = '💬 ' + (tituloPauta || ('Pauta #P-' + pautaId));
     document.getElementById('horus-chat-painel').classList.add('aberto');
+    fecharMenuHistorico();
 
     if (!nomeAutorAtual()) await mostrarPassoAutor();
     else await mostrarChat();
