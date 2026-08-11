@@ -122,6 +122,22 @@ db.exec(`
   )
 `);
 
+// Chat contextual por Pauta — v1 do HORUS Chat, escopo reduzido a só isso
+// (sem canais gerais/por programa ainda, sem @menções, sem modo NO AR;
+// ver memória do projeto pra decisões de escopo). Sem tabela de usuários
+// porque o v1 não tem login — "autor" é o nome escolhido na tela (mesma
+// lista da Agenda), guardado como texto puro.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS chat_mensagens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pauta_id INTEGER NOT NULL,
+    autor TEXT NOT NULL,
+    texto TEXT NOT NULL,
+    criado_em TEXT NOT NULL,
+    FOREIGN KEY (pauta_id) REFERENCES pautas(id)
+  )
+`);
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS materia_gcs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -318,6 +318,7 @@ router.delete('/:id/definitivo', (req, res) => {
     db.prepare('DELETE FROM materia_itens WHERE pauta_id = ?').run(id);
     db.prepare('DELETE FROM pauta_fontes WHERE pauta_id = ?').run(id);
     db.prepare('DELETE FROM pauta_textos_extra WHERE pauta_id = ?').run(id);
+    db.prepare('DELETE FROM chat_mensagens WHERE pauta_id = ?').run(id);
     db.prepare('DELETE FROM pautas_historico_status WHERE pauta_id = ?').run(id);
     db.prepare('UPDATE sugestoes SET pauta_id = NULL WHERE pauta_id = ?').run(id);
 

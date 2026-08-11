@@ -155,6 +155,7 @@
     .btn-cancelar { background: #eee; color: #333; }
     .btn-agenda { background: #336699; color: #fff; }
     .btn-lauda-modal { background: #C98A1F; color: #fff; }
+    .btn-chat-form { background: #2e8b57; color: #fff; }
     .btn-imprimir-form { background: #5b6472; color: #fff; }
     .btn-confirmar { background: #8D0333; color: #fff; }
 
@@ -336,6 +337,7 @@
     </div>
   </div>
 
+  <script src="chat-painel.js"></script>
   <script>
     // ---- Faixa de Breaking News (mesmo alerta em todas as telas) ----
     // Disparado a partir do Mapa de Produções; aqui só exibe e permite
@@ -695,6 +697,7 @@
           <div class="form-pauta-botoes">
             <button class="btn-agenda" data-acao="ver-agenda">📅 Ver na Agenda</button>
             <button class="btn-lauda-modal" data-acao="criar-lauda">📝 Criar Texto / Lauda</button>
+            <button class="btn-chat-form" data-acao="abrir-chat">💬 Chat</button>
             <span class="grupo-imprimir">
               <button type="button" class="btn-imprimir-form" data-acao="abrir-menu-imprimir">🖨️ Imprimir ▾</button>
               <div class="menu-imprimir-pauta" data-menu="form">
@@ -1365,6 +1368,17 @@
         if (aba.pautaId === null) { alert('Salve a pauta antes de criar o texto.'); return; }
         const programaId = elCampo(container, 'programa').value ? Number(elCampo(container, 'programa').value) : null;
         abrirLaudaComDados(aba.pautaId, elCampo(container, 'titulo').value, programaId, elCampo(container, 'reporter').value);
+      });
+      container.querySelector('[data-acao="abrir-chat"]').addEventListener('click', async () => {
+        const aba = abas[idAba];
+        // Diferente de Imprimir/Criar Lauda (que só avisam), o Chat salva
+        // sozinho antes de abrir — pedido explícito, pra não obrigar um
+        // passo manual só pra começar a conversar. Se salvarPauta falhar
+        // (ex.: título vazio), ela mesma já mostra o alerta e aba.pautaId
+        // continua null, então não abre o chat.
+        if (aba.pautaId === null) await salvarPauta(idAba);
+        if (aba.pautaId === null) return;
+        window.ChatPauta.abrir(aba.pautaId, elCampo(container, 'titulo').value);
       });
       const menuImprimirForm = container.querySelector('.menu-imprimir-pauta[data-menu="form"]');
       container.querySelector('[data-acao="abrir-menu-imprimir"]').addEventListener('click', (e) => {

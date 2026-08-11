@@ -225,6 +225,7 @@
     </div>
   </div>
 
+  <script src="chat-painel.js"></script>
   <script>
     // ---- Faixa de Breaking News (mesmo alerta em todas as telas) ----
     // Disparado a partir do Mapa de Produções; aqui só exibe e permite
@@ -548,6 +549,7 @@
                     ${b.cabeca_desatualizada ? `<button class="btn-sincronizar aviso-cabeca" data-id="${b.id}" title="A Cabeça da Lauda mudou depois — clique para atualizar o texto do teleprompter">🔄</button>` : ''}
                     <button class="btn-editar-item" data-id="${b.id}" title="Editar item">✏️</button>
                     ${b.pauta_id ? `<button class="btn-abrir-lauda" data-pauta="${b.pauta_id}" title="Abrir Lauda">📝</button>` : ''}
+                    ${b.pauta_id ? `<button class="btn-chat-bloco" data-pauta="${b.pauta_id}" data-titulo="${(b.titulo || '').replace(/"/g, '&quot;')}" title="Chat desta pauta">💬</button>` : ''}
                     <button class="btn-remover-bloco" data-id="${b.id}" title="Remover">🗑️</button>
                   </td>
                 </tr>
@@ -581,6 +583,12 @@
       document.querySelectorAll('.btn-abrir-lauda').forEach(btn => {
         btn.addEventListener('click', () => {
           window.location.href = 'materia.html?pauta_id=' + btn.dataset.pauta;
+        });
+      });
+
+      document.querySelectorAll('.btn-chat-bloco').forEach(btn => {
+        btn.addEventListener('click', () => {
+          window.ChatPauta.abrir(Number(btn.dataset.pauta), btn.dataset.titulo);
         });
       });
 

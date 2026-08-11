@@ -8,9 +8,11 @@
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; }
 
-    .topo { background: #336699; color: #fff; padding: 14px 20px; }
+    .topo { background: #336699; color: #fff; padding: 14px 20px; position: relative; }
     .topo h1 { font-size: 16px; margin: 0 0 4px; }
     .topo .sub { font-size: 12px; opacity: 0.9; }
+    .btn-chat-pauta { position: absolute; top: 14px; right: 20px; background: rgba(255,255,255,0.2); color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 12px; cursor: pointer; }
+    .btn-chat-pauta:hover { background: rgba(255,255,255,0.35); }
 
     .info-pauta { background: #fff; padding: 14px 20px; border-bottom: 1px solid #eee; display: flex; flex-wrap: wrap; gap: 24px; font-size: 13px; }
     .info-pauta strong { color: #5b6472; font-weight: normal; margin-right: 4px; }
@@ -232,6 +234,7 @@
   <div class="topo">
     <h1>HORUS NEWSROOM — Lauda de Reportagem</h1>
     <div class="sub" id="sub-pauta">Carregando...</div>
+    <button type="button" class="btn-chat-pauta" id="btn-chat-pauta" title="Chat desta pauta">💬 Chat</button>
   </div>
 
   <div class="faixa-breaking" id="faixa-breaking">
@@ -331,6 +334,7 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
+  <script src="chat-painel.js"></script>
   <script>
     // ---- Faixa de Breaking News (mesmo alerta em todas as telas) ----
     // Disparado a partir do Mapa de Produções; aqui só exibe e permite
@@ -371,6 +375,10 @@
 
     const params = new URLSearchParams(window.location.search);
     const pautaId = params.get('pauta_id');
+    let tituloPautaAtual = '';
+    document.getElementById('btn-chat-pauta').addEventListener('click', () => {
+      window.ChatPauta.abrir(Number(pautaId), tituloPautaAtual);
+    });
     let quillCabeca, quillWeb;
     const quillItens = {}; // id do item -> instância Quill
     const itensMeta = {}; // id do item -> { duracao_segundos, duracao_automatica }
@@ -500,6 +508,7 @@
       const nomePrograma = (programas.find(pr => pr.id === p.programa_id) || {}).nome;
 
       document.getElementById('sub-pauta').textContent = 'Pauta #P-' + p.id;
+      tituloPautaAtual = p.titulo || ('Pauta #P-' + p.id);
       document.getElementById('info-pauta').innerHTML = `
         <div><strong>Título:</strong>${p.titulo || '—'}</div>
         <div><strong>Repórter:</strong>${p.reporter || '—'}</div>
