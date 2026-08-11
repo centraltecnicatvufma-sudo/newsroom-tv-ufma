@@ -119,7 +119,7 @@ router.post('/', (req, res) => {
   const {
     sugestao_id, agenda_id, titulo, programa_id,
     destino_tv, destino_instagram, destino_youtube, destino_site,
-    orientacao, roteiro, local, anexos, tipo, texto_livre,
+    orientacao, roteiro, local, anexos, tipo, texto_livre, equipe_extra,
     produtor, reporter, cinegrafista, motorista, editor_imagens,
     equip_lapela, equip_iluminacao, equip_mochilink,
     data_fato, hora_fato, status, editoria, deadline, fontes, textos_extra
@@ -134,17 +134,18 @@ router.post('/', (req, res) => {
     INSERT INTO pautas (
       sugestao_id, agenda_id, titulo, programa_id,
       destino_tv, destino_instagram, destino_youtube, destino_site,
-      orientacao, roteiro, local, anexos, tipo, texto_livre,
+      orientacao, roteiro, local, anexos, tipo, texto_livre, equipe_extra,
       produtor, reporter, cinegrafista, motorista, editor_imagens,
       equip_lapela, equip_iluminacao, equip_mochilink,
       data_fato, hora_fato, status, editoria, deadline,
       ${colunasAtivos.join(', ')}
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${colunasAtivos.map(() => '?').join(', ')})
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${colunasAtivos.map(() => '?').join(', ')})
   `).run(
     sugestao_id || null, agenda_id || null, titulo, programa_id || null,
     destino_tv ? 1 : 0, destino_instagram ? 1 : 0, destino_youtube ? 1 : 0, destino_site ? 1 : 0,
     orientacao || '', roteiro || '', local || '', anexos || '', tipo || '', texto_livre || '',
+    Array.isArray(equipe_extra) ? equipe_extra.join(', ') : (equipe_extra || ''),
     produtor || '', reporter || '', cinegrafista || '', motorista || '', editor_imagens || '',
     equip_lapela ? 1 : 0, equip_iluminacao ? 1 : 0, equip_mochilink ? 1 : 0,
     data_fato || '', hora_fato || '', status || 'em_producao', editoria || '', deadline || '',
@@ -182,7 +183,7 @@ router.patch('/:id', (req, res) => {
   const campos = [
     'sugestao_id', 'agenda_id', 'titulo', 'programa_id',
     'destino_tv', 'destino_instagram', 'destino_youtube', 'destino_site',
-    'orientacao', 'roteiro', 'local', 'anexos', 'tipo', 'texto_livre',
+    'orientacao', 'roteiro', 'local', 'anexos', 'tipo', 'texto_livre', 'equipe_extra',
     'produtor', 'reporter', 'cinegrafista', 'motorista', 'editor_imagens',
     'equip_lapela', 'equip_iluminacao', 'equip_mochilink',
     'data_fato', 'hora_fato', 'status', 'editoria', 'deadline',
@@ -195,6 +196,9 @@ router.patch('/:id', (req, res) => {
   campos.forEach(c => {
     atualizado[c] = req.body[c] !== undefined ? req.body[c] : item[c];
   });
+  // equipe_extra chega da tela como array (seleção múltipla) — guarda como
+  // texto simples com nomes separados por vírgula, mesmo padrão do POST.
+  if (Array.isArray(atualizado.equipe_extra)) atualizado.equipe_extra = atualizado.equipe_extra.join(', ');
 
   // Tempo do Vídeo (real, pós-edição) é obrigatório antes de virar
   // Concluída — mas só pra pautas que têm matéria escrita de verdade
@@ -220,7 +224,7 @@ router.patch('/:id', (req, res) => {
     UPDATE pautas SET
       sugestao_id=?, agenda_id=?, titulo=?, programa_id=?,
       destino_tv=?, destino_instagram=?, destino_youtube=?, destino_site=?,
-      orientacao=?, roteiro=?, local=?, anexos=?, tipo=?, texto_livre=?,
+      orientacao=?, roteiro=?, local=?, anexos=?, tipo=?, texto_livre=?, equipe_extra=?,
       produtor=?, reporter=?, cinegrafista=?, motorista=?, editor_imagens=?,
       equip_lapela=?, equip_iluminacao=?, equip_mochilink=?,
       data_fato=?, hora_fato=?, status=?, editoria=?, deadline=?,
@@ -232,7 +236,7 @@ router.patch('/:id', (req, res) => {
     atualizado.sugestao_id, atualizado.agenda_id, atualizado.titulo, atualizado.programa_id,
     atualizado.destino_tv ? 1 : 0, atualizado.destino_instagram ? 1 : 0,
     atualizado.destino_youtube ? 1 : 0, atualizado.destino_site ? 1 : 0,
-    atualizado.orientacao, atualizado.roteiro, atualizado.local, atualizado.anexos, atualizado.tipo, atualizado.texto_livre,
+    atualizado.orientacao, atualizado.roteiro, atualizado.local, atualizado.anexos, atualizado.tipo, atualizado.texto_livre, atualizado.equipe_extra,
     atualizado.produtor, atualizado.reporter, atualizado.cinegrafista, atualizado.motorista, atualizado.editor_imagens,
     atualizado.equip_lapela ? 1 : 0, atualizado.equip_iluminacao ? 1 : 0, atualizado.equip_mochilink ? 1 : 0,
     atualizado.data_fato, atualizado.hora_fato, atualizado.status, atualizado.editoria, atualizado.deadline,

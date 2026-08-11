@@ -450,6 +450,31 @@
       return '<option value="">Selecione...</option>' + opcoesHtml;
     }
 
+    // Opções do select múltiplo de Equipe Extra — todo mundo da Agenda
+    // (sem filtrar por função, já que reforço pode ser qualquer papel),
+    // com os nomes já salvos vindo marcados "selected". Mesmo cuidado de
+    // opcoesPorPapel: nome salvo que não bate com ninguém da Agenda hoje
+    // continua aparecendo (senão a seleção some sozinha ao reabrir).
+    function opcoesEquipeCompleta(nomesSelecionados) {
+      const selecionados = new Set(nomesSelecionados || []);
+      const vistos = new Set();
+      const membros = equipeCache
+        .filter(m => (vistos.has(m.nome) ? false : (vistos.add(m.nome), true)))
+        .sort((a, b) => a.nome.localeCompare(b.nome));
+
+      let opcoesHtml = membros.map(m =>
+        `<option value="${m.nome}"${selecionados.has(m.nome) ? ' selected' : ''}>${m.nome} (${m.funcao})</option>`
+      ).join('');
+
+      selecionados.forEach(nome => {
+        if (!membros.some(m => m.nome === nome)) {
+          opcoesHtml += `<option value="${nome}" selected>${nome} (fora da lista — confira a função na Agenda)</option>`;
+        }
+      });
+
+      return opcoesHtml;
+    }
+
     function preencherSelectsPainel(container, dadosPauta) {
       const opcoesPrograma = '<option value="">Selecione...</option>' + programasCache.map(p =>
         `<option value="${p.id}">${p.nome}</option>`
@@ -460,6 +485,11 @@
       elCampo(container, 'reporter').innerHTML = opcoesPorPapel('reporter', dadosPauta && dadosPauta.reporter);
       elCampo(container, 'cinegrafista').innerHTML = opcoesPorPapel('cinegrafista', dadosPauta && dadosPauta.cinegrafista);
       elCampo(container, 'editor-imagens').innerHTML = opcoesPorPapel('editor-imagens', dadosPauta && dadosPauta.editor_imagens);
+
+      const equipeExtraSalva = dadosPauta && dadosPauta.equipe_extra
+        ? dadosPauta.equipe_extra.split(',').map(s => s.trim()).filter(Boolean)
+        : [];
+      elCampo(container, 'equipe-extra').innerHTML = opcoesEquipeCompleta(equipeExtraSalva);
     }
 
     function nomePrograma(id) {
@@ -823,6 +853,8 @@
             <select data-campo="editor-imagens"></select>
             <label>Motorista / Transporte</label>
             <input type="text" data-campo="motorista" placeholder="Opcional">
+            <label>Equipe Extra / Reforço (Ctrl/Cmd + clique pra selecionar vários)</label>
+            <select data-campo="equipe-extra" multiple size="8"></select>
             <label>Equipamentos Especiais</label>
             <div class="linha-checkboxes">
               <label><input type="checkbox" data-campo="lapela"> Microfone Lapela</label>
@@ -1012,6 +1044,7 @@
         reporter: elCampo(container, 'reporter').value,
         cinegrafista: elCampo(container, 'cinegrafista').value,
         editor_imagens: elCampo(container, 'editor-imagens').value,
+        equipe_extra: Array.from(elCampo(container, 'equipe-extra').selectedOptions).map(o => o.value),
         motorista: elCampo(container, 'motorista').value.trim(),
         equip_lapela: elCampo(container, 'lapela').checked,
         equip_iluminacao: elCampo(container, 'iluminacao').checked,
@@ -1112,12 +1145,9 @@
 
       const fontes = Array.isArray(p.fontes) ? p.fontes : [];
       const textosExtra = Array.isArray(p.textos_extra) ? p.textos_extra : [];
-      // Repórter/Cinegrafista/Produtor já aparecem na tabela de cabeçalho —
-      // aqui sobra só o resto da equipe de apoio.
-      const equipe = [
-        p.editor_imagens ? 'Editor de Imagens: ' + p.editor_imagens : null,
-        p.motorista ? 'Motorista: ' + p.motorista : null,
-      ].filter(Boolean);
+      // "Equipe" não aparece mais na impressão — só a Equipe Extra, e só
+      // quando tem alguém selecionado (pedido explícito do usuário).
+      const equipeExtra = p.equipe_extra ? p.equipe_extra.split(',').map(s => s.trim()).filter(Boolean) : [];
 
       const agora = new Date();
       const dataImpressao = agora.toLocaleDateString('pt-BR') + ' ' +
@@ -1132,7 +1162,7 @@
       ];
 
       const blocosFixos = [
-        entradaImpressao('Equipe', equipe.length ? equipe.join(' · ') : '—'),
+        equipeExtra.length ? entradaImpressao('Equipe Extra', equipeExtra.join(', ')) : '',
         equipamentos.length ? entradaImpressao('Equipamentos Especiais', equipamentos.join(', ')) : '',
         ...fontes.map((f, i) => entradaImpressao(
           'Fonte ' + (i + 1) + (f.cargo ? ' — ' + f.cargo : ''),
@@ -1162,11 +1192,12 @@
 
       document.getElementById('impressao-pauta').innerHTML = `
         <table class="tabela-impressao-cabecalho">
-          <thead><tr><th>Título</th><th>Data</th><th>Tipo</th></tr></thead>
+          <thead><tr><th>Título</th><th>Data</th><th>Hora</th><th>Tipo</th></tr></thead>
           <tbody>
             <tr>
               <td>${p.titulo || '—'}</td>
               <td>${formatarDataImpressao(p.data_fato)}</td>
+              <td>${p.hora_fato || '—'}</td>
               <td>${p.tipo || '—'}</td>
             </tr>
           </tbody>
@@ -1184,12 +1215,7 @@
 
         <div class="cabecalho-impressao-info">
           <div class="linha-info">
-            <strong>Programa:</strong>${nomePrograma(p.programa_id)}
-            &nbsp;&nbsp;<strong>Status:</strong>${rotulosStatus[p.status] || p.status || '—'}
-          </div>
-          <div class="linha-info">
-            <strong>Hora do Fato:</strong>${p.hora_fato || '—'}
-            &nbsp;&nbsp;<strong>Local:</strong>${p.local || '—'}
+            <strong>Local:</strong>${p.local || '—'}
           </div>
           <div class="linha-info destinos-impressao">
             <strong>Formatos / Destinos:</strong> ${destinos.length ? destinos.map(d => `<span>${d}</span>`).join('') : '—'}

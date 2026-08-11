@@ -40,6 +40,13 @@ try { db.exec(`ALTER TABLE pautas ADD COLUMN tipo TEXT`); } catch (e) {}
 // ao lado das caixas de texto tituladas (Enquadramento, Roteiro, extras).
 try { db.exec(`ALTER TABLE pautas ADD COLUMN texto_livre TEXT`); } catch (e) {}
 
+// Equipe extra (reforço) — nomes adicionais além de Repórter/Cinegrafista/
+// Produtor/Editor de Imagens, pra externas que precisam de mais gente.
+// Seleção múltipla na tela (<select multiple>), guardada aqui como texto
+// simples com nomes separados por vírgula — mesmo padrão de "anexos"
+// (texto puro), sem tabela filha, já que não tem metadado por nome.
+try { db.exec(`ALTER TABLE pautas ADD COLUMN equipe_extra TEXT`); } catch (e) {}
+
 try { db.exec(`ALTER TABLE pautas ADD COLUMN cabeca_texto TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE pautas ADD COLUMN texto_web TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE pautas ADD COLUMN editoria TEXT`); } catch (e) {}
