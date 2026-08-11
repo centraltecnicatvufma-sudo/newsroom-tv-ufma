@@ -209,7 +209,19 @@
 
     .fonte-item { border: 1px solid #eee; border-radius: 6px; padding: 10px; margin-top: 8px; position: relative; background: #fff; }
     .fonte-item .remover-fonte { position: absolute; top: 6px; right: 8px; background: none; border: none; color: #8D0333; cursor: pointer; font-size: 13px; }
-    .btn-add-fonte { background: #eef1f5; color: #336699; border: none; border-radius: 6px; padding: 8px 12px; font-size: 12px; cursor: pointer; margin-top: 10px; }
+    .btn-add-fonte { background: #eef1f5; color: #336699; border: none; border-radius: 6px; padding: 8px 12px; font-size: 12px; cursor: pointer; margin-top: 10px; white-space: nowrap; }
+
+    /* Equipe Extra / Reforço — dropdown (só quem ainda não foi
+       adicionado) + botão Adicionar, nomes escolhidos viram chips
+       removíveis abaixo. Mesmo padrão de adicionar/remover de
+       .fonte-item/.texto-extra-item, só que compacto (chip em vez de
+       card), já que aqui é só um nome, sem campos extras. */
+    .linha-equipe-extra { display: flex; gap: 8px; align-items: center; }
+    .linha-equipe-extra select { flex: 1; }
+    .lista-chips-equipe-extra { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .lista-chips-equipe-extra:empty { margin-top: 0; }
+    .chip-equipe-extra { display: inline-flex; align-items: center; gap: 6px; background: #eef1f5; color: #1b2430; border-radius: 14px; padding: 5px 8px 5px 12px; font-size: 12px; }
+    .chip-equipe-extra button { background: none; border: none; color: #8D0333; cursor: pointer; font-size: 13px; padding: 0; line-height: 1; }
 
     /* Caixas de texto extras — além de Enquadramento/Roteiro (fixas),
        quantas o repórter/produtor quiser, cada uma com título editável.
@@ -450,29 +462,21 @@
       return '<option value="">Selecione...</option>' + opcoesHtml;
     }
 
-    // Opções do select múltiplo de Equipe Extra — todo mundo da Agenda
-    // (sem filtrar por função, já que reforço pode ser qualquer papel),
-    // com os nomes já salvos vindo marcados "selected". Mesmo cuidado de
-    // opcoesPorPapel: nome salvo que não bate com ninguém da Agenda hoje
-    // continua aparecendo (senão a seleção some sozinha ao reabrir).
-    function opcoesEquipeCompleta(nomesSelecionados) {
-      const selecionados = new Set(nomesSelecionados || []);
+    // Opções do dropdown de Equipe Extra — todo mundo da Agenda (sem
+    // filtrar por função, já que reforço pode ser qualquer papel), exceto
+    // quem já foi adicionado (ver renderEquipeExtra) — assim o dropdown só
+    // oferece quem falta, e dá pra tirar alguém sem "sobrar" ninguém preso
+    // como no <select multiple> antigo.
+    function opcoesDisponiveisEquipeExtra(jaAdicionados) {
+      const adicionados = new Set(jaAdicionados || []);
       const vistos = new Set();
       const membros = equipeCache
         .filter(m => (vistos.has(m.nome) ? false : (vistos.add(m.nome), true)))
+        .filter(m => !adicionados.has(m.nome))
         .sort((a, b) => a.nome.localeCompare(b.nome));
 
-      let opcoesHtml = membros.map(m =>
-        `<option value="${m.nome}"${selecionados.has(m.nome) ? ' selected' : ''}>${m.nome} (${m.funcao})</option>`
-      ).join('');
-
-      selecionados.forEach(nome => {
-        if (!membros.some(m => m.nome === nome)) {
-          opcoesHtml += `<option value="${nome}" selected>${nome} (fora da lista — confira a função na Agenda)</option>`;
-        }
-      });
-
-      return opcoesHtml;
+      return '<option value="">Selecione...</option>' +
+        membros.map(m => `<option value="${m.nome}">${m.nome} (${m.funcao})</option>`).join('');
     }
 
     function preencherSelectsPainel(container, dadosPauta) {
@@ -485,11 +489,6 @@
       elCampo(container, 'reporter').innerHTML = opcoesPorPapel('reporter', dadosPauta && dadosPauta.reporter);
       elCampo(container, 'cinegrafista').innerHTML = opcoesPorPapel('cinegrafista', dadosPauta && dadosPauta.cinegrafista);
       elCampo(container, 'editor-imagens').innerHTML = opcoesPorPapel('editor-imagens', dadosPauta && dadosPauta.editor_imagens);
-
-      const equipeExtraSalva = dadosPauta && dadosPauta.equipe_extra
-        ? dadosPauta.equipe_extra.split(',').map(s => s.trim()).filter(Boolean)
-        : [];
-      elCampo(container, 'equipe-extra').innerHTML = opcoesEquipeCompleta(equipeExtraSalva);
     }
 
     function nomePrograma(id) {
@@ -853,8 +852,12 @@
             <select data-campo="editor-imagens"></select>
             <label>Motorista / Transporte</label>
             <input type="text" data-campo="motorista" placeholder="Opcional">
-            <label>Equipe Extra / Reforço (Ctrl/Cmd + clique pra selecionar vários)</label>
-            <select data-campo="equipe-extra" multiple size="8"></select>
+            <label>Equipe Extra / Reforço</label>
+            <div class="linha-equipe-extra">
+              <select data-campo="select-equipe-extra"></select>
+              <button type="button" class="btn-add-fonte" data-acao="add-equipe-extra">+ Adicionar</button>
+            </div>
+            <div data-campo="lista-equipe-extra" class="lista-chips-equipe-extra"></div>
             <label>Equipamentos Especiais</label>
             <div class="linha-checkboxes">
               <label><input type="checkbox" data-campo="lapela"> Microfone Lapela</label>
@@ -938,6 +941,31 @@
       });
       listaEl.querySelectorAll('.campo-titulo-extra').forEach(el => el.addEventListener('input', () => aba.textosExtra[el.dataset.i].titulo = el.value));
       listaEl.querySelectorAll('.campo-texto-extra').forEach(el => el.addEventListener('input', () => aba.textosExtra[el.dataset.i].texto = el.value));
+    }
+
+    // Chips removíveis + dropdown só com quem ainda falta adicionar — troca
+    // o <select multiple> antigo (onde tirar alguém sem mexer nos outros
+    // era estranho: sempre ficava alguém selecionado por padrão).
+    function renderEquipeExtra(idAba) {
+      const container = document.getElementById('painel-' + idAba);
+      const aba = abas[idAba];
+      const listaEl = elCampo(container, 'lista-equipe-extra');
+
+      listaEl.innerHTML = aba.equipeExtra.map((nome, i) => `
+        <span class="chip-equipe-extra">
+          ${nome}
+          <button type="button" class="remover-equipe-extra" data-i="${i}" title="Remover">✕</button>
+        </span>
+      `).join('');
+
+      listaEl.querySelectorAll('.remover-equipe-extra').forEach(btn => {
+        btn.addEventListener('click', () => {
+          aba.equipeExtra.splice(Number(btn.dataset.i), 1);
+          renderEquipeExtra(idAba);
+        });
+      });
+
+      elCampo(container, 'select-equipe-extra').innerHTML = opcoesDisponiveisEquipeExtra(aba.equipeExtra);
     }
 
     function limparPainel(idAba) {
@@ -1044,7 +1072,7 @@
         reporter: elCampo(container, 'reporter').value,
         cinegrafista: elCampo(container, 'cinegrafista').value,
         editor_imagens: elCampo(container, 'editor-imagens').value,
-        equipe_extra: Array.from(elCampo(container, 'equipe-extra').selectedOptions).map(o => o.value),
+        equipe_extra: abas[idAba].equipeExtra,
         motorista: elCampo(container, 'motorista').value.trim(),
         equip_lapela: elCampo(container, 'lapela').checked,
         equip_iluminacao: elCampo(container, 'iluminacao').checked,
@@ -1297,12 +1325,16 @@
       // pauta ainda não tem nenhuma, começa com uma em branco pronta pra
       // usar, em vez de a seção aparecer vazia.
       const textosExtraCarregados = dadosPauta && Array.isArray(dadosPauta.textos_extra) ? dadosPauta.textos_extra : [];
+      const equipeExtraCarregada = dadosPauta && dadosPauta.equipe_extra
+        ? dadosPauta.equipe_extra.split(',').map(s => s.trim()).filter(Boolean)
+        : [];
 
       abas[idAba] = {
         id: idAba,
         pautaId: pautaId,
         fontes: dadosPauta ? (dadosPauta.fontes || []).map(f => ({ ...f })) : [],
         textosExtra: textosExtraCarregados.length ? textosExtraCarregados.map(t => ({ ...t })) : [{ titulo: 'Informações Complementares', texto: '' }],
+        equipeExtra: equipeExtraCarregada,
         tituloAba: pautaId !== null ? ('#P-' + pautaId) : 'Nova Pauta'
       };
 
@@ -1317,6 +1349,7 @@
       else limparPainel(idAba);
       renderFontes(idAba);
       renderTextosExtra(idAba);
+      renderEquipeExtra(idAba);
       ligarEventosPainel(idAba, container);
 
       mudarAbaAtiva(idAba);
@@ -1355,6 +1388,12 @@
       container.querySelector('[data-acao="add-texto-extra"]').addEventListener('click', () => {
         abas[idAba].textosExtra.push({ titulo: '', texto: '' });
         renderTextosExtra(idAba);
+      });
+      container.querySelector('[data-acao="add-equipe-extra"]').addEventListener('click', () => {
+        const select = elCampo(container, 'select-equipe-extra');
+        if (!select.value) return;
+        abas[idAba].equipeExtra.push(select.value);
+        renderEquipeExtra(idAba);
       });
       container.querySelector('[data-acao="salvar"]').addEventListener('click', () => salvarPauta(idAba));
 
