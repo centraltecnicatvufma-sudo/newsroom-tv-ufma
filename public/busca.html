@@ -96,7 +96,7 @@
     <h1>HORUS NEWSROOM — Busca Geral</h1>
     <div class="caixa-busca">
       <span class="icone-lupa">🔍</span>
-      <input type="text" id="input-busca" placeholder="Buscar por título, nome, local, editoria..." autofocus>
+      <input type="text" id="input-busca" placeholder="Buscar por retranca, nome, local, editoria..." autofocus>
     </div>
   </div>
 
@@ -180,14 +180,14 @@
       {
         tipo: 'Pauta', emoji: '📝', url: '/pautas',
         campos: p => [p.titulo, p.orientacao, p.local, p.reporter, p.cinegrafista, p.produtor, p.editoria],
-        titulo: p => p.titulo || '(sem título)',
+        titulo: p => p.titulo || '(sem retranca)',
         subtitulo: p => [p.editoria, formatarDataBR(p.data_fato)].filter(Boolean).join(' · '),
         destino: p => `pautas.html?abrir=${p.id}`
       },
       {
         tipo: 'Sugestão', emoji: '📋', url: '/sugestoes',
         campos: s => [s.titulo, s.resumo, s.local, s.enviado_por, s.editoria],
-        titulo: s => s.titulo || '(sem título)',
+        titulo: s => s.titulo || '(sem retranca)',
         subtitulo: s => [s.editoria, s.enviado_por].filter(Boolean).join(' · '),
         destino: s => `sugestoes.html?abrir=${s.id}`
       },

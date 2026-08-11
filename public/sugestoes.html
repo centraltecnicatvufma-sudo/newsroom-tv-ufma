@@ -337,7 +337,7 @@
     function htmlFormularioCard() {
       return `
         <div class="form-card-campo">
-          <label>Título</label>
+          <label>Retranca</label>
           <input type="text" data-campo="titulo">
         </div>
         <div class="form-card-campo">
@@ -486,7 +486,7 @@
     async function salvarCard(id) {
       const card = document.querySelector(`.card-kanban[data-id="${id}"]`);
       const dados = coletarDadosDoContainer(card);
-      if (!dados.titulo || !dados.resumo) { alert('Preencha ao menos o título e o resumo.'); return null; }
+      if (!dados.titulo || !dados.resumo) { alert('Preencha ao menos a retranca e o resumo.'); return null; }
 
       const resp = await fetch('/sugestoes/' + id, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados)
@@ -538,7 +538,7 @@
 
         <div class="form-pauta-campos">
           <div class="campo campo-titulo">
-            <label>Título / Chamada da Sugestão</label>
+            <label>Retranca / Chamada da Sugestão</label>
             <input type="text" data-campo="titulo" placeholder='Ex: "Procon faz mutirão na UFMA"'>
           </div>
           <div class="campo">
@@ -744,7 +744,7 @@
     async function salvarSugestao(idAba, statusForcado) {
       const aba = abas[idAba];
       const dados = coletarDadosFormulario(idAba);
-      if (!dados.titulo || !dados.resumo) { alert('Preencha ao menos o título e o resumo.'); return null; }
+      if (!dados.titulo || !dados.resumo) { alert('Preencha ao menos a retranca e o resumo.'); return null; }
       if (statusForcado) dados.status = statusForcado;
 
       let salva;
@@ -951,7 +951,7 @@
       const novaPauta = await respostaPauta.json();
 
       if (!novaPauta.id) {
-        alert('Não foi possível criar a pauta. Verifique se o título da sugestão está preenchido.');
+        alert('Não foi possível criar a pauta. Verifique se a retranca da sugestão está preenchida.');
         return;
       }
 

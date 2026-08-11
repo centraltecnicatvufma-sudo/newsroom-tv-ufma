@@ -78,6 +78,7 @@
     .modal-item h2 { font-size: 16px; margin: 0 0 4px; }
     .modal-item label { font-size: 12px; color: #5b6472; display: block; margin: 12px 0 4px; }
     .modal-item input, .modal-item select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+    .modal-item textarea { width: 100%; min-height: 120px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; font-family: inherit; resize: vertical; }
     .botoes-modal-item { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
     .botoes-modal-item button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
     .botoes-modal-item button:first-child { background: #eee; color: #333; }
@@ -103,7 +104,7 @@
       .bloco-grupo-titulo { background: #f0f0f0 !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
       /* table-layout:auto deixa o navegador distribuir a largura pelo conteúdo real
-         das linhas — o fixed usava só a largura do cabeçalho e espremia o Título
+         das linhas — o fixed usava só a largura do cabeçalho e espremia a Retranca
          numa coluna quase sem espaço, quebrando palavra por palavra */
       table.rundown { table-layout: auto; width: 100%; font-size: 11px; }
       table.rundown th, table.rundown td { padding: 5px 6px; word-break: break-word; }
@@ -209,14 +210,17 @@
       <label>Tipo</label>
       <select id="mi-tipo"></select>
 
-      <label>Título</label>
-      <input type="text" id="mi-titulo" placeholder="Título da matéria">
+      <label>Retranca</label>
+      <input type="text" id="mi-titulo" placeholder="Retranca da matéria">
 
       <label>Repórter</label>
       <input type="text" id="mi-reporter" placeholder="Nome do repórter">
 
       <label>Duração Estimada (mm:ss)</label>
       <input type="text" id="mi-duracao" placeholder="02:30">
+
+      <label>Texto (o que vai ao ar — usado no Teleprompter)</label>
+      <textarea id="mi-texto-script" placeholder="Roteiro de leitura ao vivo, chamada da Escalada..."></textarea>
 
       <div class="botoes-modal-item">
         <button id="mi-cancelar">Cancelar</button>
@@ -334,6 +338,20 @@
       return b.duracao_estimada || 0;
     }
 
+    // T. CAB e T. VÍDEO — mesma fonte de dado que duracaoEfetivaBloco já
+    // soma (Cabeça e Tempo do Vídeo da Lauda vinculada), agora exibidos
+    // como colunas próprias antes do total. Sem pauta vinculada não tem
+    // como saber a parte de cabeça/vídeo separado — a coluna fica com "—"
+    // e o total continua vindo de duracao_estimada (item digitado à mão).
+    function duracaoCabecaBloco(b) {
+      const pauta = b.pauta_id ? pautasCache.find(p => p.id === b.pauta_id) : null;
+      return pauta ? (pauta.cabeca_duracao_segundos || 0) : 0;
+    }
+    function duracaoVideoBloco(b) {
+      const pauta = b.pauta_id ? pautasCache.find(p => p.id === b.pauta_id) : null;
+      return pauta ? (pauta.tempo_video_segundos || 0) : 0;
+    }
+
     // ---- Carregamento ----
     async function carregarPautasParaModal() {
       const resp = await fetch('/pautas');
@@ -404,6 +422,7 @@
       document.getElementById('mi-titulo').value = '';
       document.getElementById('mi-reporter').value = '';
       document.getElementById('mi-duracao').value = '';
+      document.getElementById('mi-texto-script').value = '';
       document.getElementById('modal-item').classList.add('aberto');
     }
 
@@ -419,6 +438,7 @@
       document.getElementById('mi-titulo').value = item.titulo || '';
       document.getElementById('mi-reporter').value = item.reporter || item.responsavel || '';
       document.getElementById('mi-duracao').value = paraMMSS(item.duracao_estimada);
+      document.getElementById('mi-texto-script').value = item.texto_script || '';
       document.getElementById('modal-item').classList.add('aberto');
     }
 
@@ -448,7 +468,7 @@
 
     document.getElementById('mi-confirmar').addEventListener('click', async () => {
       const titulo = document.getElementById('mi-titulo').value.trim();
-      if (!titulo) { alert('Preencha o título.'); return; }
+      if (!titulo) { alert('Preencha a retranca.'); return; }
 
       const reporter = document.getElementById('mi-reporter').value.trim();
       const bloco = Number(document.getElementById('mi-bloco').value) || 1;
@@ -458,7 +478,13 @@
         titulo: titulo,
         responsavel: reporter,
         reporter: reporter,
-        duracao_estimada: paraSegundos(document.getElementById('mi-duracao').value)
+        duracao_estimada: paraSegundos(document.getElementById('mi-duracao').value),
+        // Sempre manda o texto do jeito que está no modal — vira a fonte da
+        // verdade a partir de agora (nem sempre o item tem uma Lauda
+        // gravada por trás, ex. Escalada ao vivo, então não faz sentido
+        // sobrescrever silenciosamente ao trocar de pauta vinculada; pra
+        // isso já existe o botão 🔄 de sincronizar com a Cabeça da Lauda).
+        texto_script: document.getElementById('mi-texto-script').value
       };
 
       if (itemEditandoId === null) {
@@ -527,11 +553,13 @@
               <tr>
                 <th style="width:40px;">Ord</th>
                 <th style="width:130px;">Tipo</th>
-                <th>Título</th>
+                <th>Retranca</th>
                 <th style="width:200px;">Repórter</th>
                 <th style="width:110px;">Lauda</th>
                 <th style="width:150px;">Status</th>
-                <th style="width:80px;">Tempo</th>
+                <th style="width:70px;">T. CAB</th>
+                <th style="width:70px;">T. VÍDEO</th>
+                <th style="width:80px;">T. TOTAL</th>
                 <th class="acoes-rundown" style="width:130px;">Ações</th>
               </tr>
             </thead>
@@ -544,6 +572,8 @@
                   <td>${escaparHtml(b.reporter || b.responsavel || '—')}</td>
                   <td>${b.lauda_status ? `<span class="lauda-badge lauda-${b.lauda_status}">${b.lauda_status === 'pronta' ? '🟢 Pronta' : b.lauda_status === 'redacao' ? '🟡 Redação' : '🔴 Pendente'}</span>` : '—'}</td>
                   <td draggable="false"><span class="status-badge status-${b.status}" title="Status herdado da Pauta — muda em Reportagens/Edição de Vídeo">${labelStatus[b.status] || b.status}</span></td>
+                  <td class="dur">${duracaoCabecaBloco(b) ? formatarTempo(duracaoCabecaBloco(b)) : '—'}</td>
+                  <td class="dur">${duracaoVideoBloco(b) ? formatarTempo(duracaoVideoBloco(b)) : '—'}</td>
                   <td class="dur">${formatarTempo(duracaoEfetivaBloco(b))}</td>
                   <td class="acoes-rundown" draggable="false">
                     ${b.cabeca_desatualizada ? `<button class="btn-sincronizar aviso-cabeca" data-id="${b.id}" title="A Cabeça da Lauda mudou depois — clique para atualizar o texto do teleprompter">🔄</button>` : ''}

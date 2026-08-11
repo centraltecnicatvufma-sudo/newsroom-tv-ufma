@@ -71,6 +71,80 @@ function registrarHistoricoStatus(pautaId, statusAnterior, statusNovo) {
   `).run(pautaId, statusAnterior, statusNovo, new Date().toISOString());
 }
 
+// ---- Notificações automáticas de status no chat da Pauta ----
+// Regra combinada com o usuário: cargos que já são campo da própria pauta
+// (Produtor/Repórter/Editor de Imagens) notificam a pessoa REALMENTE
+// escalada naquela pauta; cargos fixos da redação sem campo próprio ainda
+// (Diretor, Diretor de Imagens, Editor Chefe, Coord. de Jornalismo, Chefe
+// de Redação) notificam todo mundo cadastrado com aquela função na
+// Agenda — pode não notificar ninguém se o cargo ainda não tem gente
+// cadastrada com esse nome exato; isso é esperado até o login existir e
+// cada cargo virar um papel de usuário de verdade (decisão do usuário).
+const ROTULOS_STATUS_NOTIFICACAO = {
+  em_edicao: '🟣 Gravado / Em Edição',
+  aguardando_revisao: '🟠 Aguardando Revisão',
+  concluida: '🟢 Concluída / Pronta'
+};
+
+function normalizarFuncao(txt) {
+  return String(txt || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+}
+
+function pessoasComFuncao(alvo) {
+  const membros = db.prepare('SELECT nome, funcao FROM equipe_agenda WHERE excluido_em IS NULL').all();
+  return membros
+    .filter(m => {
+      const f = normalizarFuncao(m.funcao);
+      if (alvo === 'diretor') return (f.includes('diretor') || f === 'direcao') && !f.includes('imagens');
+      if (alvo === 'diretor_imagens') return f.includes('direcao de imagens') || f.includes('diretor de imagens');
+      if (alvo === 'editor_chefe') return f.includes('editor chefe') || f.includes('editor-chefe');
+      if (alvo === 'coord_jornalismo') return f.includes('coorden') && f.includes('jornalis');
+      if (alvo === 'chefe_redacao') return f.includes('chefe') && f.includes('redacao');
+      return false;
+    })
+    .map(m => m.nome);
+}
+
+function destinatariosPorStatus(pauta, statusNovo) {
+  if (statusNovo === 'em_edicao') return [pauta.editor_imagens].filter(Boolean);
+  if (statusNovo === 'aguardando_revisao') {
+    return [pauta.produtor, pauta.reporter, ...pessoasComFuncao('diretor')].filter(Boolean);
+  }
+  if (statusNovo === 'concluida') {
+    return [
+      ...pessoasComFuncao('diretor_imagens'),
+      ...pessoasComFuncao('editor_chefe'),
+      ...pessoasComFuncao('diretor'),
+      ...pessoasComFuncao('coord_jornalismo'),
+      ...pessoasComFuncao('chefe_redacao')
+    ];
+  }
+  return [];
+}
+
+// Posta a mensagem de sistema no chat da própria Pauta (decisão do
+// usuário: reaproveitar o chat que já existe, não um canal por programa
+// novo) e avisa em tempo real pelo mesmo caminho de qualquer mensagem de
+// chat — quem estiver com o painel daquela pauta aberto vê na hora.
+// autor "HORUS" é o sinal que o front usa pra estilizar como aviso de
+// sistema em vez de bolha de conversa (ver chat-painel.js).
+function notificarMudancaStatus(req, pauta, statusNovo) {
+  const rotulo = ROTULOS_STATUS_NOTIFICACAO[statusNovo];
+  if (!rotulo) return;
+
+  const nomes = [...new Set(destinatariosPorStatus(pauta, statusNovo))];
+  const mencoes = nomes.map(n => '@' + n).join(' ');
+  const texto = `🔔 Matéria #P-${pauta.id} ("${pauta.titulo}") trocou de status para ${rotulo}.` + (mencoes ? ' ' + mencoes : '');
+
+  const resultado = db.prepare(`
+    INSERT INTO chat_mensagens (pauta_id, autor, texto, criado_em)
+    VALUES (?, 'HORUS', ?, ?)
+  `).run(pauta.id, texto, new Date().toISOString());
+
+  const mensagem = db.prepare('SELECT * FROM chat_mensagens WHERE id = ?').get(resultado.lastInsertRowid);
+  req.app.get('tempoReal')?.broadcast({ tipo: 'chat', pauta_id: pauta.id, mensagem });
+}
+
 // GET /pautas/historico-status -> histórico completo de transições (pros
 // Gráficos Gerenciais). Precisa vir ANTES de /:id pra não ser engolida por
 // ela (Express bateria "historico-status" como se fosse um :id)
@@ -86,7 +160,7 @@ router.get('/lixeira', (req, res) => {
   res.json(lista);
 });
 
-// GET /pautas -> lista com filtros opcionais: programa_id, status, data_fato, busca (por título)
+// GET /pautas -> lista com filtros opcionais: programa_id, status, data_fato, busca (por retranca)
 router.get('/', (req, res) => {
   const { programa_id, status, data_fato, busca } = req.query;
 
@@ -125,7 +199,7 @@ router.post('/', (req, res) => {
     data_fato, hora_fato, status, editoria, deadline, fontes, textos_extra
   } = req.body;
 
-  if (!titulo) return res.status(400).json({ erro: 'Título é obrigatório' });
+  if (!titulo) return res.status(400).json({ erro: 'Retranca é obrigatória' });
 
   const colunasAtivos = camposAtivos();
   const valoresAtivos = colunasAtivos.map(c => req.body[c] ? 1 : 0);
@@ -156,11 +230,11 @@ router.post('/', (req, res) => {
 
   if (Array.isArray(fontes)) {
     const inserirFonte = db.prepare(`
-      INSERT INTO pauta_fontes (pauta_id, nome, cargo, contato, horario_confirmado)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO pauta_fontes (pauta_id, nome, cargo, contato, horario_confirmado, endereco, observacao)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     fontes.forEach(f => {
-      inserirFonte.run(novaId, f.nome || '', f.cargo || '', f.contato || '', f.horario_confirmado || '');
+      inserirFonte.run(novaId, f.nome || '', f.cargo || '', f.contato || '', f.horario_confirmado || '', f.endereco || '', f.observacao || '');
     });
   }
 
@@ -255,16 +329,21 @@ router.patch('/:id', (req, res) => {
     // mudança de status feita direto no Espelho (decisão explícita: mais
     // simples e previsível do que tentar preservar avanço manual seletivamente).
     db.prepare('UPDATE blocos SET status = ? WHERE pauta_id = ?').run(atualizado.status, id);
+
+    notificarMudancaStatus(req, {
+      id, titulo: atualizado.titulo, produtor: atualizado.produtor,
+      reporter: atualizado.reporter, editor_imagens: atualizado.editor_imagens
+    }, atualizado.status);
   }
 
   if (Array.isArray(req.body.fontes)) {
     db.prepare('DELETE FROM pauta_fontes WHERE pauta_id = ?').run(id);
     const inserirFonte = db.prepare(`
-      INSERT INTO pauta_fontes (pauta_id, nome, cargo, contato, horario_confirmado)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO pauta_fontes (pauta_id, nome, cargo, contato, horario_confirmado, endereco, observacao)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     req.body.fontes.forEach(f => {
-      inserirFonte.run(id, f.nome || '', f.cargo || '', f.contato || '', f.horario_confirmado || '');
+      inserirFonte.run(id, f.nome || '', f.cargo || '', f.contato || '', f.horario_confirmado || '', f.endereco || '', f.observacao || '');
     });
   }
 

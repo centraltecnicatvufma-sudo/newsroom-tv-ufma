@@ -132,7 +132,7 @@ router.post('/', (req, res) => {
   } = req.body;
 
   if (!espelho_id) return res.status(400).json({ erro: "Informe o espelho_id" });
-  if (!titulo) return res.status(400).json({ erro: "Título é obrigatório" });
+  if (!titulo) return res.status(400).json({ erro: "Retranca é obrigatória" });
 
   const numeroBloco = Number(bloco) > 0 ? Number(bloco) : 1;
 

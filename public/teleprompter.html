@@ -216,7 +216,7 @@
           e.stopPropagation();
           const index = Number(btn.dataset.index);
           const item = itens[index];
-          const novoTitulo = window.prompt('Novo título:', item.titulo);
+          const novoTitulo = window.prompt('Nova retranca:', item.titulo);
           if (!novoTitulo || novoTitulo.trim() === '') return;
           item.titulo = novoTitulo.trim();
           if (item.origem === 'bloco') {
@@ -267,7 +267,7 @@
     }
 
     function adicionarItemManual() {
-      const titulo = window.prompt('Título do novo item:', '');
+      const titulo = window.prompt('Retranca do novo item:', '');
       if (!titulo) return;
       itens.push({ origem: 'manual', id: null, titulo: titulo, tipo: 'manual', texto: '' });
       renderListaTextos();

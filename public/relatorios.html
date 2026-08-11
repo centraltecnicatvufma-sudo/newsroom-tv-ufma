@@ -871,7 +871,7 @@
       `;
 
       ligarExpansaoDetalhe(area, ordenados, (item) => `
-        <span class="titulo-item-detalhe">Bloco ${item.bloco || 1} — ${escaparHtml(item.titulo || 'Sem título')}${item.responsavel ? ' · ' + escaparHtml(item.responsavel) : ''}</span>
+        <span class="titulo-item-detalhe">Bloco ${item.bloco || 1} — ${escaparHtml(item.titulo || 'Sem retranca')}${item.responsavel ? ' · ' + escaparHtml(item.responsavel) : ''}</span>
         <span>${formatarTempo(item.duracao_estimada || 0)}</span>
       `, () => '', 7);
     }
@@ -1056,8 +1056,8 @@
     // relatório é só leitura/analítico (por tipo, por período); restaurar e
     // excluir definitivamente continuam sendo feitos na própria Lixeira.
     const RECURSOS_EXCLUSAO = [
-      { tipo: 'Pauta', emoji: '📝', url: '/pautas', titulo: p => p.titulo || '(sem título)' },
-      { tipo: 'Sugestão', emoji: '📋', url: '/sugestoes', titulo: s => s.titulo || '(sem título)' },
+      { tipo: 'Pauta', emoji: '📝', url: '/pautas', titulo: p => p.titulo || '(sem retranca)' },
+      { tipo: 'Sugestão', emoji: '📋', url: '/sugestoes', titulo: s => s.titulo || '(sem retranca)' },
       { tipo: 'Agendamento', emoji: '🗓', url: '/agenda', titulo: a => (a.programa_nome || 'Agendamento') + (a.data ? ' — ' + formatarData(a.data) : '') },
       { tipo: 'Programa/Quadro', emoji: '🎬', url: '/agenda/programas', titulo: p => p.nome },
       { tipo: 'Membro de Equipe', emoji: '👥', url: '/agenda/equipe', titulo: m => m.nome },

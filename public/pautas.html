@@ -61,6 +61,7 @@
     .acoes-lista button { font-size: 14px; padding: 6px 10px; line-height: 1; border-radius: 6px; border: none; cursor: pointer; margin-right: 4px; }
     .btn-ver { background: #eee; color: #333; }
     .btn-lauda { background: #336699; color: #fff; }
+    .btn-chat-lista { background: #2e8b57; color: #fff; }
     .btn-imprimir-pauta { background: #5b6472; color: #fff; }
     .btn-excluir { background: #8D0333; color: #fff; }
 
@@ -71,30 +72,39 @@
        de blocos empilhados de conteúdo (.entrada-impressao) — sem tabela de
        cabeçalho nem caixa com borda ao redor do conteúdo. */
     .somente-impressao { display: none; }
-    .impressao-pauta { text-align: justify; }
+    /* Fonte única de 12px em toda a impressão da Pauta — pedido explícito
+       do usuário ("tudo com fonte em tamanho 12"), no lugar da mistura de
+       10/11/13px que existia antes. Herdada por tudo dentro de
+       .impressao-pauta; as regras abaixo não redeclaram font-size a
+       menos que precisem ficar menor de propósito (nenhuma precisa mais). */
+    .impressao-pauta { text-align: justify; font-size: 12px; }
     /* Tabela de cabeçalho impressa — mesma estrutura da tabela em tela
        (.tabela-cabecalho-pauta), mas com bordas sólidas pra ficar igual à
        lauda de pauta impressa em papel que a redação já usa hoje. */
     .impressao-pauta .tabela-impressao-cabecalho { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-    .impressao-pauta .tabela-impressao-cabecalho th, .impressao-pauta .tabela-impressao-cabecalho td { border: 1px solid #000; padding: 5px 8px; font-size: 12px; text-align: left; }
-    .impressao-pauta .tabela-impressao-cabecalho th { background: #eee; font-size: 10px; text-transform: uppercase; }
+    .impressao-pauta .tabela-impressao-cabecalho th, .impressao-pauta .tabela-impressao-cabecalho td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
+    .impressao-pauta .tabela-impressao-cabecalho th { background: #eee; text-transform: uppercase; }
     .impressao-pauta .cabecalho-impressao-info { padding: 0 0 12px; border-bottom: 1px solid #ccc; margin-bottom: 14px; }
-    .impressao-pauta .linha-info { margin-bottom: 6px; font-size: 13px; }
+    .impressao-pauta .linha-info { margin-bottom: 6px; }
     .impressao-pauta .linha-info strong { color: #5b6472; font-weight: bold; margin-right: 4px; }
     .impressao-pauta .destinos-impressao span { display: inline-block; margin-right: 14px; }
-    .impressao-pauta .entrada-impressao { margin-bottom: 10px; font-size: 13px; }
-    .impressao-pauta .entrada-impressao strong { display: block; font-size: 11px; margin-bottom: 2px; }
-    .impressao-pauta .rodape-impressao { display: flex; justify-content: space-between; font-size: 10px; color: #5b6472; margin-top: 16px; border-top: 1px solid #ccc; padding-top: 6px; }
+    .impressao-pauta .entrada-impressao { margin-bottom: 10px; }
+    .impressao-pauta .entrada-impressao strong { display: block; margin-bottom: 2px; }
+    .impressao-pauta .rodape-impressao { display: flex; justify-content: space-between; color: #5b6472; margin-top: 16px; border-top: 1px solid #ccc; padding-top: 6px; }
 
-    /* Corpo da Pauta impresso em 2 colunas físicas: texto livre (sem
-       rótulo) numa coluna estreita de 25% à esquerda, caixas de texto
-       tituladas (Enquadramento, Roteiro, extras) na coluna de 75% à
+    /* Corpo da Pauta impresso em 2 colunas físicas: Entrevistados numa
+       coluna estreita de 30% à esquerda (Horário/Entrevistado/Função/
+       Contato/Endereço/Observação, um bloco por entrevistado), caixas de
+       texto tituladas (Objetivo, Abordagem, extras) na coluna de 70% à
        direita — cada caixa com o título no topo, empilhada; sem coluna do
        meio pra rótulos. Modo "Padrão (2 colunas)" usa essa divisão
-       lado-a-lado; modo "Uma coluna" empilha tudo numa coluna só (texto
-       livre primeiro, depois as caixas), sem o lado-a-lado. */
+       lado-a-lado; modo "Uma coluna" empilha tudo numa coluna só
+       (Entrevistados primeiro, depois as caixas), sem o lado-a-lado.
+       Texto livre foi removido (tela, impressão e coleta) — o campo
+       pautas.texto_livre continua existindo no banco, só não é mais
+       lido/escrito por nenhum caminho do código. */
     .impressao-pauta .corpo-impressao-colunas { display: flex; gap: 16px; margin-bottom: 12px; }
-    .impressao-pauta .coluna-impressao-livre { flex: 0 0 25%; font-size: 13px; border-right: 1px solid #ccc; padding-right: 12px; white-space: pre-wrap; }
+    .impressao-pauta .coluna-impressao-livre { flex: 0 0 30%; border-right: 1px solid #ccc; padding-right: 12px; white-space: pre-wrap; }
     .impressao-pauta .coluna-impressao-caixas { flex: 1; min-width: 0; }
 
     /* Dropdown do botão de impressão da Pauta (mesmo padrão do dropdown
@@ -168,7 +178,12 @@
     .btn-imprimir-form { background: #5b6472; color: #fff; }
     .btn-confirmar { background: #8D0333; color: #fff; }
 
-    /* Tabelas de cabeçalho da Pauta — Título/Data/Tipo e Repórter/
+    /* Barra "Dados da Pauta" — oculta/mostra as tabelas de cabeçalho pra
+       ganhar espaço vertical na área de edição; começa sempre aberta. */
+    .form-pauta-cabecalho-toggle { display: flex; align-items: center; gap: 6px; padding: 8px 24px; background: #eef1f5; border-bottom: 1px solid #eee; font-size: 11px; color: #5b6472; text-transform: uppercase; font-weight: 600; cursor: pointer; user-select: none; }
+    .form-pauta-cabecalho-toggle .seta-recolher { font-size: 11px; }
+
+    /* Tabelas de cabeçalho da Pauta — Retranca/Data/Tipo e Repórter/
        Cinegrafista/Produtor, no mesmo padrão da lauda de pauta impressa
        que a redação já usa em papel (ver retranca física de referência). */
     .form-pauta-tabelas { padding: 14px 24px 0; background: #fff; border-bottom: 1px solid #eee; }
@@ -190,18 +205,7 @@
 
     .form-pauta-corpo { flex: 1; overflow-y: auto; padding: 20px 24px; background: #f4f5f7; }
     .form-pauta-corpo .subpainel { display: none; max-width: 900px; }
-    .form-pauta-corpo .subpainel[data-subpainel="conteudo"] { max-width: 1200px; }
     .form-pauta-corpo .subpainel.ativa { display: block; }
-
-    /* Corpo da Pauta em 2 colunas: texto livre (sem rótulo, uso à vontade
-       do produtor/repórter) à esquerda, caixas de texto tituladas
-       (Enquadramento, Roteiro, extras) à direita — mesmo padrão de
-       redação usado no papel de referência. */
-    .corpo-pauta-colunas { display: flex; gap: 20px; margin-top: 14px; align-items: flex-start; }
-    .corpo-pauta-colunas .coluna-texto-livre { flex: 1; min-width: 0; }
-    .corpo-pauta-colunas .coluna-texto-livre textarea { min-height: 360px; }
-    .corpo-pauta-colunas .coluna-caixas-texto { flex: 1; min-width: 0; }
-    .corpo-pauta-colunas .coluna-caixas-texto label:first-child { margin-top: 0; }
     .form-pauta-corpo label { font-size: 12px; color: #5b6472; display: block; margin: 14px 0 4px; }
     .form-pauta-corpo label:first-child { margin-top: 0; }
     .form-pauta-corpo input[type="text"], .form-pauta-corpo input[type="date"], .form-pauta-corpo input[type="time"],
@@ -233,7 +237,7 @@
     .chip-equipe-extra { display: inline-flex; align-items: center; gap: 6px; background: #eef1f5; color: #1b2430; border-radius: 14px; padding: 5px 8px 5px 12px; font-size: 12px; }
     .chip-equipe-extra button { background: none; border: none; color: #8D0333; cursor: pointer; font-size: 13px; padding: 0; line-height: 1; }
 
-    /* Caixas de texto extras — além de Enquadramento/Roteiro (fixas),
+    /* Caixas de texto extras — além de Objetivo/Abordagem (fixas),
        quantas o repórter/produtor quiser, cada uma com título editável.
        Textarea com o mesmo resize:vertical das caixas fixas (ver
        .form-pauta-corpo textarea), tamanho ajustável igual. */
@@ -337,7 +341,7 @@
   <div class="somente-impressao" id="impressao-grade">
     <div class="titulo-grade" id="titulo-impressao-grade"></div>
     <table class="tabela-grade">
-      <thead><tr><th>Data</th><th>Título</th><th>Programa</th><th>Produtor</th></tr></thead>
+      <thead><tr><th>Data</th><th>Retranca</th><th>Programa</th><th>Produtor</th></tr></thead>
       <tbody id="corpo-impressao-grade"></tbody>
     </table>
     <div class="rodape-grade">
@@ -559,8 +563,8 @@
     setInterval(atualizarContadoresDeadline, 30000);
 
     // Ordem de prioridade: data do fato mais recente primeiro; empatando
-    // (mesma data, ou nenhuma das duas tem data), ordem alfabética pelo
-    // Título. Mesma regra em Pautas, Reportagens e Edição de Vídeo —
+    // (mesma data, ou nenhuma das duas tem data), ordem alfabética pela
+    // Retranca. Mesma regra em Pautas, Reportagens e Edição de Vídeo —
     // Sugestões de Pauta fica de fora de propósito (só ordem de cadastro).
     function compararPautas(a, b) {
       const porData = (b.data_fato || '').localeCompare(a.data_fato || '');
@@ -596,7 +600,7 @@
         <table class="lista-pautas">
           <thead>
             <tr>
-              <th>ID</th><th>Título</th><th>Programa</th><th>Data / Hora</th>
+              <th>ID</th><th>Retranca</th><th>Programa</th><th>Data / Hora</th>
               <th>Deadline</th><th>Ativos</th><th>Equipe</th><th>Status</th><th>Ações</th>
             </tr>
           </thead>
@@ -619,6 +623,7 @@
                 <td class="acoes-lista">
                   <button class="btn-ver" data-id="${p.id}" title="Ver/Editar">👁️</button>
                   <button class="btn-lauda" data-id="${p.id}" title="Lauda">📝</button>
+                  <button class="btn-chat-lista" data-id="${p.id}" data-titulo="${(p.titulo || '').replace(/"/g, '&quot;')}" title="Chat desta pauta">💬</button>
                   <span class="grupo-imprimir">
                     <button class="btn-imprimir-pauta" data-id="${p.id}" title="Imprimir Pauta">🖨️ ▾</button>
                     <div class="menu-imprimir-pauta" data-id="${p.id}">
@@ -648,6 +653,11 @@
         btn.addEventListener('click', () => {
           const p = pautasCache.find(item => item.id === Number(btn.dataset.id));
           if (p) abrirLaudaComDados(p.id, p.titulo, p.programa_id, p.reporter);
+        });
+      });
+      conteudo.querySelectorAll('.btn-chat-lista').forEach(btn => {
+        btn.addEventListener('click', () => {
+          window.ChatPauta.abrir(Number(btn.dataset.id), btn.dataset.titulo);
         });
       });
       conteudo.querySelectorAll('.btn-imprimir-pauta').forEach(btn => {
@@ -720,88 +730,93 @@
           </div>
         </div>
 
-        <div class="form-pauta-tabelas">
-          <table class="tabela-cabecalho-pauta">
-            <thead><tr><th>Título</th><th>Data</th><th>Tipo</th></tr></thead>
-            <tbody>
-              <tr>
-                <td><input type="text" data-campo="titulo" placeholder='Ex: "Aula Inaugural UFMA"'></td>
-                <td><input type="date" data-campo="data-fato"></td>
-                <td>
-                  <select data-campo="tipo">
-                    <option value="">Selecione...</option>
-                    <option value="VT">VT</option>
-                    <option value="ST">ST</option>
-                    <option value="Sonora">Sonora</option>
-                    <option value="Ao Vivo">Ao Vivo</option>
-                    <option value="Nota Coberta">Nota Coberta</option>
-                  </select>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <table class="tabela-cabecalho-pauta">
-            <thead><tr><th>Repórter</th><th>Cinegrafista</th><th>Produtor</th></tr></thead>
-            <tbody>
-              <tr>
-                <td><select data-campo="reporter"></select></td>
-                <td><select data-campo="cinegrafista"></select></td>
-                <td><select data-campo="produtor"></select></td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="form-pauta-cabecalho-toggle" data-acao="toggle-cabecalho">
+          <span class="seta-recolher">▼</span> Dados da Pauta
         </div>
+        <div class="form-pauta-cabecalho-corpo">
+          <div class="form-pauta-tabelas">
+            <table class="tabela-cabecalho-pauta">
+              <thead><tr><th>Retranca</th><th>Data</th><th>Tipo</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><input type="text" data-campo="titulo" placeholder='Ex: "Aula Inaugural UFMA"'></td>
+                  <td><input type="date" data-campo="data-fato"></td>
+                  <td>
+                    <select data-campo="tipo">
+                      <option value="">Selecione...</option>
+                      <option value="VT">VT</option>
+                      <option value="ST">ST</option>
+                      <option value="Sonora">Sonora</option>
+                      <option value="Ao Vivo">Ao Vivo</option>
+                      <option value="Nota Coberta">Nota Coberta</option>
+                    </select>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="tabela-cabecalho-pauta">
+              <thead><tr><th>Repórter</th><th>Cinegrafista</th><th>Produtor</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><select data-campo="reporter"></select></td>
+                  <td><select data-campo="cinegrafista"></select></td>
+                  <td><select data-campo="produtor"></select></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-        <div class="form-pauta-campos">
-          <div class="campo">
-            <label>Programa</label>
-            <select data-campo="programa"></select>
-          </div>
-          <div class="campo">
-            <label>Editoria</label>
-            <select data-campo="editoria">
-              <option value="">Selecione...</option>
-              <option value="Arte e Cultura">Arte e Cultura</option>
-              <option value="Cidade">Cidade</option>
-              <option value="Ciência e Tecnologia">Ciência e Tecnologia</option>
-              <option value="Comportamento e Sociedade">Comportamento e Sociedade</option>
-              <option value="Direitos Humanos e Inclusão">Direitos Humanos e Inclusão</option>
-              <option value="Economia e Trabalho">Economia e Trabalho</option>
-              <option value="Esporte e Lazer">Esporte e Lazer</option>
-              <option value="Educação">Educação</option>
-              <option value="Meio Ambiente">Meio Ambiente</option>
-              <option value="Política">Política</option>
-              <option value="Saúde">Saúde</option>
-              <option value="Segurança e Justiça">Segurança e Justiça</option>
-              <option value="Especial">Especial</option>
-              <option value="UFMA">UFMA</option>
-              <option value="Outra">Outra</option>
-            </select>
-          </div>
-          <div class="campo">
-            <label>Hora do Fato</label>
-            <input type="time" data-campo="hora-fato">
-          </div>
-          <div class="campo">
-            <label>Deadline (hora-limite de fechamento)</label>
-            <input type="datetime-local" data-campo="deadline">
-          </div>
-          <div class="campo">
-            <label>Status da Produção 🔒</label>
-            <select data-campo="status" disabled title="Status só muda a partir de Reportagens — a Pauta nasce e permanece Em Produção aqui">
-              <option value="em_producao">🟡 Em Produção</option>
-              <option value="em_gravacao">🔵 Em Gravação</option>
-              <option value="em_edicao">🟣 Gravado / Em Edição</option>
-              <option value="aguardando_revisao">🟠 Aguardando Revisão</option>
-              <option value="concluida">🟢 Concluída / Pronta</option>
-            </select>
+          <div class="form-pauta-campos">
+            <div class="campo">
+              <label>Programa</label>
+              <select data-campo="programa"></select>
+            </div>
+            <div class="campo">
+              <label>Editoria</label>
+              <select data-campo="editoria">
+                <option value="">Selecione...</option>
+                <option value="Arte e Cultura">Arte e Cultura</option>
+                <option value="Cidade">Cidade</option>
+                <option value="Ciência e Tecnologia">Ciência e Tecnologia</option>
+                <option value="Comportamento e Sociedade">Comportamento e Sociedade</option>
+                <option value="Direitos Humanos e Inclusão">Direitos Humanos e Inclusão</option>
+                <option value="Economia e Trabalho">Economia e Trabalho</option>
+                <option value="Esporte e Lazer">Esporte e Lazer</option>
+                <option value="Educação">Educação</option>
+                <option value="Meio Ambiente">Meio Ambiente</option>
+                <option value="Política">Política</option>
+                <option value="Saúde">Saúde</option>
+                <option value="Segurança e Justiça">Segurança e Justiça</option>
+                <option value="Especial">Especial</option>
+                <option value="UFMA">UFMA</option>
+                <option value="Outra">Outra</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label>Hora do Fato</label>
+              <input type="time" data-campo="hora-fato">
+            </div>
+            <div class="campo">
+              <label>Deadline (hora-limite de fechamento)</label>
+              <input type="datetime-local" data-campo="deadline">
+            </div>
+            <div class="campo">
+              <label>Status da Produção 🔒</label>
+              <select data-campo="status" disabled title="Status só muda a partir de Reportagens — a Pauta nasce e permanece Em Produção aqui">
+                <option value="em_producao">🟡 Em Produção</option>
+                <option value="em_gravacao">🔵 Em Gravação</option>
+                <option value="em_edicao">🟣 Gravado / Em Edição</option>
+                <option value="aguardando_revisao">🟠 Aguardando Revisão</option>
+                <option value="concluida">🟢 Concluída / Pronta</option>
+              </select>
+            </div>
           </div>
         </div>
 
         <div class="form-pauta-subabas">
           <button class="ativa" data-subaba="conteudo">Conteúdo</button>
           <button data-subaba="equipe">Equipe &amp; Logística</button>
-          <button data-subaba="fontes">Fontes</button>
+          <button data-subaba="fontes">Entrevistados</button>
           <button data-subaba="anexos">Anexos</button>
         </div>
 
@@ -842,25 +857,16 @@
                 <label><input type="checkbox" data-campo="infografico-pronto"> Pronto</label>
               </div>
             </div>
-            <div class="corpo-pauta-colunas">
-              <div class="coluna-texto-livre">
-                <textarea data-campo="texto-livre" placeholder="Texto livre..."></textarea>
-              </div>
-              <div class="coluna-caixas-texto">
-                <label>Enquadramento / Ângulo da Notícia</label>
-                <textarea data-campo="orientacao" placeholder="Orientação da chefia de redação..."></textarea>
-                <label>Perguntas Principais / Roteiro Sugerido</label>
-                <textarea data-campo="roteiro" placeholder="Tópicos essenciais a abordar..."></textarea>
+            <label>Objetivo</label>
+            <textarea data-campo="orientacao" placeholder="Orientação da chefia de redação..."></textarea>
+            <label>Abordagem</label>
+            <textarea data-campo="roteiro" placeholder="Tópicos essenciais a abordar..."></textarea>
 
-                <div data-campo="lista-textos-extra"></div>
-                <button type="button" class="btn-add-texto-extra" data-acao="add-texto-extra">+ Adicionar Caixa de Texto</button>
-              </div>
-            </div>
+            <div data-campo="lista-textos-extra"></div>
+            <button type="button" class="btn-add-texto-extra" data-acao="add-texto-extra">+ Adicionar Caixa de Texto</button>
           </div>
 
           <div class="subpainel" data-subpainel="equipe">
-            <label>Local / Endereço</label>
-            <input type="text" data-campo="local" placeholder="Endereço ou local no campus">
             <label>Editor de Imagens</label>
             <select data-campo="editor-imagens"></select>
             <label>Motorista / Transporte</label>
@@ -880,9 +886,9 @@
           </div>
 
           <div class="subpainel" data-subpainel="fontes">
-            <label>Fontes e Entrevistados</label>
+            <label>Entrevistados</label>
             <div data-campo="lista-fontes"></div>
-            <button type="button" class="btn-add-fonte" data-acao="add-fonte">+ Adicionar Fonte</button>
+            <button type="button" class="btn-add-fonte" data-acao="add-fonte">+ Adicionar Entrevistado</button>
           </div>
 
           <div class="subpainel" data-subpainel="anexos">
@@ -915,6 +921,10 @@
               <input type="text" class="fonte-horario" data-i="${i}" value="${f.horario_confirmado || ''}">
             </div>
           </div>
+          <label>Endereço</label>
+          <input type="text" class="fonte-endereco" data-i="${i}" value="${f.endereco || ''}" placeholder="Local do encontro com este entrevistado">
+          <label>Observação</label>
+          <textarea class="fonte-observacao" data-i="${i}">${f.observacao || ''}</textarea>
         </div>
       `).join('');
 
@@ -928,11 +938,13 @@
       listaEl.querySelectorAll('.fonte-cargo').forEach(el => el.addEventListener('input', () => aba.fontes[el.dataset.i].cargo = el.value));
       listaEl.querySelectorAll('.fonte-contato').forEach(el => el.addEventListener('input', () => aba.fontes[el.dataset.i].contato = el.value));
       listaEl.querySelectorAll('.fonte-horario').forEach(el => el.addEventListener('input', () => aba.fontes[el.dataset.i].horario_confirmado = el.value));
+      listaEl.querySelectorAll('.fonte-endereco').forEach(el => el.addEventListener('input', () => aba.fontes[el.dataset.i].endereco = el.value));
+      listaEl.querySelectorAll('.fonte-observacao').forEach(el => el.addEventListener('input', () => aba.fontes[el.dataset.i].observacao = el.value));
     }
 
     // Mesmo padrão de renderFontes — cada caixa de texto extra tem título
     // editável (vira o rótulo na impressão) e um texto livre, com
-    // resize:vertical igual às caixas fixas (Enquadramento/Roteiro).
+    // resize:vertical igual às caixas fixas (Objetivo/Abordagem).
     function renderTextosExtra(idAba) {
       const container = document.getElementById('painel-' + idAba);
       const aba = abas[idAba];
@@ -993,9 +1005,7 @@
       elCampo(container, 'youtube').checked = false;
       elCampo(container, 'orientacao').value = '';
       elCampo(container, 'roteiro').value = '';
-      elCampo(container, 'texto-livre').value = '';
       elCampo(container, 'tipo').value = '';
-      elCampo(container, 'local').value = '';
       elCampo(container, 'anexos').value = '';
       elCampo(container, 'data-fato').value = '';
       elCampo(container, 'hora-fato').value = '';
@@ -1028,9 +1038,7 @@
       elCampo(container, 'youtube').checked = !!p.destino_youtube;
       elCampo(container, 'orientacao').value = p.orientacao || '';
       elCampo(container, 'roteiro').value = p.roteiro || '';
-      elCampo(container, 'texto-livre').value = p.texto_livre || '';
       elCampo(container, 'tipo').value = p.tipo || '';
-      elCampo(container, 'local').value = p.local || '';
       elCampo(container, 'anexos').value = p.anexos || '';
       elCampo(container, 'data-fato').value = p.data_fato || '';
       elCampo(container, 'hora-fato').value = p.hora_fato || '';
@@ -1074,9 +1082,7 @@
         destino_youtube: elCampo(container, 'youtube').checked,
         orientacao: elCampo(container, 'orientacao').value.trim(),
         roteiro: elCampo(container, 'roteiro').value.trim(),
-        texto_livre: elCampo(container, 'texto-livre').value.trim(),
         tipo: elCampo(container, 'tipo').value,
-        local: elCampo(container, 'local').value.trim(),
         anexos: elCampo(container, 'anexos').value.trim(),
         data_fato: elCampo(container, 'data-fato').value,
         hora_fato: elCampo(container, 'hora-fato').value,
@@ -1156,7 +1162,7 @@
       return `<div class="entrada-impressao"><strong>${rotulo}</strong><div>${conteudoHtml}</div></div>`;
     }
 
-    // Caixas de texto (Enquadramento, Roteiro, extras) — sempre empilhadas,
+    // Caixas de texto (Objetivo, Abordagem, extras) — sempre empilhadas,
     // título no topo de cada uma, sem coluna do meio pra rótulo (pedido
     // explícito: nada de tabela rótulo/conteúdo aqui, só a coluna própria
     // no layout de impressão — ver montarImpressaoPauta).
@@ -1164,11 +1170,29 @@
       return caixas.map(c => entradaImpressao(c.rotulo, c.conteudo)).join('');
     }
 
+    // Entrevistados na impressão — um bloco por entrevistado, sempre nessa
+    // ordem de campos (pedido explícito do usuário): Horário, Entrevistado,
+    // Função, Contato, Endereço, Observação. Campo vazio não aparece (evita
+    // linha "Endereço: —" poluindo quando não tem endereço cadastrado).
+    function montarBlocoEntrevistados(fontes) {
+      return fontes.map((f, i) => entradaImpressao(
+        'Entrevistado ' + (i + 1),
+        [
+          f.horario_confirmado ? 'Horário: ' + f.horario_confirmado : null,
+          'Entrevistado: ' + (f.nome || '—'),
+          f.cargo ? 'Função: ' + f.cargo : null,
+          f.contato ? 'Contato: ' + f.contato : null,
+          f.endereco ? 'Endereço: ' + f.endereco : null,
+          f.observacao ? 'Observação: ' + f.observacao : null
+        ].filter(Boolean).join('<br>')
+      )).join('');
+    }
+
     // Monta a folha de impressão da pauta com os dados vindos direto do
     // backend — sempre busca a versão mais recente, mesmo que a pauta esteja
     // aberta numa aba com alterações ainda não salvas. Cabeçalho (tabelas)
-    // e blocos fixos (Equipe/Equipamentos/Fontes/Anexos) sempre iguais; só
-    // o corpo (texto livre + caixas) muda de layout conforme o modo
+    // e blocos fixos (Equipe Extra/Equipamentos/Anexos) sempre iguais; só
+    // o corpo (Entrevistados + caixas) muda de layout conforme o modo
     // escolhido no dropdown — ver corpoHtml logo abaixo.
     function montarImpressaoPauta(p, modo) {
       const destinos = [
@@ -1195,8 +1219,8 @@
         agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
       const caixasTexto = [
-        { rotulo: 'Enquadramento / Ângulo da Notícia', conteudo: p.orientacao ? p.orientacao.replace(/\n/g, '<br>') : '—' },
-        { rotulo: 'Perguntas Principais / Roteiro Sugerido', conteudo: p.roteiro ? p.roteiro.replace(/\n/g, '<br>') : '—' },
+        { rotulo: 'Objetivo', conteudo: p.orientacao ? p.orientacao.replace(/\n/g, '<br>') : '—' },
+        { rotulo: 'Abordagem', conteudo: p.roteiro ? p.roteiro.replace(/\n/g, '<br>') : '—' },
         ...textosExtra
           .filter(t => (t.titulo && t.titulo.trim()) || (t.texto && t.texto.trim()))
           .map(t => ({ rotulo: t.titulo && t.titulo.trim() ? t.titulo : 'Observações', conteudo: t.texto ? t.texto.replace(/\n/g, '<br>') : '—' }))
@@ -1205,35 +1229,30 @@
       const blocosFixos = [
         equipeExtra.length ? entradaImpressao('Equipe Extra', equipeExtra.join(', ')) : '',
         equipamentos.length ? entradaImpressao('Equipamentos Especiais', equipamentos.join(', ')) : '',
-        ...fontes.map((f, i) => entradaImpressao(
-          'Fonte ' + (i + 1) + (f.cargo ? ' — ' + f.cargo : ''),
-          [f.nome || '—', f.contato, f.horario_confirmado ? 'Horário confirmado: ' + f.horario_confirmado : null].filter(Boolean).join(' · ')
-        )),
         p.anexos ? entradaImpressao('Anexos', p.anexos.replace(/\n/g, '<br>')) : ''
       ].filter(Boolean).join('');
 
-      const textoLivreHtml = p.texto_livre ? p.texto_livre.replace(/\n/g, '<br>') : '—';
       const blocoCaixas = montarBlocoCaixasTexto(caixasTexto);
+      const blocoEntrevistados = montarBlocoEntrevistados(fontes);
 
-      // "Padrão (2 colunas)": texto livre (25%) e caixas (75%) lado a lado.
-      // "Uma coluna": tudo empilhado, sem lado-a-lado — o texto livre
-      // ganha um rótulo aqui (só nesse modo) pra não aparecer solto antes
-      // do Enquadramento, já que na tela ele não tem título nenhum.
+      // "Padrão (2 colunas)": Entrevistados (30%) e caixas de texto (70%)
+      // lado a lado. "Uma coluna": tudo empilhado, sem lado-a-lado —
+      // Entrevistados primeiro, depois as caixas.
       const corpoHtml = modo === 'padrao'
         ? `
           <div class="corpo-impressao-colunas">
-            <div class="coluna-impressao-livre">${textoLivreHtml}</div>
+            <div class="coluna-impressao-livre">${blocoEntrevistados}</div>
             <div class="coluna-impressao-caixas">${blocoCaixas}</div>
           </div>
         `
         : `
-          ${entradaImpressao('Texto Livre', textoLivreHtml)}
+          ${blocoEntrevistados}
           ${blocoCaixas}
         `;
 
       document.getElementById('impressao-pauta').innerHTML = `
         <table class="tabela-impressao-cabecalho">
-          <thead><tr><th>Título</th><th>Data</th><th>Hora</th><th>Tipo</th></tr></thead>
+          <thead><tr><th>Retranca</th><th>Data</th><th>Hora</th><th>Tipo</th></tr></thead>
           <tbody>
             <tr>
               <td>${p.titulo || '—'}</td>
@@ -1255,9 +1274,6 @@
         </table>
 
         <div class="cabecalho-impressao-info">
-          <div class="linha-info">
-            <strong>Local:</strong>${p.local || '—'}
-          </div>
           <div class="linha-info destinos-impressao">
             <strong>Formatos / Destinos:</strong> ${destinos.length ? destinos.map(d => `<span>${d}</span>`).join('') : '—'}
           </div>
@@ -1288,7 +1304,7 @@
     // se estiverem selecionados na tela (busca por texto continua de fora
     // — filtro livre demais pra fazer sentido numa grade impressa).
     // Layout inspirado num modelo de grade impressa que a redação já usa
-    // em outro sistema, com DATA/TÍTULO/PROGRAMA/PRODUTOR.
+    // em outro sistema, com DATA/RETRANCA/PROGRAMA/PRODUTOR.
     async function executarImpressaoGrade() {
       const dataFiltro = document.getElementById('filtro-data').value;
       if (!dataFiltro) { alert('Selecione uma data no filtro antes de imprimir a grade.'); return; }
@@ -1342,10 +1358,12 @@
         dadosPauta = await resp.json();
       }
 
-      // Sempre pelo menos 1 caixa de texto extra, além de Enquadramento e
-      // Roteiro (que são campos fixos, não entram nesta lista) — se a
-      // pauta ainda não tem nenhuma, começa com uma em branco pronta pra
-      // usar, em vez de a seção aparecer vazia.
+      // Toda pauta nova já nasce com "Informações" e "Sugestão de Imagens"
+      // além de Objetivo e Abordagem (que são campos fixos, não entram
+      // nesta lista) — são caixas padrão, não campos travados: continuam
+      // editáveis/renomeáveis/removíveis como qualquer caixa extra. Pauta
+      // já existente mostra exatamente o que tem salvo, sem forçar esse
+      // default por cima.
       const textosExtraCarregados = dadosPauta && Array.isArray(dadosPauta.textos_extra) ? dadosPauta.textos_extra : [];
       const equipeExtraCarregada = dadosPauta && dadosPauta.equipe_extra
         ? dadosPauta.equipe_extra.split(',').map(s => s.trim()).filter(Boolean)
@@ -1355,7 +1373,7 @@
         id: idAba,
         pautaId: pautaId,
         fontes: dadosPauta ? (dadosPauta.fontes || []).map(f => ({ ...f })) : [],
-        textosExtra: textosExtraCarregados.length ? textosExtraCarregados.map(t => ({ ...t })) : [{ titulo: 'Informações Complementares', texto: '' }],
+        textosExtra: textosExtraCarregados.length ? textosExtraCarregados.map(t => ({ ...t })) : [{ titulo: 'Informações', texto: '' }, { titulo: 'Sugestão de Imagens', texto: '' }],
         equipeExtra: equipeExtraCarregada,
         tituloAba: pautaId !== null ? ('#P-' + pautaId) : 'Nova Pauta'
       };
@@ -1378,6 +1396,13 @@
     }
 
     function ligarEventosPainel(idAba, container) {
+      container.querySelector('[data-acao="toggle-cabecalho"]').addEventListener('click', (e) => {
+        const corpo = container.querySelector('.form-pauta-cabecalho-corpo');
+        const seta = e.currentTarget.querySelector('.seta-recolher');
+        const abrindo = corpo.style.display === 'none';
+        corpo.style.display = abrindo ? '' : 'none';
+        seta.textContent = abrindo ? '▼' : '▶';
+      });
       container.querySelector('[data-acao="fechar"]').addEventListener('click', () => fecharAba(idAba));
       container.querySelector('[data-acao="ver-agenda"]').addEventListener('click', () => {
         window.location.href = 'agenda.html';
@@ -1393,7 +1418,7 @@
         // Diferente de Imprimir/Criar Lauda (que só avisam), o Chat salva
         // sozinho antes de abrir — pedido explícito, pra não obrigar um
         // passo manual só pra começar a conversar. Se salvarPauta falhar
-        // (ex.: título vazio), ela mesma já mostra o alerta e aba.pautaId
+        // (ex.: retranca vazia), ela mesma já mostra o alerta e aba.pautaId
         // continua null, então não abre o chat.
         if (aba.pautaId === null) await salvarPauta(idAba);
         if (aba.pautaId === null) return;
@@ -1447,7 +1472,7 @@
 
     async function salvarPauta(idAba) {
       const dados = coletarDadosFormulario(idAba);
-      if (!dados.titulo) { alert('Preencha ao menos o título da pauta.'); return; }
+      if (!dados.titulo) { alert('Preencha ao menos a retranca da pauta.'); return; }
 
       const aba = abas[idAba];
       let pautaSalva;

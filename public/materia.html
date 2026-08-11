@@ -477,7 +477,7 @@
       ].filter(Boolean);
 
       document.getElementById('info-impressao').innerHTML = `
-        <div class="linha-info"><strong>Título:</strong>${escaparHtml(p.titulo) || '—'}</div>
+        <div class="linha-info"><strong>Retranca:</strong>${escaparHtml(p.titulo) || '—'}</div>
         <div class="linha-info">
           <strong>Programa:</strong>${escaparHtml(nomePrograma) || '—'}
           &nbsp;&nbsp;<strong>Status:</strong>${labelStatus[p.status] || p.status || '—'}
@@ -510,7 +510,7 @@
       document.getElementById('sub-pauta').textContent = 'Pauta #P-' + p.id;
       tituloPautaAtual = p.titulo || ('Pauta #P-' + p.id);
       document.getElementById('info-pauta').innerHTML = `
-        <div><strong>Título:</strong>${p.titulo || '—'}</div>
+        <div><strong>Retranca:</strong>${p.titulo || '—'}</div>
         <div><strong>Repórter:</strong>${p.reporter || '—'}</div>
         <div><strong>Cinegrafista:</strong>${p.cinegrafista || '—'}</div>
         <div><strong>Status:</strong>${p.status || '—'}</div>

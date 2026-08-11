@@ -149,8 +149,8 @@
     // arquivos de rota, então a tela só precisa saber o endpoint e como
     // montar um título legível pra cada tipo de item.
     const RECURSOS = [
-      { tipo: 'Pauta', emoji: '📝', url: '/pautas', titulo: p => p.titulo || '(sem título)' },
-      { tipo: 'Sugestão', emoji: '📋', url: '/sugestoes', titulo: s => s.titulo || '(sem título)' },
+      { tipo: 'Pauta', emoji: '📝', url: '/pautas', titulo: p => p.titulo || '(sem retranca)' },
+      { tipo: 'Sugestão', emoji: '📋', url: '/sugestoes', titulo: s => s.titulo || '(sem retranca)' },
       { tipo: 'Agendamento', emoji: '🗓', url: '/agenda', titulo: a => (a.programa_nome || 'Agendamento') + (a.data ? ' — ' + formatarDataBR(a.data) : '') + (a.hora ? ' ' + a.hora : '') },
       { tipo: 'Programa/Quadro', emoji: '🎬', url: '/agenda/programas', titulo: p => p.nome },
       { tipo: 'Membro de Equipe', emoji: '👥', url: '/agenda/equipe', titulo: m => m.nome },

@@ -43,6 +43,7 @@
     .btn-salvar-tempo { background: #2e8b57; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; font-size: 14px; line-height: 1; cursor: pointer; }
     .btn-salvar-tempo:hover { background: #256e45; }
     .btn-lauda-video { background: #336699; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; font-size: 14px; line-height: 1; cursor: pointer; }
+    .btn-chat-lista { background: #2e8b57; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; font-size: 14px; line-height: 1; cursor: pointer; }
 
     .estado-vazio { text-align: center; color: #999; padding: 60px 20px; }
 
@@ -124,7 +125,7 @@
     </div>
     <div class="campo-busca">
       <label>Buscar</label>
-      <input type="text" id="filtro-busca" placeholder="🔍 Buscar por título...">
+      <input type="text" id="filtro-busca" placeholder="🔍 Buscar por retranca...">
     </div>
     <span class="contador-pendentes" id="contador-pendentes"></span>
   </div>
@@ -133,6 +134,7 @@
     <div id="area-tabela">Carregando...</div>
   </div>
 
+  <script src="chat-painel.js"></script>
   <script>
     // ---- Faixa de Breaking News (mesmo alerta em todas as telas) ----
     async function carregarAlertaBreakingNews() {
@@ -181,11 +183,15 @@
     };
 
     // Esta tela é a ÚNICA que deixa escolher "Aguardando Revisão" — o
-    // clique no badge alterna só entre Aguardando Revisão e Concluída.
-    // Em Produção/Em Gravação/Em Edição não são controlados aqui (isso é
-    // papel de Reportagens), então o badge fica só informativo nesses
-    // casos — clicável só quando já está num desses dois status.
-    const CICLO_STATUS_BADGE = ['aguardando_revisao', 'concluida'];
+    // clique no badge alterna entre Em Edição, Aguardando Revisão e
+    // Concluída (Em Edição entrou no ciclo por pedido do usuário: antes só
+    // dava pra sair de Em Edição salvando o Tempo do Vídeo, que já pula
+    // direto pra Concluída — agora também dá pra mandar só pra Aguardando
+    // Revisão, clicando no badge). Em Produção/Em Gravação não são
+    // controlados aqui (isso é papel de Reportagens); o badge fica só
+    // informativo nesses casos — clicável só quando já está num desses
+    // três status.
+    const CICLO_STATUS_BADGE = ['em_edicao', 'aguardando_revisao', 'concluida'];
 
     let pautasCache = [];
     let programasCache = [];
@@ -235,7 +241,7 @@
     }
 
     // Ordem de prioridade: data do fato mais recente primeiro; empatando,
-    // ordem alfabética pelo Título. Mesma regra em Pautas, Reportagens e
+    // ordem alfabética pela Retranca. Mesma regra em Pautas, Reportagens e
     // Edição de Vídeo — quem está "Pendente" continua destacado na linha
     // (ver linha-pendente), só não vem mais agrupado no topo à parte.
     function compararPautas(a, b) {
@@ -274,7 +280,7 @@
         <table class="lista-video">
           <thead>
             <tr>
-              <th>Data</th><th>Título</th><th>Repórter</th><th>Programa / Quadro</th><th>Status</th>
+              <th>Data</th><th>Retranca</th><th>Repórter</th><th>Programa / Quadro</th><th>Status</th>
               <th title="Cabeça + Corpo do VT, estimado pelo texto da Lauda">⏱️ Estimado</th>
               <th>🎬 Tempo do Vídeo</th><th></th>
             </tr>
@@ -298,7 +304,10 @@
                     <button class="btn-salvar-tempo" data-id="${p.id}" title="Salva o tempo e marca a pauta como Concluída">✅</button>
                   </div>
                 </td>
-                <td><button class="btn-lauda-video" data-id="${p.id}" title="Lauda">📝</button></td>
+                <td>
+                  <button class="btn-lauda-video" data-id="${p.id}" title="Lauda">📝</button>
+                  <button class="btn-chat-lista" data-id="${p.id}" data-titulo="${(p.titulo || '').replace(/"/g, '&quot;')}" title="Chat desta pauta">💬</button>
+                </td>
               </tr>
             `).join('')}
           </tbody>
@@ -311,6 +320,11 @@
       area.querySelectorAll('.btn-salvar-tempo').forEach(btn => {
         btn.addEventListener('click', () => salvarTempoVideo(btn.dataset.id));
       });
+      area.querySelectorAll('.btn-chat-lista').forEach(btn => {
+        btn.addEventListener('click', () => {
+          window.ChatPauta.abrir(Number(btn.dataset.id), btn.dataset.titulo);
+        });
+      });
       area.querySelectorAll('.btn-lauda-video').forEach(btn => {
         btn.addEventListener('click', () => {
           const p = pautasCache.find(item => item.id === Number(btn.dataset.id));
@@ -322,12 +336,12 @@
     function statusBadgeHtml(p) {
       const clicavel = CICLO_STATUS_BADGE.includes(p.status);
       return `<span class="status-badge status-${p.status}${clicavel ? ' clicavel' : ''}"
-        ${clicavel ? `data-id="${p.id}" title="Clique para alternar entre Aguardando Revisão e Concluída"` : ''}>${rotulosStatus[p.status] || p.status}</span>`;
+        ${clicavel ? `data-id="${p.id}" title="Clique para alternar entre Em Edição, Aguardando Revisão e Concluída"` : ''}>${rotulosStatus[p.status] || p.status}</span>`;
     }
 
-    // Alterna entre Aguardando Revisão e Concluída — é a ÚNICA forma de
-    // marcar Aguardando Revisão no sistema inteiro. Concluída continua
-    // exigindo Tempo do Vídeo preenchido (validação já existe em
+    // Alterna entre Em Edição, Aguardando Revisão e Concluída — é a ÚNICA
+    // forma de marcar Aguardando Revisão no sistema inteiro. Concluída
+    // continua exigindo Tempo do Vídeo preenchido (validação já existe em
     // pautas.js); se faltar, o backend recusa e o alert abaixo avisa,
     // sem sujeira de lógica duplicada aqui.
     async function avancarStatusClicado(id) {

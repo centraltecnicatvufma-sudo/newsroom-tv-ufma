@@ -105,6 +105,14 @@ db.exec(`
   )
 `);
 
+// Endereço por Entrevistado — uma pauta pode ter mais de um entrevistado
+// em locais diferentes, então o endereço deixou de ser um campo único da
+// Pauta (pautas.local) e passou a acompanhar cada Entrevistado. A coluna
+// pautas.local continua existindo no banco (dado antigo não é apagado),
+// só não aparece mais na tela nem na impressão.
+try { db.exec(`ALTER TABLE pauta_fontes ADD COLUMN endereco TEXT`); } catch (e) {}
+try { db.exec(`ALTER TABLE pauta_fontes ADD COLUMN observacao TEXT`); } catch (e) {}
+
 // Caixas de texto extras da Pauta — além de "Enquadramento" e "Roteiro"
 // (que continuam como campos fixos: pautas.orientacao/roteiro, sem
 // migração, pra não mexer em conteúdo já existente), o repórter/produtor
@@ -135,6 +143,20 @@ db.exec(`
     texto TEXT NOT NULL,
     criado_em TEXT NOT NULL,
     FOREIGN KEY (pauta_id) REFERENCES pautas(id)
+  )
+`);
+
+// Canal geral (#redacao-geral) — v2 do HORUS Chat. Tabela separada da de
+// chat por pauta de propósito (sem tocar em chat_mensagens, que já está
+// testada e em uso): só existe UM canal geral por enquanto, sem coluna de
+// "canal" pra distinguir vários — se um dia precisar de mais de um canal
+// geral, aí sim vale introduzir esse conceito, não antes.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS chat_geral_mensagens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    autor TEXT NOT NULL,
+    texto TEXT NOT NULL,
+    criado_em TEXT NOT NULL
   )
 `);
 
@@ -186,23 +208,6 @@ try {
 } catch (e) {
   // Coluna já existe — tudo bem, ignora o erro
 }
-
-// Migração: o fluxo de status do espelho foi reduzido para 4 etapas.
-// Tudo que era 'producao', 'chefia' ou 'externa' vira 'produzindo_vt'.
-db.exec(`
-  UPDATE blocos SET status = 'produzindo_vt'
-  WHERE status IS NULL OR status NOT IN ('produzindo_vt', 'edicao', 'revisao', 'pronto')
-`);
-
-// Migração: o status do bloco passa a usar o MESMO vocabulário de status
-// da Pauta (em_producao/em_gravacao/em_edicao/concluida) — Sugestão é a
-// única etapa do fluxo com classificação própria; a partir da Pauta, tudo
-// segue os mesmos 4 status (decisão explícita, pra não ter duas
-// classificações diferentes convivendo no mesmo pipeline). "revisao" não
-// tem equivalente do lado da Pauta — dobra pra "em_edicao".
-db.exec(`UPDATE blocos SET status = 'em_producao' WHERE status = 'produzindo_vt'`);
-db.exec(`UPDATE blocos SET status = 'em_edicao' WHERE status IN ('edicao', 'revisao')`);
-db.exec(`UPDATE blocos SET status = 'concluida' WHERE status = 'pronto'`);
 
 // Item sem bloco definido pertence ao Bloco 1
 db.exec(`UPDATE blocos SET bloco = 1 WHERE bloco IS NULL OR bloco < 1`);

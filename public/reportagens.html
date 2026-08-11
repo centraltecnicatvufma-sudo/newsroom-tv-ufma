@@ -42,6 +42,7 @@
     .status-concluida { background: #2e8b57; }
 
     .btn-lauda { background: #336699; color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+    .btn-chat-lista { background: #2e8b57; color: #fff; }
     .btn-lauda:hover { background: #285480; }
 
     /* Ações da Lista — mesmo padrão de botões usado na Capa de Pautas
@@ -179,8 +180,8 @@
     </div>
     <div class="grupo-busca-visao">
       <div class="campo-busca">
-        <label>Buscar por título</label>
-        <input type="text" id="filtro-busca" placeholder="🔍 Filtrar por título...">
+        <label>Buscar por retranca</label>
+        <input type="text" id="filtro-busca" placeholder="🔍 Filtrar por retranca...">
       </div>
       <div class="alternador-visao">
         <button class="ativo" id="btn-visao-lista">🗂️ Lista</button>
@@ -203,6 +204,7 @@
     </div>
   </div>
 
+  <script src="chat-painel.js"></script>
   <script>
     // ---- Faixa de Breaking News (mesmo alerta em todas as telas) ----
     // Disparado a partir do Mapa de Produções; aqui só exibe e permite
@@ -305,7 +307,7 @@
     }
 
     // Ordem de prioridade: data do fato mais recente primeiro; empatando,
-    // ordem alfabética pelo Título. Mesma regra em Pautas, Reportagens e
+    // ordem alfabética pela Retranca. Mesma regra em Pautas, Reportagens e
     // Edição de Vídeo.
     function compararPautas(a, b) {
       const porData = (b.data_fato || '').localeCompare(a.data_fato || '');
@@ -411,7 +413,7 @@
           <table class="lista-reportagens">
             <thead>
               <tr>
-                <th>Data</th><th>Título</th><th>Repórter</th><th>Programa / Quadro</th><th>Status</th>
+                <th>Data</th><th>Retranca</th><th>Repórter</th><th>Programa / Quadro</th><th>Status</th>
                 <th title="Cabeça + Corpo do VT, estimado pelo texto da Lauda">⏱️ Estimado</th>
                 <th title="Duração real, cronometrada após edição e revisão">🎬 Tempo do Vídeo</th>
                 <th>Ações</th>
@@ -429,6 +431,7 @@
                   <td>${p.tempo_video_segundos ? formatarMMSS(p.tempo_video_segundos) : '—'}</td>
                   <td class="acoes-lista">
                     <button class="btn-lauda" data-id="${p.id}" title="Lauda">📝</button>
+                    <button class="btn-chat-lista" data-id="${p.id}" data-titulo="${(p.titulo || '').replace(/"/g, '&quot;')}" title="Chat desta pauta">💬</button>
                     <span class="grupo-imprimir">
                       <button class="btn-imprimir-pauta" data-id="${p.id}" title="Imprimir Lauda">🖨️ ▾</button>
                       <div class="menu-imprimir-lauda" data-id="${p.id}">
@@ -450,6 +453,11 @@
           btn.addEventListener('click', () => {
             const p = pautasCache.find(item => item.id === Number(btn.dataset.id));
             if (p) abrirLauda(p);
+          });
+        });
+        area.querySelectorAll('.btn-chat-lista').forEach(btn => {
+          btn.addEventListener('click', () => {
+            window.ChatPauta.abrir(Number(btn.dataset.id), btn.dataset.titulo);
           });
         });
         area.querySelectorAll('.btn-imprimir-pauta').forEach(btn => {
