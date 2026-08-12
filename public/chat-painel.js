@@ -10,19 +10,23 @@
 // mensagem no payload — os outros usos daquele canal só mandam um sinal de
 // "algo mudou" e o cliente refaz o fetch.
 //
-// Não existe login no HORUS v1 ainda — "autor" é o nome escolhido numa
-// lista (mesma da Agenda) e guardado no localStorage do navegador. Quando
-// o sistema de login for implementado, é só trocar nomeAutorAtual()/
-// pedirAutor() por dado de sessão real; o resto (mensagens, WS) não muda.
+// Autor da mensagem vem sempre da sessão logada (GET /auth/me) — v1 do
+// Chat, antes do login real existir, deixava escolher livremente um nome
+// numa lista, guardado no localStorage, com um botão "Trocar" pra virar
+// qualquer outra pessoa a qualquer momento. Isso parou de fazer sentido
+// assim que o login real (JWT) passou a existir: ninguém deveria
+// conseguir mandar mensagem se passando por outro colega só clicando
+// num botão. Backend também não confia mais em nenhum "autor" mandado
+// pelo cliente (ver chat.js) — aqui é só espelho da mesma trava.
 //
 // Uso: incluir este script na página e chamar window.ChatPauta.abrir(id, titulo)
 // pra abrir o chat de uma pauta, ou window.ChatPauta.abrirGeral() pro canal geral.
 (function () {
-  const CHAVE_AUTOR = 'horus_chat_autor';
   let painelInjetado = false;
   let socket = null;
   let contexto = null; // { tipo: 'pauta', pautaId, titulo } | { tipo: 'geral' } | null
   let equipeCache = null;
+  let nomeUsuarioLogado = null;
 
   function injetarEstilo() {
     if (document.getElementById('chat-painel-estilo')) return;
@@ -58,14 +62,8 @@
       .horus-chat-historico-menu button.atual { font-weight: bold; color: #336699; }
       .horus-chat-historico-menu .horus-chat-historico-vazio { padding: 14px 12px; font-size: 12px; color: #999; text-align: center; }
 
-      .horus-chat-autor-form { padding: 20px 16px; }
-      .horus-chat-autor-form label { display: block; font-size: 12px; color: #5b6472; margin-bottom: 6px; }
-      .horus-chat-autor-form select { width: 100%; padding: 9px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; margin-bottom: 10px; }
-      .horus-chat-autor-form button { width: 100%; background: #336699; color: #fff; border: none; border-radius: 6px; padding: 9px; font-size: 13px; cursor: pointer; }
-
-      .horus-chat-quemsou { padding: 6px 16px; font-size: 11px; color: #5b6472; background: #eef1f5; border-bottom: 1px solid #e2e2e2; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+      .horus-chat-quemsou { padding: 6px 16px; font-size: 11px; color: #5b6472; background: #eef1f5; border-bottom: 1px solid #e2e2e2; display: flex; align-items: center; flex-shrink: 0; }
       .horus-chat-quemsou strong { color: #1b2430; }
-      .horus-chat-quemsou button { background: none; border: none; color: #336699; font-size: 11px; cursor: pointer; text-decoration: underline; padding: 0; }
 
       .horus-chat-mensagens { flex: 1; overflow-y: auto; padding: 12px; background: #f4f5f7; display: flex; flex-direction: column; gap: 8px; }
       .horus-chat-vazio { text-align: center; color: #999; font-size: 12px; margin-top: 20px; }
@@ -112,14 +110,8 @@
         </div>
       </div>
       <div class="horus-chat-historico-menu" id="horus-chat-historico-menu"></div>
-      <div class="horus-chat-autor-form" id="horus-chat-autor-form" style="display:none">
-        <label>Quem é você?</label>
-        <select id="horus-chat-select-autor"></select>
-        <button type="button" id="horus-chat-confirmar-autor">Entrar no chat</button>
-      </div>
       <div class="horus-chat-quemsou" id="horus-chat-quemsou" style="display:none">
         <span>Você: <strong id="horus-chat-nome-atual"></strong></span>
-        <button type="button" id="horus-chat-trocar-autor">Trocar</button>
       </div>
       <div class="horus-chat-mensagens" id="horus-chat-mensagens" style="display:none"></div>
       <div class="horus-chat-footer" id="horus-chat-footer" style="display:none">
@@ -131,8 +123,6 @@
     painelInjetado = true;
 
     document.getElementById('horus-chat-fechar').addEventListener('click', fechar);
-    document.getElementById('horus-chat-confirmar-autor').addEventListener('click', confirmarAutor);
-    document.getElementById('horus-chat-trocar-autor').addEventListener('click', mostrarPassoAutor);
     document.getElementById('horus-chat-enviar').addEventListener('click', enviarMensagem);
     document.getElementById('horus-chat-input').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') enviarMensagem();
@@ -194,7 +184,20 @@
   }
 
   function nomeAutorAtual() {
-    return localStorage.getItem(CHAVE_AUTOR) || '';
+    return nomeUsuarioLogado || '';
+  }
+
+  // Carregada uma vez (sessão logada não muda de nome durante o uso) —
+  // mesma fonte de verdade usada em todo o resto do app (GET /auth/me),
+  // nunca duplicada/guardada em localStorage.
+  async function carregarUsuarioAtual() {
+    if (nomeUsuarioLogado) return nomeUsuarioLogado;
+    const resp = await fetch('/auth/me');
+    if (resp.ok) {
+      const usuario = await resp.json();
+      nomeUsuarioLogado = usuario.nome;
+    }
+    return nomeUsuarioLogado;
   }
 
   async function carregarEquipe() {
@@ -206,32 +209,6 @@
       .filter(m => (vistos.has(m.nome) ? false : (vistos.add(m.nome), true)))
       .sort((a, b) => a.nome.localeCompare(b.nome));
     return equipeCache;
-  }
-
-  async function mostrarPassoAutor() {
-    document.getElementById('horus-chat-mensagens').style.display = 'none';
-    document.getElementById('horus-chat-footer').style.display = 'none';
-    document.getElementById('horus-chat-quemsou').style.display = 'none';
-    const form = document.getElementById('horus-chat-autor-form');
-    form.style.display = 'block';
-
-    const membros = await carregarEquipe();
-    const select = document.getElementById('horus-chat-select-autor');
-    select.innerHTML = '<option value="">Selecione...</option>' +
-      membros.map(m => `<option value="${m.nome}">${m.nome} (${m.funcao})</option>`).join('');
-
-    // pré-seleciona quem já estava conversando, pra "Trocar" não obrigar a
-    // rolar a lista toda de novo caso seja só pra conferir/confirmar
-    const atual = nomeAutorAtual();
-    if (atual && membros.some(m => m.nome === atual)) select.value = atual;
-  }
-
-  function confirmarAutor() {
-    const nome = document.getElementById('horus-chat-select-autor').value;
-    if (!nome) return;
-    localStorage.setItem(CHAVE_AUTOR, nome);
-    document.getElementById('horus-chat-autor-form').style.display = 'none';
-    mostrarChat();
   }
 
   function formatarHora(iso) {
@@ -247,9 +224,9 @@
     return String(texto).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  // @Menção só reconhece nomes de verdade da Agenda (mesma lista do "Quem
-  // é você?"), não qualquer "@palavra" solta — evita marcar coisa por
-  // engano e permite nome com espaço ("@ANA THEREZA VIEGAS"). Ordenado do
+  // @Menção só reconhece nomes de verdade da Agenda, não qualquer
+  // "@palavra" solta — evita marcar coisa por engano e permite nome com
+  // espaço ("@ANA THEREZA VIEGAS"). Ordenado do
   // nome mais longo pro mais curto pra "ANA THEREZA VIEGAS" não parar em
   // só "ANA" no meio do caminho.
   function regexMencoes() {
@@ -328,13 +305,11 @@
     document.getElementById('horus-chat-mensagens').style.display = 'flex';
     document.getElementById('horus-chat-footer').style.display = 'flex';
     document.getElementById('horus-chat-quemsou').style.display = 'flex';
-    document.getElementById('horus-chat-nome-atual').textContent = nomeAutorAtual();
 
     // Precisa da lista da Agenda carregada ANTES de renderizar, senão a
-    // primeira leva de mensagens abre sem reconhecer nenhuma @menção —
-    // mostrarPassoAutor() já carrega quando pede "Quem é você?", mas quem
-    // já tem nome salvo pula essa etapa e chegava aqui sem equipeCache.
-    await carregarEquipe();
+    // primeira leva de mensagens abre sem reconhecer nenhuma @menção.
+    await Promise.all([carregarUsuarioAtual(), carregarEquipe()]);
+    document.getElementById('horus-chat-nome-atual').textContent = nomeAutorAtual();
 
     const resp = await fetch(endpointAtual());
     mensagensAtuais = await resp.json();
@@ -348,10 +323,13 @@
     if (!texto || !contexto) return;
 
     input.value = '';
+    // Autor não vai mais no corpo — o backend identifica quem está
+    // mandando pela própria sessão logada (ver chat.js), não confia em
+    // nada que o cliente diga sobre "quem eu sou".
     await fetch(endpointAtual(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ autor: nomeAutorAtual(), texto })
+      body: JSON.stringify({ texto })
     });
     // não adiciona otimisticamente na tela — a mensagem volta pelo próprio
     // WebSocket (mesmo caminho pra todo mundo, sem duplicar lógica)
@@ -407,8 +385,7 @@
     document.getElementById('horus-chat-painel').classList.add('aberto');
     fecharMenuHistorico();
 
-    if (!nomeAutorAtual()) await mostrarPassoAutor();
-    else await mostrarChat();
+    await mostrarChat();
   }
 
   async function abrirGeral() {
@@ -418,8 +395,7 @@
     document.getElementById('horus-chat-painel').classList.add('aberto');
     fecharMenuHistorico();
 
-    if (!nomeAutorAtual()) await mostrarPassoAutor();
-    else await mostrarChat();
+    await mostrarChat();
   }
 
   function fechar() {
