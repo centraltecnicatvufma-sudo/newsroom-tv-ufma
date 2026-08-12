@@ -258,6 +258,13 @@ db.exec(`
   )
 `);
 
+// Perfil (nível de permissão pra quando o login existir) e E-mail (pro
+// convite de primeiro acesso) — cadastro por enquanto, sem login/sessão/
+// permissão de verdade ainda (ver decisão do usuário: essa etapa é só a
+// base de dados, autenticação fica pra depois).
+try { db.exec('ALTER TABLE equipe_agenda ADD COLUMN perfil TEXT'); } catch (e) {}
+try { db.exec('ALTER TABLE equipe_agenda ADD COLUMN email TEXT'); } catch (e) {}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS agendamentos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

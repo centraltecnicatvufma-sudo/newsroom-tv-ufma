@@ -182,8 +182,8 @@ router.get('/equipe/lixeira', (req, res) => {
 });
 
 router.post('/equipe', (req, res) => {
-  const { nome, funcao } = req.body;
-  const resultado = db.prepare('INSERT INTO equipe_agenda (nome, funcao) VALUES (?, ?)').run(nome, funcao);
+  const { nome, funcao, perfil, email } = req.body;
+  const resultado = db.prepare('INSERT INTO equipe_agenda (nome, funcao, perfil, email) VALUES (?, ?, ?, ?)').run(nome, funcao, perfil || '', email || '');
   const novo = db.prepare('SELECT * FROM equipe_agenda WHERE id = ?').get(resultado.lastInsertRowid);
   res.status(201).json(novo);
 });
@@ -197,8 +197,10 @@ router.patch('/equipe/:id', (req, res) => {
 
   const nome = req.body.nome !== undefined ? req.body.nome : item.nome;
   const funcao = req.body.funcao !== undefined ? req.body.funcao : item.funcao;
+  const perfil = req.body.perfil !== undefined ? req.body.perfil : item.perfil;
+  const email = req.body.email !== undefined ? req.body.email : item.email;
 
-  db.prepare('UPDATE equipe_agenda SET nome = ?, funcao = ? WHERE id = ?').run(nome, funcao, id);
+  db.prepare('UPDATE equipe_agenda SET nome = ?, funcao = ?, perfil = ?, email = ? WHERE id = ?').run(nome, funcao, perfil, email, id);
 
   const atualizado = db.prepare('SELECT * FROM equipe_agenda WHERE id = ?').get(id);
   res.json(atualizado);

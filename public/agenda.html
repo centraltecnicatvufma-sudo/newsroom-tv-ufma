@@ -76,7 +76,7 @@
     .modal { background: #fff; border-radius: 10px; padding: 20px; width: 360px; }
     .modal h2 { font-size: 16px; margin: 0 0 16px; }
     .modal label { font-size: 12px; color: #5b6472; display: block; margin: 12px 0 4px; }
-    .modal input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+    .modal input[type="text"], .modal input[type="email"], .modal select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
     .modal .opcoes-tipo { display: flex; gap: 12px; font-size: 13px; flex-wrap: wrap; }
     .modal .botoes-modal { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
     .modal .botoes-modal button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
@@ -194,6 +194,18 @@
       <input type="text" id="input-nome-membro" placeholder="Nome do membro">
       <label>Função</label>
       <input type="text" id="input-funcao-membro" placeholder="Ex: Repórter, Cinegrafista, Diretor...">
+      <label>Perfil</label>
+      <select id="input-perfil-membro">
+        <option value="">Selecione...</option>
+        <option value="Administrador / TI">Administrador / TI (Nível 6)</option>
+        <option value="Editor-Chefe / Chefe de Redação">Editor-Chefe / Chefe de Redação (Nível 5)</option>
+        <option value="Produtor">Produtor (Nível 4)</option>
+        <option value="Repórter / Redator">Repórter / Redator (Nível 3)</option>
+        <option value="Técnico">Técnico (Nível 2)</option>
+        <option value="Operador">Operador (Nível 1)</option>
+      </select>
+      <label>E-mail</label>
+      <input type="email" id="input-email-membro" placeholder="nome@ufma.br">
       <div class="botoes-modal">
         <button class="btn-cancelar" id="cancelar-equipe">Cancelar</button>
         <button class="btn-confirmar" id="confirmar-equipe">Salvar</button>
@@ -386,8 +398,10 @@
         <tr>
           <td>${m.nome}</td>
           <td><span class="tag-tipo">${m.funcao}</span></td>
+          <td>${m.perfil || '—'}</td>
+          <td>${m.email || '—'}</td>
           <td class="acoes-lista">
-            <button class="btn-ver btn-editar-membro" data-id="${m.id}" data-nome="${m.nome}" data-funcao="${m.funcao}" title="Editar">✏️</button>
+            <button class="btn-ver btn-editar-membro" data-id="${m.id}" data-nome="${m.nome}" data-funcao="${m.funcao}" data-perfil="${m.perfil || ''}" data-email="${m.email || ''}" title="Editar">✏️</button>
             <button class="btn-excluir btn-excluir-membro" data-id="${m.id}" title="Excluir">🗑️</button>
           </td>
         </tr>
@@ -401,7 +415,7 @@
         ${lista.length === 0
           ? '<div class="estado-vazio">Nenhum membro cadastrado ainda.</div>'
           : `<table class="tabela-simples">
-              <thead><tr><th>Nome</th><th>Função</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Nome</th><th>Função</th><th>Perfil</th><th>E-mail</th><th>Ações</th></tr></thead>
               <tbody>${corpoTabela}</tbody>
             </table>`}
       `;
@@ -410,6 +424,8 @@
         idEmEdicaoEquipe = null;
         document.getElementById('input-nome-membro').value = '';
         document.getElementById('input-funcao-membro').value = '';
+        document.getElementById('input-perfil-membro').value = '';
+        document.getElementById('input-email-membro').value = '';
         document.getElementById('modal-equipe').classList.add('aberto');
       });
 
@@ -418,6 +434,8 @@
           idEmEdicaoEquipe = Number(btn.dataset.id);
           document.getElementById('input-nome-membro').value = btn.dataset.nome;
           document.getElementById('input-funcao-membro').value = btn.dataset.funcao;
+          document.getElementById('input-perfil-membro').value = btn.dataset.perfil;
+          document.getElementById('input-email-membro').value = btn.dataset.email;
           document.getElementById('modal-equipe').classList.add('aberto');
         });
       });
@@ -440,19 +458,21 @@
     document.getElementById('confirmar-equipe').addEventListener('click', async () => {
       const nome = document.getElementById('input-nome-membro').value.trim();
       const funcao = document.getElementById('input-funcao-membro').value.trim();
+      const perfil = document.getElementById('input-perfil-membro').value;
+      const email = document.getElementById('input-email-membro').value.trim();
       if (!nome || !funcao) return;
 
       if (idEmEdicaoEquipe !== null) {
         await fetch(`/agenda/equipe/${idEmEdicaoEquipe}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nome, funcao })
+          body: JSON.stringify({ nome, funcao, perfil, email })
         });
       } else {
         await fetch('/agenda/equipe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nome, funcao })
+          body: JSON.stringify({ nome, funcao, perfil, email })
         });
       }
 

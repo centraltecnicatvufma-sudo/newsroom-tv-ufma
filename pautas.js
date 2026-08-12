@@ -100,9 +100,44 @@ function pessoasComFuncao(alvo) {
       if (alvo === 'editor_chefe') return f.includes('editor chefe') || f.includes('editor-chefe');
       if (alvo === 'coord_jornalismo') return f.includes('coorden') && f.includes('jornalis');
       if (alvo === 'chefe_redacao') return f.includes('chefe') && f.includes('redacao');
+      // "Técnica" é deliberadamente amplo (confirmado com o usuário): cobre
+      // qualquer função com "técnico(a)", "operador", "almoxarifado" ou
+      // "audiovisual" — hoje bate com CORD. TÉCNICO/OPERAÇÕES e os
+      // OPERADOR DE ÁUDIO/CÂMERA/ESTÚDIO da Agenda real, mas já cobre de
+      // propósito nomes de função que ainda não existem cadastrados
+      // (Técnico de Vídeo, Almoxarifado, Técnico Audiovisual etc.).
+      if (alvo === 'tecnica') return ['tecnic', 'operador', 'almoxarifado', 'audiovisual'].some(kw => f.includes(kw));
       return false;
     })
     .map(m => m.nome);
+}
+
+// ---- Notificação automática de Equipamentos Especiais ----
+// Regra combinada com o usuário: só dispara na TRANSIÇÃO de desmarcado
+// pra marcado (checkbox recém-marcado, seja na criação ou numa edição
+// posterior) — reabrir/salvar a pauta de novo sem mudar esse campo não
+// gera aviso repetido.
+const ROTULOS_EQUIPAMENTO = {
+  equip_lapela: 'Microfone Lapela',
+  equip_iluminacao: 'Iluminação Externa',
+  equip_mochilink: 'Mochilink / Transmissão ao Vivo'
+};
+
+function notificarEquipamentoEspecial(req, pauta, camposRecemMarcados) {
+  const rotulos = camposRecemMarcados.map(c => ROTULOS_EQUIPAMENTO[c]).filter(Boolean);
+  if (!rotulos.length) return;
+
+  const nomes = [...new Set(pessoasComFuncao('tecnica'))];
+  const mencoes = nomes.map(n => '@' + n).join(' ');
+  const texto = `🔧 Matéria #P-${pauta.id} ("${pauta.titulo}") solicitou equipamento especial: ${rotulos.join(', ')}.` + (mencoes ? ' ' + mencoes : '');
+
+  const resultado = db.prepare(`
+    INSERT INTO chat_mensagens (pauta_id, autor, texto, criado_em)
+    VALUES (?, 'HORUS', ?, ?)
+  `).run(pauta.id, texto, new Date().toISOString());
+
+  const mensagem = db.prepare('SELECT * FROM chat_mensagens WHERE id = ?').get(resultado.lastInsertRowid);
+  req.app.get('tempoReal')?.broadcast({ tipo: 'chat', pauta_id: pauta.id, mensagem });
 }
 
 function destinatariosPorStatus(pauta, statusNovo) {
@@ -241,6 +276,11 @@ router.post('/', (req, res) => {
   salvarTextosExtra(novaId, textos_extra);
   registrarHistoricoStatus(novaId, null, status || 'em_producao');
 
+  const camposEquipamentoMarcados = Object.keys(ROTULOS_EQUIPAMENTO).filter(c => req.body[c]);
+  if (camposEquipamentoMarcados.length) {
+    notificarEquipamentoEspecial(req, { id: novaId, titulo }, camposEquipamentoMarcados);
+  }
+
   const nova = db.prepare('SELECT * FROM pautas WHERE id = ?').get(novaId);
   nova.fontes = buscarFontes(novaId);
   nova.textos_extra = buscarTextosExtra(novaId);
@@ -334,6 +374,11 @@ router.patch('/:id', (req, res) => {
       id, titulo: atualizado.titulo, produtor: atualizado.produtor,
       reporter: atualizado.reporter, editor_imagens: atualizado.editor_imagens
     }, atualizado.status);
+  }
+
+  const camposEquipamentoRecemMarcados = Object.keys(ROTULOS_EQUIPAMENTO).filter(c => !item[c] && atualizado[c]);
+  if (camposEquipamentoRecemMarcados.length) {
+    notificarEquipamentoEspecial(req, { id, titulo: atualizado.titulo }, camposEquipamentoRecemMarcados);
   }
 
   if (Array.isArray(req.body.fontes)) {

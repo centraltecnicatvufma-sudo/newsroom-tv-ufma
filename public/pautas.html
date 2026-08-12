@@ -822,39 +822,44 @@
 
         <div class="form-pauta-corpo">
           <div class="subpainel ativa" data-subpainel="conteudo">
-            <label>Formatos / Destinos</label>
-            <div class="linha-checkboxes">
-              <label><input type="checkbox" data-campo="tv"> VT TV Aberta</label>
-              <label><input type="checkbox" data-campo="insta"> Reels/Instagram</label>
-              <label><input type="checkbox" data-campo="site"> Matéria Site</label>
-              <label><input type="checkbox" data-campo="youtube"> YouTube</label>
+            <div class="form-pauta-cabecalho-toggle" data-acao="toggle-formatos">
+              <span class="seta-recolher">▼</span> Formatos / Destinos e Checklist de Ativos Multimídia
             </div>
-            <label>Checklist de Ativos Multimídia</label>
-            <div class="checklist-ativos">
-              <div class="linha-ativo">
-                <span class="rotulo-ativo">📝 Texto</span>
-                <label><input type="checkbox" data-campo="texto-necessario"> Necessário</label>
-                <label><input type="checkbox" data-campo="texto-pronto"> Pronto</label>
+            <div class="form-pauta-formatos-corpo">
+              <label>Formatos / Destinos</label>
+              <div class="linha-checkboxes">
+                <label><input type="checkbox" data-campo="tv"> VT TV Aberta</label>
+                <label><input type="checkbox" data-campo="insta"> Reels/Instagram</label>
+                <label><input type="checkbox" data-campo="site"> Matéria Site</label>
+                <label><input type="checkbox" data-campo="youtube"> YouTube</label>
               </div>
-              <div class="linha-ativo">
-                <span class="rotulo-ativo">📸 Foto</span>
-                <label><input type="checkbox" data-campo="foto-necessario"> Necessário</label>
-                <label><input type="checkbox" data-campo="foto-pronto"> Pronto</label>
-              </div>
-              <div class="linha-ativo">
-                <span class="rotulo-ativo">🎥 Vídeo</span>
-                <label><input type="checkbox" data-campo="video-necessario"> Necessário</label>
-                <label><input type="checkbox" data-campo="video-pronto"> Pronto</label>
-              </div>
-              <div class="linha-ativo">
-                <span class="rotulo-ativo">🎙️ Áudio</span>
-                <label><input type="checkbox" data-campo="audio-necessario"> Necessário</label>
-                <label><input type="checkbox" data-campo="audio-pronto"> Pronto</label>
-              </div>
-              <div class="linha-ativo">
-                <span class="rotulo-ativo">📊 Infográfico</span>
-                <label><input type="checkbox" data-campo="infografico-necessario"> Necessário</label>
-                <label><input type="checkbox" data-campo="infografico-pronto"> Pronto</label>
+              <label>Checklist de Ativos Multimídia</label>
+              <div class="checklist-ativos">
+                <div class="linha-ativo">
+                  <span class="rotulo-ativo">📝 Texto</span>
+                  <label><input type="checkbox" data-campo="texto-necessario"> Necessário</label>
+                  <label><input type="checkbox" data-campo="texto-pronto"> Pronto</label>
+                </div>
+                <div class="linha-ativo">
+                  <span class="rotulo-ativo">📸 Foto</span>
+                  <label><input type="checkbox" data-campo="foto-necessario"> Necessário</label>
+                  <label><input type="checkbox" data-campo="foto-pronto"> Pronto</label>
+                </div>
+                <div class="linha-ativo">
+                  <span class="rotulo-ativo">🎥 Vídeo</span>
+                  <label><input type="checkbox" data-campo="video-necessario"> Necessário</label>
+                  <label><input type="checkbox" data-campo="video-pronto"> Pronto</label>
+                </div>
+                <div class="linha-ativo">
+                  <span class="rotulo-ativo">🎙️ Áudio</span>
+                  <label><input type="checkbox" data-campo="audio-necessario"> Necessário</label>
+                  <label><input type="checkbox" data-campo="audio-pronto"> Pronto</label>
+                </div>
+                <div class="linha-ativo">
+                  <span class="rotulo-ativo">📊 Infográfico</span>
+                  <label><input type="checkbox" data-campo="infografico-necessario"> Necessário</label>
+                  <label><input type="checkbox" data-campo="infografico-pronto"> Pronto</label>
+                </div>
               </div>
             </div>
             <label>Objetivo</label>
@@ -1273,11 +1278,13 @@
           </tbody>
         </table>
 
-        <div class="cabecalho-impressao-info">
-          <div class="linha-info destinos-impressao">
-            <strong>Formatos / Destinos:</strong> ${destinos.length ? destinos.map(d => `<span>${d}</span>`).join('') : '—'}
+        ${destinos.length ? `
+          <div class="cabecalho-impressao-info">
+            <div class="linha-info destinos-impressao">
+              <strong>Formatos / Destinos:</strong> ${destinos.map(d => `<span>${d}</span>`).join('')}
+            </div>
           </div>
-        </div>
+        ` : ''}
 
         ${corpoHtml}
 
@@ -1398,6 +1405,13 @@
     function ligarEventosPainel(idAba, container) {
       container.querySelector('[data-acao="toggle-cabecalho"]').addEventListener('click', (e) => {
         const corpo = container.querySelector('.form-pauta-cabecalho-corpo');
+        const seta = e.currentTarget.querySelector('.seta-recolher');
+        const abrindo = corpo.style.display === 'none';
+        corpo.style.display = abrindo ? '' : 'none';
+        seta.textContent = abrindo ? '▼' : '▶';
+      });
+      container.querySelector('[data-acao="toggle-formatos"]').addEventListener('click', (e) => {
+        const corpo = container.querySelector('.form-pauta-formatos-corpo');
         const seta = e.currentTarget.querySelector('.seta-recolher');
         const abrindo = corpo.style.display === 'none';
         corpo.style.display = abrindo ? '' : 'none';

@@ -90,33 +90,34 @@
     .lauda-pendente { background: #fbe4ea; color: #5A021F; }
     .aviso-cabeca { color: #C98A1F; cursor: pointer; font-size: 13px; }
 
+    /* Folha de impressão dedicada do Espelho — layout enxuto, sem os
+       controles/colunas de trabalho da tela (Ações, Status, Lauda,
+       tempos). Mesmo padrão já usado em Pautas: um container próprio
+       (#impressao-espelho), escondido na tela, só visível no papel (ver
+       @media print mais abaixo) — dá controle total da ordem das colunas
+       e do layout, sem depender de esconder pedaços da tabela de trabalho. */
+    .somente-impressao { display: none; }
+    .impressao-espelho { font-size: 12px; }
+    .impressao-espelho .cabecalho-impressao-espelho { margin-bottom: 16px; }
+    .impressao-espelho .cabecalho-impressao-espelho h1 { font-size: 16px; margin: 0 0 4px; }
+    .impressao-espelho .cabecalho-impressao-espelho .data-impressao-espelho { font-size: 12px; color: #333; }
+    .impressao-espelho .bloco-impressao-titulo { font-size: 12px; font-weight: bold; margin: 14px 0 4px; padding-bottom: 2px; border-bottom: 1px solid #000; }
+    .impressao-espelho table.tabela-impressao-espelho { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+    .impressao-espelho table.tabela-impressao-espelho th { text-align: left; font-size: 10px; text-transform: uppercase; color: #333; padding: 3px 6px; border-bottom: 1px solid #999; }
+    .impressao-espelho table.tabela-impressao-espelho td { padding: 3px 6px; border-bottom: 1px solid #eee; vertical-align: top; }
+    .impressao-espelho table.tabela-impressao-espelho td.col-ord { width: 34px; }
+    .impressao-espelho table.tabela-impressao-espelho td.col-tipo { width: 110px; }
+
     @media print {
-      @page { size: landscape; margin: 12mm; }
+      @page { size: portrait; margin: 12mm; }
 
-      .barra-acoes-espelho, .acoes-rundown, .overlay-modal, .zona-fim-bloco, .nr-sidebar, .faixa-breaking { display: none !important; }
+      .barra-acoes-espelho, .acoes-rundown, .overlay-modal, .zona-fim-bloco, .nr-sidebar, .faixa-breaking,
+      .topo, .conteudo { display: none !important; }
       body { background: #fff; }
-      .conteudo { max-width: 100%; margin: 0; padding: 0; }
-
-      .topo { background: #fff !important; color: #000 !important; padding: 0 0 10px; }
-      .status-tempo-badge { border: 1px solid #999; background: none !important; color: #000 !important; }
-
-      .bloco-grupo { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; margin-bottom: 12px; }
-      .bloco-grupo-titulo { background: #f0f0f0 !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
-      /* table-layout:auto deixa o navegador distribuir a largura pelo conteúdo real
-         das linhas — o fixed usava só a largura do cabeçalho e espremia a Retranca
-         numa coluna quase sem espaço, quebrando palavra por palavra */
-      table.rundown { table-layout: auto; width: 100%; font-size: 11px; }
-      table.rundown th, table.rundown td { padding: 5px 6px; word-break: break-word; }
-      table.rundown td.titulo-item { white-space: normal; overflow: visible; text-overflow: clip; }
-
-      /* Badges de cor viram texto preto com contorno: o navegador nem sempre
-         imprime cor de fundo (depende da opção "gráficos de segundo plano" da
-         caixa de impressão), e texto branco sobre fundo que sumiu fica ilegível */
-      .tipo-badge, .status-badge, .lauda-badge {
-        background: none !important; color: #000 !important; border: 1px solid #999;
-      }
-      .status-badge { width: auto; }
+      .nr-app { height: auto !important; overflow: visible !important; }
+      .somente-impressao { display: block !important; }
+      .impressao-espelho .bloco-impressao-titulo { break-after: avoid; }
+      .impressao-espelho table.tabela-impressao-espelho tr { break-inside: avoid; }
     }
   
     /* Faixa de Breaking News — mesmo alerta visível em toda tela do
@@ -196,6 +197,8 @@
   </div>
 
   <div class="conteudo" id="conteudo">Carregando...</div>
+
+  <div class="somente-impressao impressao-espelho" id="impressao-espelho"></div>
 
   <div class="overlay-modal" id="modal-item">
     <div class="modal-item">
@@ -279,6 +282,7 @@
 
     let pautasCache = [];
     let blocosCache = [];
+    let espelhoCache = null;
     let itemEditandoId = null; // null = criando; com id = editando
 
     // Mesmo vocabulário de status da Pauta — Sugestão é a única etapa do
@@ -380,6 +384,7 @@
       }
 
       const espelho = await respEspelho.json();
+      espelhoCache = espelho;
       document.getElementById('sub-espelho').textContent =
         (espelho.programa || 'Sem programa') + ' — ' + (espelho.data || 'sem data');
 
@@ -522,7 +527,58 @@
       window.open('teleprompter.html?espelho_id=' + espelhoId, '_blank');
     });
 
-    document.getElementById('btn-imprimir').addEventListener('click', () => window.print());
+    function formatarDataImpressaoEspelho(iso) {
+      if (!iso) return '—';
+      const [ano, mes, dia] = String(iso).split('-');
+      return (dia && mes && ano) ? `${dia}/${mes}/${ano}` : iso;
+    }
+
+    // Folha de impressão do Espelho — layout enxuto pedido pelo usuário:
+    // sem bordas de grade (só uma linha por baixo de cada linha/cabeçalho),
+    // retrato, uma tabela por Bloco com só ORD/RETRANCA/REPÓRTER/TIPO
+    // (sem Status/Lauda/tempos/Ações — informação de trabalho, não de leitura
+    // rápida em papel). Cabeçalho mostra o nome do Programa + a Data.
+    function montarImpressaoEspelho(espelho, blocos) {
+      const grupos = {};
+      blocos.forEach(b => {
+        const numBloco = b.bloco || 1;
+        if (!grupos[numBloco]) grupos[numBloco] = [];
+        grupos[numBloco].push(b);
+      });
+      const numerosBlocos = Object.keys(grupos).sort((a, b) => Number(a) - Number(b));
+
+      const blocosHtml = numerosBlocos.map(num => `
+        <div class="bloco-impressao-titulo">BLOCO ${num}</div>
+        <table class="tabela-impressao-espelho">
+          <thead>
+            <tr><th class="col-ord">Ord</th><th>Retranca</th><th>Repórter</th><th class="col-tipo">Tipo</th></tr>
+          </thead>
+          <tbody>
+            ${grupos[num].map(b => `
+              <tr>
+                <td class="col-ord">${b.ordem}</td>
+                <td>${escaparHtml(b.titulo)}</td>
+                <td>${escaparHtml(b.reporter || b.responsavel || '—')}</td>
+                <td class="col-tipo">${labelTipo[b.tipo] || b.tipo}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `).join('');
+
+      document.getElementById('impressao-espelho').innerHTML = `
+        <div class="cabecalho-impressao-espelho">
+          <h1>${escaparHtml(espelho.programa || 'Sem programa')}</h1>
+          <div class="data-impressao-espelho">${formatarDataImpressaoEspelho(espelho.data)}</div>
+        </div>
+        ${blocosHtml}
+      `;
+    }
+
+    document.getElementById('btn-imprimir').addEventListener('click', () => {
+      montarImpressaoEspelho(espelhoCache || {}, blocosCache);
+      window.print();
+    });
 
     // ---- Rundown ----
     function renderRundown(blocos) {
