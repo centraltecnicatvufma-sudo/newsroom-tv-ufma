@@ -286,6 +286,23 @@
     let espelhoCache = null;
     let itemEditandoId = null; // null = criando; com id = editando
 
+    // Operador(1) e Técnico(2) têm só leitura do Rundown — sem editar
+    // item/mover/excluir/criar (ver mesma regra no backend, blocos.js).
+    // Buscado direto aqui, não via window.usuarioLogado, pela mesma razão
+    // de sugestoes.html: sem garantia de que auth-guard.js já resolveu.
+    let nivelUsuarioAtual = 0;
+    async function carregarNivelUsuario() {
+      try {
+        const resp = await fetch('/auth/me');
+        if (resp.ok) nivelUsuarioAtual = (await resp.json()).nivel || 0;
+      } catch (e) {}
+    }
+    function aplicarPermissaoEdicaoEspelho() {
+      if (nivelUsuarioAtual >= 3) return;
+      document.getElementById('btn-novo-item')?.remove();
+      document.getElementById('btn-novo-bloco')?.remove();
+    }
+
     // Mesmo vocabulário de status da Pauta — Sugestão é a única etapa do
     // pipeline com classificação própria; a partir da Pauta, Bloco segue
     // os mesmos status, herdados automaticamente (ver cascata em
@@ -599,6 +616,14 @@
 
       const numerosBlocos = Object.keys(grupos).sort((a, b) => Number(a) - Number(b));
 
+      // Operador(1) e Técnico(2) só têm leitura do Rundown — sem Editar
+      // Item/Abrir Lauda/Excluir/Sincronizar nem arrastar pra reordenar
+      // (pedido explícito do usuário pro Nível 1; estendido ao Nível 2
+      // porque os dois compartilham "leitura do Rundown aprovado" e o
+      // backend já bloqueia edição de Lauda pra ambos, ver materia.js).
+      // Chat continua disponível pra todo mundo, sem exceção.
+      const podeEditar = nivelUsuarioAtual >= 3;
+
       container.innerHTML = numerosBlocos.map(num => `
         <div class="bloco-grupo" data-bloco="${num}">
           <div class="bloco-grupo-titulo">
@@ -622,7 +647,7 @@
             </thead>
             <tbody>
               ${grupos[num].map(b => `
-                <tr data-id="${b.id}" data-bloco="${num}" draggable="true">
+                <tr data-id="${b.id}" data-bloco="${num}" draggable="${podeEditar}">
                   <td>${b.ordem}</td>
                   <td><span class="tipo-badge tipo-${b.tipo}">${labelTipo[b.tipo] || b.tipo}</span></td>
                   <td class="titulo-item" title="${escaparHtml(b.titulo)}">${escaparHtml(b.titulo)}</td>
@@ -633,11 +658,11 @@
                   <td class="dur">${duracaoVideoBloco(b) ? formatarTempo(duracaoVideoBloco(b)) : '—'}</td>
                   <td class="dur">${formatarTempo(duracaoEfetivaBloco(b))}</td>
                   <td class="acoes-rundown" draggable="false">
-                    ${b.cabeca_desatualizada ? `<button class="btn-sincronizar aviso-cabeca" data-id="${b.id}" title="A Cabeça da Lauda mudou depois — clique para atualizar o texto do teleprompter">🔄</button>` : ''}
-                    <button class="btn-editar-item" data-id="${b.id}" title="Editar item">✏️</button>
-                    ${b.pauta_id ? `<button class="btn-abrir-lauda" data-pauta="${b.pauta_id}" title="Abrir Lauda">📝</button>` : ''}
+                    ${podeEditar && b.cabeca_desatualizada ? `<button class="btn-sincronizar aviso-cabeca" data-id="${b.id}" title="A Cabeça da Lauda mudou depois — clique para atualizar o texto do teleprompter">🔄</button>` : ''}
+                    ${podeEditar ? `<button class="btn-editar-item" data-id="${b.id}" title="Editar item">✏️</button>` : ''}
+                    ${podeEditar && b.pauta_id ? `<button class="btn-abrir-lauda" data-pauta="${b.pauta_id}" title="Abrir Lauda">📝</button>` : ''}
                     ${b.pauta_id ? `<button class="btn-chat-bloco" data-pauta="${b.pauta_id}" data-titulo="${(b.titulo || '').replace(/"/g, '&quot;')}" title="Chat desta pauta">💬</button>` : ''}
-                    <button class="btn-remover-bloco" data-id="${b.id}" title="Remover">🗑️</button>
+                    ${podeEditar ? `<button class="btn-remover-bloco" data-id="${b.id}" title="Remover">🗑️</button>` : ''}
                   </td>
                 </tr>
               `).join('')}
@@ -648,7 +673,7 @@
       `).join('');
 
       ligarAcoesDaTabela();
-      ligarArrastarSoltar();
+      if (podeEditar) ligarArrastarSoltar();
     }
 
     function ligarAcoesDaTabela() {
@@ -790,6 +815,8 @@
     // rundown — duracaoEfetivaBloco() consulta pautasCache pra saber se já
     // tem Tempo do Vídeo real (ver função acima)
     (async function init() {
+      await carregarNivelUsuario();
+      aplicarPermissaoEdicaoEspelho();
       await carregarPautasParaModal();
       await carregarEspelho();
     })();

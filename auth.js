@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const db = require('./banco');
+const { nivelDoUsuario } = require('./permissoes');
 
 // Segredo do JWT: usa JWT_SECRET do ambiente se existir; senão gera um
 // segredo aleatório na primeira vez que o servidor sobe e guarda num
@@ -139,6 +140,9 @@ router.patch('/senha', exigirLogin, (req, res) => {
 router.get('/me', exigirLogin, (req, res) => {
   const membro = db.prepare('SELECT id, nome, perfil, email FROM equipe_agenda WHERE id = ? AND excluido_em IS NULL').get(req.usuario.id);
   if (!membro) return res.status(401).json({ erro: 'Usuário não encontrado' });
+  // nivel calculado aqui (não guardado na tabela) — fonte única de
+  // verdade é permissoes.js, o front nunca duplica esse mapeamento.
+  membro.nivel = nivelDoUsuario(membro.perfil);
   res.json(membro);
 });
 

@@ -383,6 +383,29 @@
     });
     let quillCabeca, quillWeb;
     const quillItens = {}; // id do item -> instância Quill
+
+    // Operador(1) e Técnico(2) só têm leitura da Lauda — a garantia real
+    // é o backend (materia.js bloqueia POST/PATCH/DELETE, pautas.js
+    // bloqueia mudar cabeca_texto/texto_web fora da única transição
+    // permitida do Técnico); isso aqui só trava os campos na tela pra não
+    // deixar digitar algo que vai falhar ao salvar.
+    let nivelUsuarioAtual = 0;
+    async function carregarNivelUsuario() {
+      try {
+        const resp = await fetch('/auth/me');
+        if (resp.ok) nivelUsuarioAtual = (await resp.json()).nivel || 0;
+      } catch (e) {}
+    }
+    function aplicarPermissaoLauda() {
+      if (nivelUsuarioAtual >= 3) return;
+      quillCabeca?.enable(false);
+      quillWeb?.enable(false);
+      Object.values(quillItens).forEach(q => q.enable(false));
+      document.querySelectorAll('.conteudo input, .conteudo textarea, .conteudo select').forEach(el => { el.disabled = true; });
+      document.getElementById('btn-salvar')?.remove();
+      document.querySelectorAll('.add-itens, #btn-add-gc').forEach(el => el.remove());
+      document.querySelectorAll('.btn-remover-item, .btn-remover-gc, .btn-mover').forEach(el => el.remove());
+    }
     const itensMeta = {}; // id do item -> { duracao_segundos, duracao_automatica }
     let itensCache = []; // último retorno de GET /materia, na ordem — usado pra achar vizinho ao reordenar
 
@@ -983,15 +1006,23 @@
     });
 
     (async function init() {
-      const resultadoBloqueio = await Bloqueio.tentarBloquear(Number(pautaId));
-      if (!resultadoBloqueio.ok) {
-        await mostrarBloqueioTotal(resultadoBloqueio.bloqueadoPor);
-        return;
+      await carregarNivelUsuario();
+
+      // Quem só tem leitura (Operador/Técnico) não reivindica o bloqueio
+      // de edição — não vai editar nada, e travar a Lauda pra quem
+      // realmente precisa editar seria um efeito colateral indevido.
+      if (nivelUsuarioAtual >= 3) {
+        const resultadoBloqueio = await Bloqueio.tentarBloquear(Number(pautaId));
+        if (!resultadoBloqueio.ok) {
+          await mostrarBloqueioTotal(resultadoBloqueio.bloqueadoPor);
+          return;
+        }
       }
 
       await carregarPauta();
       await carregarItens();
       await carregarGcs();
+      aplicarPermissaoLauda();
 
       // Vindo de Reportagens com o modo de impressão já escolhido (atalho
       // do botão 🖨️ na Lista) — pula direto pro print, sem exigir clique manual

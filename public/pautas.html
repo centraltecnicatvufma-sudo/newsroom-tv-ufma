@@ -409,6 +409,29 @@
     let equipeCache = [];
     let pautasCache = [];
 
+    // Operador(1) e Técnico(2) só têm leitura de Pauta — sem criar,
+    // editar nem excluir (a ÚNICA exceção do Técnico, mudar status pra
+    // Aguardando Revisão, fica só na tela de Edição de Vídeo, não aqui).
+    // Buscado direto aqui, não via window.usuarioLogado, pela mesma razão
+    // já documentada em sugestoes.html/espelho.html.
+    let nivelUsuarioAtual = 0;
+    async function carregarNivelUsuario() {
+      try {
+        const resp = await fetch('/auth/me');
+        if (resp.ok) nivelUsuarioAtual = (await resp.json()).nivel || 0;
+      } catch (e) {}
+    }
+    // Aplica o modo somente-leitura no painel de uma Pauta aberta: trava
+    // todo campo e some com Salvar/Excluir/Adicionar — a garantia real é
+    // o backend (pautas.js), isso aqui só evita a pessoa digitar algo
+    // que vai falhar ao salvar.
+    function aplicarPermissaoPauta(container) {
+      if (nivelUsuarioAtual >= 3) return;
+      container.querySelectorAll('input, textarea, select').forEach(el => { el.disabled = true; });
+      container.querySelector('[data-acao="salvar"]')?.remove();
+      container.querySelectorAll('.btn-add-fonte, .btn-add-texto-extra').forEach(el => el.remove());
+    }
+
     // Cada pauta aberta vira uma aba independente, com seu próprio painel no
     // DOM e seu próprio estado (fontes, sub-aba ativa) — dá pra ter várias
     // pautas abertas ao mesmo tempo, cada uma fechável, sem interferir uma
@@ -646,7 +669,7 @@
                       <button data-modo="uma-coluna" data-id="${p.id}">🖨️ Uma coluna</button>
                     </div>
                   </span>
-                  <button class="btn-excluir" data-id="${p.id}" title="Excluir">🗑️</button>
+                  ${nivelUsuarioAtual >= 3 ? `<button class="btn-excluir" data-id="${p.id}" title="Excluir">🗑️</button>` : ''}
                   ${p.bloqueado_por && window.usuarioLogado?.perfil === 'Administrador / TI'
                     ? `<button class="btn-forcar-destravamento" data-id="${p.id}" title="Forçar destravamento (só Administrador)">🔓</button>`
                     : ''}
@@ -1384,11 +1407,16 @@
 
         // Pauta e Lauda compartilham o mesmo bloqueio (ver bloqueio.js) —
         // se outra pessoa está com essa retranca aberta em qualquer uma
-        // das duas telas, não abre pra edição aqui também.
-        const resultadoBloqueio = await Bloqueio.tentarBloquear(pautaId);
-        if (!resultadoBloqueio.ok) {
-          alert(`🔒 Esta pauta está sendo editada por ${resultadoBloqueio.bloqueadoPor} agora. Tente novamente quando ela for fechada.`);
-          return;
+        // das duas telas, não abre pra edição aqui também. Quem só tem
+        // leitura (Operador/Técnico) não reivindica o bloqueio — não vai
+        // editar nada, travar a pauta pra quem precisa editar de verdade
+        // seria um efeito colateral indevido.
+        if (nivelUsuarioAtual >= 3) {
+          const resultadoBloqueio = await Bloqueio.tentarBloquear(pautaId);
+          if (!resultadoBloqueio.ok) {
+            alert(`🔒 Esta pauta está sendo editada por ${resultadoBloqueio.bloqueadoPor} agora. Tente novamente quando ela for fechada.`);
+            return;
+          }
         }
       }
 
@@ -1432,6 +1460,7 @@
       renderTextosExtra(idAba);
       renderEquipeExtra(idAba);
       ligarEventosPainel(idAba, container);
+      aplicarPermissaoPauta(container);
 
       mudarAbaAtiva(idAba);
     }
@@ -1603,7 +1632,7 @@
       barra.innerHTML = `
         <button class="aba-doc ${abaAtivaId === 'capa' ? 'ativa' : ''}" data-aba="capa">🗂️ Capa</button>
         ${abasHtml}
-        <button class="btn-nova-aba" id="btn-nova-aba" title="Nova Pauta">+</button>
+        ${nivelUsuarioAtual >= 3 ? '<button class="btn-nova-aba" id="btn-nova-aba" title="Nova Pauta">+</button>' : ''}
       `;
 
       barra.querySelectorAll('.aba-doc').forEach(btn => {
@@ -1615,12 +1644,14 @@
       barra.querySelectorAll('.fechar-aba').forEach(el => {
         el.addEventListener('click', (e) => { e.stopPropagation(); fecharAba(el.dataset.fechar); });
       });
-      document.getElementById('btn-nova-aba').addEventListener('click', () => abrirAbaPauta(null));
+      document.getElementById('btn-nova-aba')?.addEventListener('click', () => abrirAbaPauta(null));
     }
 
     document.getElementById('btn-nova-pauta').addEventListener('click', () => abrirAbaPauta(null));
 
     (async function init() {
+      await carregarNivelUsuario();
+      if (nivelUsuarioAtual < 3) document.getElementById('btn-nova-pauta')?.remove();
       await carregarProgramas();
       await carregarEquipe();
       await carregarPautas();

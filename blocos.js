@@ -1,6 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const db = require('./banco');
+const { exigirNivelMinimo } = require('./permissoes');
+
+// Operador(1) e Técnico(2) têm só "leitura do Rundown aprovado" —
+// qualquer mudança no Espelho (criar/editar/mover/excluir item,
+// ressincronizar cabeça) exige pelo menos Repórter/Redator(3). GET
+// continua aberto pra qualquer perfil logado ("visualizar todas as
+// páginas").
+const exigirEdicaoEspelho = exigirNivelMinimo(3);
 
 // Fluxo de status do espelho, na ordem em que a redação percorre — mesmo
 // vocabulário de status da Pauta (em_producao/em_gravacao/em_edicao/
@@ -125,7 +133,7 @@ router.get('/', (req, res) => {
 });
 
 // POST /blocos -> cria um novo item dentro de um bloco do espelho
-router.post('/', (req, res) => {
+router.post('/', exigirEdicaoEspelho, (req, res) => {
   const {
     espelho_id, pauta_id, bloco, tipo, titulo,
     responsavel, reporter, duracao_estimada, duracao_alvo_vt, texto_script
@@ -163,7 +171,7 @@ router.post('/', (req, res) => {
 });
 
 // PATCH /blocos/:id/mover -> move o item para outra posição, inclusive para outro bloco
-router.patch('/:id/mover', (req, res) => {
+router.patch('/:id/mover', exigirEdicaoEspelho, (req, res) => {
   const id = Number(req.params.id);
   const item = db.prepare('SELECT * FROM blocos WHERE id = ?').get(id);
 
@@ -282,7 +290,7 @@ router.patch('/:id/status', (req, res) => {
 });
 
 // PATCH /blocos/:id/sincronizar-cabeca -> repuxa a Cabeça da Lauda para o texto do teleprompter
-router.patch('/:id/sincronizar-cabeca', (req, res) => {
+router.patch('/:id/sincronizar-cabeca', exigirEdicaoEspelho, (req, res) => {
   const id = Number(req.params.id);
   const bloco = db.prepare('SELECT * FROM blocos WHERE id = ?').get(id);
 
@@ -300,7 +308,7 @@ router.patch('/:id/sincronizar-cabeca', (req, res) => {
 });
 
 // PATCH /blocos/:id -> edita os campos gerais do item
-router.patch('/:id', (req, res) => {
+router.patch('/:id', exigirEdicaoEspelho, (req, res) => {
   const id = Number(req.params.id);
   const bloco = db.prepare('SELECT * FROM blocos WHERE id = ?').get(id);
 
@@ -347,7 +355,7 @@ router.patch('/:id', (req, res) => {
 });
 
 // DELETE /blocos/:id -> remove um item do espelho
-router.delete('/:id', (req, res) => {
+router.delete('/:id', exigirEdicaoEspelho, (req, res) => {
   const id = Number(req.params.id);
   const bloco = db.prepare('SELECT espelho_id, bloco FROM blocos WHERE id = ?').get(id);
 

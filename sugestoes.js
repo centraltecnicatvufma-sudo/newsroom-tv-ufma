@@ -1,6 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const db = require('./banco');
+const { nivelDoUsuario } = require('./permissoes');
+
+// Aprovar, arquivar ou colocar em análise é decisão editorial — só
+// Produtor(4)/Editor-Chefe(5)/Administrador(6). Qualquer perfil pode
+// CRIAR uma sugestão (POST, sem checagem) e continuar editando os
+// próprios dados dela; só a mudança de status pra essas 3 etapas é
+// restrita.
+const STATUS_RESTRITOS_A_NIVEL_4 = ['em_analise', 'aprovada', 'arquivada'];
 
 // Avisa quem estiver com o Mapa de Produções aberto que uma sugestão mudou
 // (ver tempo_real.js)
@@ -76,6 +84,14 @@ router.patch('/:id', (req, res) => {
   campos.forEach(c => {
     atualizado[c] = req.body[c] !== undefined ? req.body[c] : item[c];
   });
+
+  if (
+    atualizado.status !== item.status &&
+    STATUS_RESTRITOS_A_NIVEL_4.includes(atualizado.status) &&
+    nivelDoUsuario(req.usuario) < 4
+  ) {
+    return res.status(403).json({ erro: 'Seu perfil não pode aprovar, arquivar ou colocar em análise uma sugestão' });
+  }
 
   // Marca a data da decisão só na primeira vez que a sugestão sai de
   // nova/em_analise pra aprovada/arquivada — não sobrescreve se ela já

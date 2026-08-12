@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('./banco');
+const { nivelDoUsuario, exigirNivelMinimo } = require('./permissoes');
 
 function buscarFontes(pautaId) {
   return db.prepare('SELECT * FROM pauta_fontes WHERE pauta_id = ?').all(pautaId);
@@ -225,7 +226,7 @@ router.get('/:id', (req, res) => {
 });
 
 // POST /pautas -> cria pauta (+ fontes, se enviadas)
-router.post('/', (req, res) => {
+router.post('/', exigirNivelMinimo(3), (req, res) => {
   const {
     sugestao_id, agenda_id, titulo, programa_id,
     destino_tv, destino_instagram, destino_youtube, destino_site,
@@ -314,6 +315,33 @@ router.patch('/:id', (req, res) => {
   // equipe_extra chega da tela como array (seleção múltipla) — guarda como
   // texto simples com nomes separados por vírgula, mesmo padrão do POST.
   if (Array.isArray(atualizado.equipe_extra)) atualizado.equipe_extra = atualizado.equipe_extra.join(', ');
+
+  // Operador(1) e Técnico(2) não editam CONTEÚDO de pauta nenhum —
+  // título, orientação, Cabeça/Texto Web da Lauda etc. passam todos por
+  // essa mesma rota, então a trava tem que valer pro PATCH inteiro, não
+  // só pra quando `status` muda (bug real encontrado pelo usuário: só
+  // travar a mudança de status deixava editar/salvar texto livremente).
+  // A ÚNICA ação permitida pro Técnico em QUALQUER lugar fora da tela de
+  // Edição de Vídeo é essa uma transição específica de status — nada
+  // mais, nenhum outro campo junto na mesma chamada.
+  const nivel = nivelDoUsuario(req.usuario);
+  if (nivel < 3) {
+    const camposEnviados = campos.filter(c => req.body[c] !== undefined);
+    const ehTransicaoPermitidaDoTecnico =
+      nivel === 2 &&
+      camposEnviados.length === 1 &&
+      camposEnviados[0] === 'status' &&
+      item.status === 'em_edicao' &&
+      req.body.status === 'aguardando_revisao';
+
+    if (!ehTransicaoPermitidaDoTecnico) {
+      return res.status(403).json({
+        erro: nivel === 2
+          ? 'Técnico só pode mudar o status de 🟣 Gravado/Em Edição para 🟠 Aguardando Revisão, na Edição de Vídeo'
+          : 'Seu perfil não pode editar pautas'
+      });
+    }
+  }
 
   // Tempo do Vídeo (real, pós-edição) é obrigatório antes de virar
   // Concluída — mas só pra pautas que têm matéria escrita de verdade
@@ -471,7 +499,7 @@ router.delete('/:id/bloquear/forcar', (req, res) => {
 // DELETE /pautas/:id -> manda pra lixeira (soft delete). Os registros
 // filhos (blocos, matéria, fontes) ficam intactos: se a pauta for
 // restaurada, o conteúdo volta junto.
-router.delete('/:id', (req, res) => {
+router.delete('/:id', exigirNivelMinimo(3), (req, res) => {
   const id = Number(req.params.id);
   const pauta = db.prepare('SELECT agenda_id FROM pautas WHERE id = ? AND excluido_em IS NULL').get(id);
   if (!pauta) return res.status(404).json({ erro: 'Pauta não encontrada' });

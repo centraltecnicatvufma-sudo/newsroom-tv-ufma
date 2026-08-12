@@ -294,6 +294,18 @@
     let sugestoesCache = [];
     let aprovandoContexto = null; // { tipo: 'aba', idAba } ou { tipo: 'card', sugestaoId }
 
+    // Aprovar/Arquivar/Em Análise é restrito a nível 4+ (ver sugestoes.js) —
+    // buscado direto aqui (não via window.usuarioLogado) porque não há
+    // garantia de que auth-guard.js já resolveu a sessão no momento em que
+    // a lista renderiza pela primeira vez.
+    let nivelUsuarioAtual = 0;
+    async function carregarNivelUsuario() {
+      try {
+        const resp = await fetch('/auth/me');
+        if (resp.ok) nivelUsuarioAtual = (await resp.json()).nivel || 0;
+      } catch (e) {}
+    }
+
     const rotulosUrgencia = { rotina: 'Rotina', relevante: 'Relevante', urgente: 'Fato do Dia / Urgente' };
     const rotulosStatus = { nova: 'Nova Sugestão', em_analise: 'Em Análise', aprovada: 'Aprovada', arquivada: 'Arquivada' };
 
@@ -459,9 +471,10 @@
     function renderBotoesCard(card, s) {
       const botoesEl = card.querySelector('[data-campo="botoes"]');
       const botoes = [];
-      if (s.status !== 'em_analise') botoes.push('<button class="btn-agenda" data-acao="em-analise">🔎 Em Análise</button>');
-      if (s.status !== 'aprovada') botoes.push('<button class="btn-lauda-modal" data-acao="aprovar">✅ Aprovar e Gerar Pauta</button>');
-      if (s.status !== 'arquivada') botoes.push('<button class="btn-cancelar" data-acao="arquivar">❌ Arquivar</button>');
+      const podeDecidir = nivelUsuarioAtual >= 4;
+      if (podeDecidir && s.status !== 'em_analise') botoes.push('<button class="btn-agenda" data-acao="em-analise">🔎 Em Análise</button>');
+      if (podeDecidir && s.status !== 'aprovada') botoes.push('<button class="btn-lauda-modal" data-acao="aprovar">✅ Aprovar e Gerar Pauta</button>');
+      if (podeDecidir && s.status !== 'arquivada') botoes.push('<button class="btn-cancelar" data-acao="arquivar">❌ Arquivar</button>');
       botoes.push('<button class="btn-excluir-sugestao" data-acao="excluir">🗑️ Excluir</button>');
       botoes.push('<button class="btn-confirmar" data-acao="salvar">💾 Salvar</button>');
       botoes.push('<button class="btn-cancelar" data-acao="fechar">Fechar</button>');
@@ -722,9 +735,10 @@
 
       const botoes = [];
       if (salva) {
-        if (aba.status !== 'em_analise') botoes.push('<button class="btn-agenda" data-acao="em-analise">🔎 Marcar Em Análise</button>');
-        if (aba.status !== 'aprovada') botoes.push('<button class="btn-lauda-modal" data-acao="aprovar">✅ Aprovar e Gerar Pauta</button>');
-        if (aba.status !== 'arquivada') botoes.push('<button class="btn-cancelar" data-acao="arquivar">❌ Arquivar</button>');
+        const podeDecidir = nivelUsuarioAtual >= 4;
+        if (podeDecidir && aba.status !== 'em_analise') botoes.push('<button class="btn-agenda" data-acao="em-analise">🔎 Marcar Em Análise</button>');
+        if (podeDecidir && aba.status !== 'aprovada') botoes.push('<button class="btn-lauda-modal" data-acao="aprovar">✅ Aprovar e Gerar Pauta</button>');
+        if (podeDecidir && aba.status !== 'arquivada') botoes.push('<button class="btn-cancelar" data-acao="arquivar">❌ Arquivar</button>');
         botoes.push('<button class="btn-excluir-sugestao" data-acao="excluir">🗑️ Excluir</button>');
       }
       botoes.push('<button class="btn-cancelar" data-acao="fechar">Fechar</button>');
@@ -999,6 +1013,7 @@
     });
 
     (async function init() {
+      await carregarNivelUsuario();
       await carregarSugestoes();
       renderQuadro();
       renderBarraAbas();

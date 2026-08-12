@@ -1,6 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const db = require('./banco');
+const { exigirNivelMinimo } = require('./permissoes');
+
+// Mesma regra do Espelho (ver blocos.js): Operador(1) e Técnico(2) só têm
+// leitura — qualquer mudança na Lauda exige pelo menos Repórter/Redator(3).
+const exigirEdicaoLauda = exigirNivelMinimo(3);
 
 // GET /materia?pauta_id=1 -> lista os itens da matéria de uma pauta, na ordem
 router.get('/', (req, res) => {
@@ -20,7 +25,7 @@ router.get('/', (req, res) => {
 // POST /materia -> adiciona um novo item (OFF, SONORA, PASSAGEM, ARTE ou
 // SOBE_SOM) à matéria. duracao_automatica começa ligada por padrão (o tempo
 // é estimado a partir do texto até o repórter desligar manualmente).
-router.post('/', (req, res) => {
+router.post('/', exigirEdicaoLauda, (req, res) => {
   const { pauta_id, tipo, texto } = req.body;
 
   const ultimo = db.prepare(
@@ -38,7 +43,7 @@ router.post('/', (req, res) => {
 });
 
 // PATCH /materia/:id -> edita o texto, as indicações ao editor e/ou a duração de um item
-router.patch('/:id', (req, res) => {
+router.patch('/:id', exigirEdicaoLauda, (req, res) => {
   const id = Number(req.params.id);
   const item = db.prepare('SELECT * FROM materia_itens WHERE id = ?').get(id);
 
@@ -59,7 +64,7 @@ router.patch('/:id', (req, res) => {
 });
 
 // DELETE /materia/:id -> remove um item
-router.delete('/:id', (req, res) => {
+router.delete('/:id', exigirEdicaoLauda, (req, res) => {
   const id = Number(req.params.id);
   const resultado = db.prepare('DELETE FROM materia_itens WHERE id = ?').run(id);
 
@@ -71,7 +76,7 @@ router.delete('/:id', (req, res) => {
 });
 
 // PATCH /materia/:id/ordem -> move um item para uma nova posição, reorganizando os outros
-router.patch('/:id/ordem', (req, res) => {
+router.patch('/:id/ordem', exigirEdicaoLauda, (req, res) => {
   const id = Number(req.params.id);
   const { nova_ordem } = req.body;
 
@@ -121,7 +126,7 @@ router.get('/gcs', (req, res) => {
 });
 
 // POST /materia/gcs -> adiciona um GC novo
-router.post('/gcs', (req, res) => {
+router.post('/gcs', exigirEdicaoLauda, (req, res) => {
   const { pauta_id, nome, cargo, tempo_entrada } = req.body;
 
   const resultado = db.prepare(`
@@ -134,7 +139,7 @@ router.post('/gcs', (req, res) => {
 });
 
 // PATCH /materia/gcs/:id -> edita um GC
-router.patch('/gcs/:id', (req, res) => {
+router.patch('/gcs/:id', exigirEdicaoLauda, (req, res) => {
   const id = Number(req.params.id);
   const item = db.prepare('SELECT * FROM materia_gcs WHERE id = ?').get(id);
   if (!item) return res.status(404).json({ erro: "GC não encontrado" });
@@ -150,7 +155,7 @@ router.patch('/gcs/:id', (req, res) => {
 });
 
 // DELETE /materia/gcs/:id -> remove um GC
-router.delete('/gcs/:id', (req, res) => {
+router.delete('/gcs/:id', exigirEdicaoLauda, (req, res) => {
   const id = Number(req.params.id);
   const resultado = db.prepare('DELETE FROM materia_gcs WHERE id = ?').run(id);
 
