@@ -303,32 +303,38 @@ router.patch('/:id/ordem', (req, res, next) => {
   router.handle(req, res, next);
 });
 
-// PATCH /blocos/:id/status -> muda o status, respeitando as regras de permissão
-router.patch('/:id/status', (req, res) => {
+// PATCH /blocos/:id/status -> muda o status de um item MANUAL (sem Pauta
+// vinculada, ex. Escalada, Passagem de Bloco) diretamente no Espelho. Item
+// vinculado a Pauta continua com status herdado dela (ver PATCH /pautas/:id
+// em pautas.js, que propaga pra UPDATE blocos SET status... WHERE pauta_id)
+// — sem essa trava aqui, uma mudança direta ficaria sobrescrita na próxima
+// vez que a Pauta mudasse de status, e a Espelho voltaria a mentir sobre o
+// estado real da produção.
+router.patch('/:id/status', exigirEdicaoEspelho, exigirSetorDoItem, (req, res) => {
   const id = Number(req.params.id);
-  const { novo_status, perfil } = req.body; // perfil: 'editor', 'produtor', 'chefe_redacao', etc.
+  const { novo_status } = req.body;
 
   const bloco = db.prepare('SELECT * FROM blocos WHERE id = ?').get(id);
   if (!bloco) {
     return res.status(404).json({ erro: "Item não encontrado" });
   }
 
-  if (!ORDEM_STATUS.includes(novo_status)) {
-    return res.status(400).json({ erro: "Status inválido" });
+  if (bloco.pauta_id) {
+    return res.status(400).json({ erro: "O status deste item vem da Pauta vinculada — mude em Reportagens ou Edição de Vídeo" });
   }
 
-  // Regra de permissão: editor só pode mover pra "Em Edição" — marcar como
-  // Concluída fica pra quem tem visão do todo (chefe de redação/produtor),
-  // até porque isso já esbarra na obrigatoriedade do Tempo do Vídeo (ver
-  // pautas.js)
-  if (perfil === 'editor' && novo_status !== 'em_edicao') {
-    return res.status(403).json({ erro: "Editor só pode mudar o status para 'Em Edição'" });
+  // Escalada é texto lido ao vivo, sem gravação/edição de vídeo — só faz
+  // sentido alternar entre Em Produção (ainda escrevendo) e Concluída
+  // (pronta pra ir ao ar), não o ciclo de 5 estágios usado pra vídeo.
+  const statusPermitidos = bloco.tipo === 'escalada' ? ['em_producao', 'concluida'] : ORDEM_STATUS;
+  if (!statusPermitidos.includes(novo_status)) {
+    return res.status(400).json({ erro: "Status inválido" });
   }
 
   // Ao entrar em edição, registra quem pegou o material
   let editorAtual = bloco.editor_atual;
   if (novo_status === 'em_edicao' && !editorAtual) {
-    editorAtual = req.body.usuario || 'Editor não informado';
+    editorAtual = req.usuario.nome || 'Editor não informado';
   }
 
   db.prepare('UPDATE blocos SET status = ?, editor_atual = ? WHERE id = ?')

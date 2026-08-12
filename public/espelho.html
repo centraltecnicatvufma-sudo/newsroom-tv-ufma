@@ -53,6 +53,8 @@
     .tipo-encerramento { background: #1e293b; }
 
     .status-badge { font-size: 11px; padding: 3px 10px; border-radius: 4px; color: #fff; border: none; white-space: nowrap; width: 100%; display: inline-block; text-align: center; box-sizing: border-box; }
+    .status-badge.clicavel-status { cursor: pointer; }
+    .status-badge.clicavel-status:hover { filter: brightness(1.15); }
     .status-em_producao { background: #C98A1F; }
     .status-em_gravacao { background: #336699; }
     .status-em_edicao { background: #6b3fa0; }
@@ -82,6 +84,7 @@
     .modal-item h2 { font-size: 16px; margin: 0 0 4px; }
     .modal-item label { font-size: 12px; color: #5b6472; display: block; margin: 12px 0 4px; }
     .modal-item input, .modal-item select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+    .modal-item input[readonly] { background: #f4f5f7; color: #5b6472; }
     .modal-item textarea { width: 100%; min-height: 120px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; font-family: inherit; resize: vertical; }
     .botoes-modal-item { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
     .botoes-modal-item button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
@@ -268,6 +271,10 @@
 
       <label>Duração Estimada (mm:ss)</label>
       <input type="text" id="mi-duracao" placeholder="02:30">
+      <label style="display:flex; align-items:center; gap:6px; margin-top:6px; text-transform:none; font-size:12px;">
+        <input type="checkbox" id="mi-duracao-auto" style="width:auto;">
+        Calcular automaticamente pelo texto (~150 palavras/min)
+      </label>
 
       <label>Texto (o que vai ao ar — usado no Teleprompter)</label>
       <textarea id="mi-texto-script" placeholder="Roteiro de leitura ao vivo, chamada da Escalada..."></textarea>
@@ -392,6 +399,30 @@
       return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
     }
 
+    // Estimativa de tempo de leitura pelo texto — mesma referência já usada
+    // na Lauda (~150 palavras/min, ritmo comum de locução em telejornal;
+    // ver materia.html). Só recalcula a Duração Estimada enquanto o
+    // interruptor "Calcular automaticamente" estiver ligado, pra não
+    // sobrescrever uma duração real já digitada (ex. um VT com tempo
+    // cronometrado, não lido ao vivo).
+    const PALAVRAS_POR_MINUTO_ITEM = 150;
+    function calcularSegundosAutomaticosItem(texto) {
+      const limpo = (texto || '').trim();
+      if (!limpo) return 0;
+      const palavras = limpo.split(/\s+/).filter(Boolean).length;
+      return Math.round(palavras / PALAVRAS_POR_MINUTO_ITEM * 60);
+    }
+    function recalcularDuracaoAutomaticaItem() {
+      if (!document.getElementById('mi-duracao-auto').checked) return;
+      const segundos = calcularSegundosAutomaticosItem(document.getElementById('mi-texto-script').value);
+      document.getElementById('mi-duracao').value = paraMMSS(segundos);
+    }
+    document.getElementById('mi-texto-script').addEventListener('input', recalcularDuracaoAutomaticaItem);
+    document.getElementById('mi-duracao-auto').addEventListener('change', (e) => {
+      document.getElementById('mi-duracao').readOnly = e.target.checked;
+      if (e.target.checked) recalcularDuracaoAutomaticaItem();
+    });
+
     function formatarTempo(segundosTotais) {
       const s = Number(segundosTotais) || 0;
       return String(Math.floor(s / 60)).padStart(2, '0') + "'" + String(s % 60).padStart(2, '0') + '"';
@@ -506,6 +537,8 @@
       document.getElementById('mi-reporter').value = '';
       document.getElementById('mi-duracao').value = '';
       document.getElementById('mi-texto-script').value = '';
+      document.getElementById('mi-duracao-auto').checked = true;
+      document.getElementById('mi-duracao').readOnly = true;
       document.getElementById('modal-item').classList.add('aberto');
     }
 
@@ -523,6 +556,13 @@
       document.getElementById('mi-reporter').value = item.reporter || item.responsavel || '';
       document.getElementById('mi-duracao').value = paraMMSS(item.duracao_estimada);
       document.getElementById('mi-texto-script').value = item.texto_script || '';
+      // Só começa com o cálculo automático ligado se a duração já salva
+      // bate com o que o texto atual geraria (ou os dois estão vazios) —
+      // senão é sinal de que alguém digitou uma duração real (ex. VT já
+      // cronometrado), e abrir o modal não pode sobrescrever isso sozinho.
+      const auto = (item.duracao_estimada || 0) === calcularSegundosAutomaticosItem(item.texto_script);
+      document.getElementById('mi-duracao-auto').checked = auto;
+      document.getElementById('mi-duracao').readOnly = auto;
       document.getElementById('modal-item').classList.add('aberto');
     }
 
@@ -543,9 +583,12 @@
         document.getElementById('mi-titulo').value = pauta.titulo || '';
         document.getElementById('mi-reporter').value = pauta.reporter || '';
         // Pré-preenche com Cabeça + Corpo do VT da Lauda (se já tiver
-        // conteúdo escrito) — só um ponto de partida, continua editável
+        // conteúdo escrito) — é uma duração real, não estimada pelo texto
+        // deste item, então desliga o cálculo automático
         if (pauta.duracao_estimada_segundos) {
           document.getElementById('mi-duracao').value = paraMMSS(pauta.duracao_estimada_segundos);
+          document.getElementById('mi-duracao-auto').checked = false;
+          document.getElementById('mi-duracao').readOnly = false;
         }
       }
     });
@@ -840,7 +883,11 @@
                   <td class="titulo-item" title="${escaparHtml(b.titulo)}">${b.indicacao_camera ? `<span class="camera-badge">${labelCamera[b.indicacao_camera] || b.indicacao_camera}</span><br>` : ''}${escaparHtml(b.titulo)}</td>
                   <td>${escaparHtml(b.reporter || b.responsavel || '—')}</td>
                   <td>${b.lauda_status ? `<span class="lauda-badge lauda-${b.lauda_status}">${b.lauda_status === 'pronta' ? '🟢 Pronta' : b.lauda_status === 'redacao' ? '🟡 Redação' : '🔴 Pendente'}</span>` : '—'}</td>
-                  <td draggable="false"><span class="status-badge status-${b.status}" title="Status herdado da Pauta — muda em Reportagens/Edição de Vídeo">${labelStatus[b.status] || b.status}</span></td>
+                  <td draggable="false">${
+                    b.tipo === 'escalada' && podeEditarEsseItem(b)
+                      ? `<span class="status-badge status-${b.status} clicavel-status" data-id="${b.id}" title="Clique para alternar entre Em Produção e Concluída">${labelStatus[b.status] || b.status}</span>`
+                      : `<span class="status-badge status-${b.status}" title="${b.pauta_id ? 'Status herdado da Pauta — muda em Reportagens/Edição de Vídeo' : ''}">${labelStatus[b.status] || b.status}</span>`
+                  }</td>
                   <td class="dur">${duracaoCabecaBloco(b) ? formatarTempo(duracaoCabecaBloco(b)) : '—'}</td>
                   <td class="dur">${duracaoVideoBloco(b) ? formatarTempo(duracaoVideoBloco(b)) : '—'}</td>
                   <td class="dur">${formatarTempo(duracaoEfetivaBloco(b))}</td>
@@ -864,9 +911,15 @@
     }
 
     function ligarAcoesDaTabela() {
-      // Status do bloco é somente leitura aqui — herda da Pauta (ver
-      // cascata em pautas.js). Muda em Reportagens (fluxo normal) ou em
-      // Edição de Vídeo (marca Concluída ao salvar o Tempo do Vídeo).
+      // Status do bloco é somente leitura quando vem de uma Pauta vinculada
+      // — herda dela (ver cascata em pautas.js), muda em Reportagens (fluxo
+      // normal) ou em Edição de Vídeo (marca Concluída ao salvar o Tempo do
+      // Vídeo). Item MANUAL (sem Pauta, ex. Escalada, Passagem de Bloco)
+      // não passa por nenhuma dessas telas — pra esses, o badge fica
+      // clicável direto aqui no Espelho (ver clicavel-status no HTML).
+      document.querySelectorAll('.status-badge.clicavel-status').forEach(badge => {
+        badge.addEventListener('click', () => avancarStatusManual(Number(badge.dataset.id)));
+      });
 
       document.querySelectorAll('.btn-editar-item').forEach(btn => {
         btn.addEventListener('click', () => abrirModalEditarItem(Number(btn.dataset.id)));
@@ -898,6 +951,29 @@
           carregarEspelho();
         });
       });
+    }
+
+    // Alterna o status de uma Escalada entre só dois estágios — Em Produção
+    // (ainda sendo escrita) e Concluída (pronta pra ir ao ar) — pedido
+    // explícito do usuário, mais simples que o ciclo completo de 5 estágios
+    // usado em Reportagens/Edição de Vídeo (que não se aplicam a um texto
+    // lido ao vivo, sem gravação/edição de vídeo envolvida).
+    async function avancarStatusManual(id) {
+      const item = blocosCache.find(b => b.id === id);
+      if (!item) return;
+      const proximo = item.status === 'concluida' ? 'em_producao' : 'concluida';
+
+      const resp = await fetch('/blocos/' + id + '/status', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ novo_status: proximo })
+      });
+      if (!resp.ok) {
+        const erro = await resp.json().catch(() => ({}));
+        alert(erro.erro || 'Não foi possível mudar o status.');
+        return;
+      }
+      carregarEspelho();
     }
 
     // ---- Arrastar e soltar (dentro do bloco e entre blocos) ----

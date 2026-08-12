@@ -34,17 +34,24 @@
   .painel-editar label { font-size: 11px; color: #5b6472; margin-bottom: 4px; }
   .painel-editar textarea { flex: 1; background: #fafbfc; color: #1b2430; border: 1px solid #ddd; border-radius: 6px; padding: 10px; font-size: 14px; resize: none; }
 
-  .painel-rolagem { flex: 1; overflow: hidden; position: relative; background: #000; }
+  /* .painel-rolagem agora é uma coluna: a faixa de indicação de câmera
+     (altura fixa, sempre reservada) em cima, e a área de rolagem embaixo
+     — antes a faixa ficava com position:absolute por cima do texto, e a
+     rolagem passava "por trás" dela (as duas se misturavam visualmente
+     conforme o texto subia). Com espaço próprio, o texto nunca invade a
+     faixa; a altura fixa de #indicador-camera-op (constante mesmo vazia)
+     é o que garante o "espaço duplo" antes do texto começar. */
+  .painel-rolagem { flex: 1; overflow: hidden; position: relative; background: #000; display: flex; flex-direction: column; }
+  .indicador-camera-op { flex-shrink: 0; height: 34px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: bold; letter-spacing: 0.5px; color: #fff; background: #111; }
+  .indicador-camera-op.cam-fechada { background: #444; }
+  .indicador-camera-op.cam-aberta { background: #1f8a3b; }
+  .indicador-camera-op.virada-cam-aberta { background: #c0392b; }
+  .area-rolagem-op { position: relative; flex: 1; min-height: 0; overflow: hidden; }
   /* .escala-rolagem tem largura fixa (a resolução de referência) e é escalada
      via transform pra caber neste painel — assim o texto SEMPRE quebra do
      mesmo jeito, e só o zoom visual muda de tela pra tela */
   .escala-rolagem { position: absolute; top: 0; left: 50%; transform-origin: top center; }
   .texto-rolagem { width: 100%; padding: 0 40px; font-weight: bold; line-height: 1.5; text-align: center; color: #FFD400; white-space: pre-wrap; text-transform: uppercase; }
-  .indicador-camera-op { position: absolute; top: 0; left: 0; right: 0; z-index: 5; text-align: center; padding: 4px; font-size: 11px; font-weight: bold; letter-spacing: 0.5px; color: #fff; display: none; }
-  .indicador-camera-op.visivel { display: block; }
-  .indicador-camera-op.cam-fechada { background: #444; }
-  .indicador-camera-op.cam-aberta { background: #1f8a3b; }
-  .indicador-camera-op.virada-cam-aberta { background: #c0392b; }
 
   .toolbar-inferior { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #eef1f5; border-top: 1px solid #ddd; }
   .toolbar-inferior button { background: #fff; color: #336699; border: 1px solid #ddd; border-radius: 6px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
@@ -120,8 +127,10 @@
       </div>
       <div class="painel-rolagem" id="painel-rolagem">
         <div class="indicador-camera-op" id="indicador-camera-op"></div>
-        <div class="escala-rolagem" id="escala-rolagem">
-          <div class="texto-rolagem" id="texto-rolagem"></div>
+        <div class="area-rolagem-op" id="area-rolagem-op">
+          <div class="escala-rolagem" id="escala-rolagem">
+            <div class="texto-rolagem" id="texto-rolagem"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -288,7 +297,7 @@
         el.textContent = '';
         return;
       }
-      el.className = 'indicador-camera-op visivel ' + (CAMERA_CLASSE[indicacao] || '');
+      el.className = 'indicador-camera-op ' + (CAMERA_CLASSE[indicacao] || '');
       el.textContent = CAMERA_TEXTO[indicacao] || indicacao;
     }
 
@@ -403,7 +412,10 @@
       if (referenciaLargura && referenciaAltura) {
         return { largura: referenciaLargura, altura: referenciaAltura };
       }
-      const painel = document.getElementById('painel-rolagem');
+      // Referência é a área de rolagem em si (area-rolagem-op), não o
+      // painel inteiro — este último agora também contém a faixa fixa de
+      // indicação de câmera, que não é área de texto.
+      const painel = document.getElementById('area-rolagem-op');
       return { largura: painel.clientWidth, altura: painel.clientHeight };
     }
 
@@ -411,7 +423,7 @@
     // pré-visualização local, sem afetar onde as linhas quebram
     function aplicarEscala() {
       const { largura } = referenciaAtual();
-      const painel = document.getElementById('painel-rolagem');
+      const painel = document.getElementById('area-rolagem-op');
       const escala = document.getElementById('escala-rolagem');
       const fator = painel.clientWidth / largura;
 
@@ -439,7 +451,7 @@
     // operador — assim o texto sempre nasce e morre fora da área visível
     // dela também, não importa a proporção da caixa.
     function posicaoLocalOperador(posicaoGlobal, alturaTexto) {
-      const painel = document.getElementById('painel-rolagem');
+      const painel = document.getElementById('area-rolagem-op');
       const { largura } = referenciaAtual();
       const fator = painel.clientWidth / largura;
       if (!fator) return posicaoGlobal;
@@ -519,7 +531,7 @@
     // no painel esquerdo acompanha qual item está no centro da tela — o
     // operador sempre vê destacado o que está sendo lido no momento.
     function itemNoCentroDaTela() {
-      const painel = document.getElementById('painel-rolagem');
+      const painel = document.getElementById('area-rolagem-op');
       const centroY = painel.getBoundingClientRect().top + painel.clientHeight / 2;
       const segmentos = document.querySelectorAll('#texto-rolagem .segmento-item');
 
@@ -663,7 +675,39 @@
       }
     };
 
-    document.getElementById('btn-2monitor').addEventListener('click', abrirSegundoMonitor);
+    // Botão liga/desliga: abre o 2º Monitor se estiver fechado, fecha se
+    // estiver aberto — o rótulo sempre reflete o estado real da janela,
+    // inclusive quando ela é fechada na marra (X do sistema), não só pelo
+    // botão, graças ao pollingJanelaApresentador() abaixo.
+    function janelaApresentadorAberta() {
+      return !!(janelaApresentador && !janelaApresentador.closed);
+    }
+    function atualizarBotaoMonitor() {
+      document.getElementById('btn-2monitor').textContent =
+        janelaApresentadorAberta() ? '✖ Fechar 2º Monitor' : '📺 Exibir no 2º Monitor';
+    }
+    let checagemJanelaId = null;
+    function iniciarChecagemJanela() {
+      if (checagemJanelaId) return;
+      checagemJanelaId = setInterval(() => {
+        if (!janelaApresentadorAberta()) {
+          janelaApresentador = null;
+          clearInterval(checagemJanelaId);
+          checagemJanelaId = null;
+          atualizarBotaoMonitor();
+        }
+      }, 1000);
+    }
+
+    document.getElementById('btn-2monitor').addEventListener('click', () => {
+      if (janelaApresentadorAberta()) {
+        janelaApresentador.close();
+        janelaApresentador = null;
+        atualizarBotaoMonitor();
+      } else {
+        abrirSegundoMonitor();
+      }
+    });
 
     async function abrirSegundoMonitor() {
       if (!('getScreenDetails' in window)) {
@@ -691,6 +735,8 @@
         const features = `left=${outraTela.availLeft},top=${outraTela.availTop},width=${outraTela.availWidth},height=${outraTela.availHeight}`;
         janelaApresentador = window.open('', 'janela-apresentador-tvufma', features);
         montarJanelaApresentador(janelaApresentador);
+        atualizarBotaoMonitor();
+        iniciarChecagemJanela();
 
         setTimeout(() => {
           try { janelaApresentador.document.documentElement.requestFullscreen(); } catch (e) {}
@@ -712,7 +758,16 @@
           <title>HORUS Newsroom — Apresentador</title>
           <style>
             html, body { margin:0; padding:0; background:#000; height:100%; overflow:hidden; }
-            #palco { position:relative; width:100%; height:100%; overflow:hidden; }
+            /* #palco em coluna: a faixa de câmera (altura fixa, sempre
+               reservada) em cima, a área de rolagem embaixo — assim o
+               texto nunca passa "por trás" da faixa (era exatamente esse
+               overlay com position:absolute que misturava os dois
+               visualmente antes). Altura fixa também é o que garante que
+               #area-rolagem nunca mude de tamanho entre itens, já que a
+               referência de tela do apresentador (larguraReferencia/
+               alturaReferencia) é medida uma única vez e congelada. */
+            #palco { position:relative; width:100%; height:100%; overflow:hidden; display:flex; flex-direction:column; }
+            #area-rolagem { position:relative; flex:1; min-height:0; overflow:hidden; }
             #escala { position:absolute; top:0; left:50%; transform-origin: top center; }
             #texto {
               width:100%; padding:0 40px; box-sizing:border-box;
@@ -720,33 +775,31 @@
               font-weight:bold; text-transform:uppercase; white-space:pre-wrap;
               line-height:1.5;
             }
-            /* Aviso de câmera do apresentador — fixo (fora da rolagem),
-               precisa ficar visível o tempo todo pra ele saber a hora de
-               virar de câmera, por isso não escala/mexe junto com o texto.
-               Espelhado (scaleX(-1)) igual ao texto: a tela do apresentador
-               é lida através do vidro/espelho do teleprompter, então tudo
-               que aparece nela precisa estar invertido pra ler certo. */
+            /* Aviso de câmera do apresentador — espelhado (scaleX(-1)) igual
+               ao texto: a tela do apresentador é lida através do vidro/
+               espelho do teleprompter, então tudo que aparece nela precisa
+               estar invertido pra ler certo. */
             #indicador-camera {
-              position:absolute; top:0; left:0; right:0; z-index:5;
-              text-align:center; padding:14px; box-sizing:border-box;
-              font-family:Arial, sans-serif; font-weight:bold; font-size:28px;
-              letter-spacing:1px; color:#fff; display:none;
+              flex-shrink:0; height:64px; box-sizing:border-box;
+              display:flex; align-items:center; justify-content:center;
+              font-family:Arial, sans-serif; font-weight:bold; font-size:26px;
+              letter-spacing:1px; color:#fff; background:#000;
               transform: scaleX(-1);
             }
-            #indicador-camera.visivel { display:block; }
-            #indicador-camera.cam-fechada { background:rgba(68,68,68,0.9); }
-            #indicador-camera.cam-aberta { background:rgba(31,138,59,0.9); }
-            #indicador-camera.virada-cam-aberta { background:rgba(192,57,43,0.92); }
+            #indicador-camera.cam-fechada { background:#444; }
+            #indicador-camera.cam-aberta { background:#1f8a3b; }
+            #indicador-camera.virada-cam-aberta { background:#c0392b; }
           </style>
         </head>
         <body>
           <div id="palco">
             <div id="indicador-camera"></div>
-            <div id="escala"><div id="texto"></div></div>
+            <div id="area-rolagem"><div id="escala"><div id="texto"></div></div></div>
           </div>
           <script>
             const canal = new BroadcastChannel('teleprompter-tv-ufma');
             const palco = document.getElementById('palco');
+            const areaRolagem = document.getElementById('area-rolagem');
             const escala = document.getElementById('escala');
             const textoEl = document.getElementById('texto');
             const indicadorEl = document.getElementById('indicador-camera');
@@ -764,10 +817,10 @@
 
             // Mesma largura de referência recebida do operador — garante que
             // a quebra de linha aqui seja idêntica à da tela do operador
-            let larguraReferencia = palco.clientWidth;
+            let larguraReferencia = areaRolagem.clientWidth;
 
             function aplicarEscala() {
-              const fator = palco.clientWidth / larguraReferencia;
+              const fator = areaRolagem.clientWidth / larguraReferencia;
               escala.style.width = larguraReferencia + 'px';
               escala.style.marginLeft = (-larguraReferencia / 2) + 'px';
               escala.style.transform = 'scale(' + fator + ')';
@@ -780,9 +833,11 @@
             // antes de entrar em tela cheia, e não conta com o espaço que o
             // fullscreen recupera (barra de menu, dock). Sem essa correção, o
             // início da rolagem não descia o suficiente e o texto já nascia
-            // visível na tela do apresentador.
+            // visível na tela do apresentador. Mede a ÁREA DE ROLAGEM, não o
+            // palco inteiro — senão a faixa de câmera entraria na conta e o
+            // texto nasceria mais baixo do que devia.
             function avisarDimensoesReais() {
-              canal.postMessage({ tipo: 'dimensoes-apresentador', largura: palco.clientWidth, altura: palco.clientHeight });
+              canal.postMessage({ tipo: 'dimensoes-apresentador', largura: areaRolagem.clientWidth, altura: areaRolagem.clientHeight });
             }
             document.addEventListener('fullscreenchange', () => setTimeout(avisarDimensoesReais, 50));
             setTimeout(avisarDimensoesReais, 600);
@@ -802,7 +857,7 @@
                 indicadorEl.className = '';
                 indicadorEl.textContent = '';
               } else {
-                indicadorEl.className = 'visivel ' + (CAMERA_CLASSE[d.indicacaoCamera] || '');
+                indicadorEl.className = CAMERA_CLASSE[d.indicacaoCamera] || '';
                 indicadorEl.textContent = CAMERA_TEXTO[d.indicacaoCamera] || d.indicacaoCamera;
               }
             };
