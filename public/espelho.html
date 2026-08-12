@@ -121,12 +121,15 @@
        sem indicação de câmera, inspirado no modelo de grade de outro
        sistema (mesmo espírito do "Imprimir Grade" de Pautas): moldura
        em tabela cheia (bordas em toda célula, cabeçalho cinza), uma
-       tabela por Bloco, com PÁG/TIPO/RETRANCA/PRAÇA/EDITOR/REPÓRTER/
-       CAB./VT/TOTAL/OK/APR. Praça, Editor, OK e Apr não têm dado
-       equivalente no sistema — ficam em branco de propósito, pra
-       preenchimento manual no papel (igual ao modelo original).
-       Os dois modos são mutuamente exclusivos na impressão via a
-       classe body.imprimindo-grade-espelho (mesma técnica já usada em
+       tabela por Bloco, com ORD/TIPO/RETRANCA/REPÓRTER/T.CAB/T.VT/TOTAL/
+       APR — as colunas que têm dado de verdade no sistema (o modelo
+       original também trazia Praça/Editor/OK, tirados por não terem
+       equivalente aqui) mais Apr, calculada automaticamente: "OK" só
+       quando o item está com status Concluída, em branco caso
+       contrário — não é preenchimento manual como no modelo original.
+       Os dois
+       modos são mutuamente exclusivos na impressão via a classe
+       body.imprimindo-grade-espelho (mesma técnica já usada em
        pautas.html pra Grade x Pauta individual). */
     #impressao-espelho-grade { display: none; }
     .titulo-grade-espelho { font-size: 16px; font-weight: bold; margin: 0 0 2em; }
@@ -135,7 +138,7 @@
     .tabela-grade-espelho th, .tabela-grade-espelho td { padding: 5px 8px; font-size: 11px; text-align: left; border: 1px solid #000; }
     .tabela-grade-espelho th { background: #e0e0e0; text-transform: uppercase; }
     .tabela-grade-espelho tbody tr:nth-child(even) { background: #f6f6f6; }
-    .tabela-grade-espelho td.col-pag, .tabela-grade-espelho td.col-ok, .tabela-grade-espelho td.col-apr { width: 30px; text-align: center; }
+    .tabela-grade-espelho td.col-pag, .tabela-grade-espelho td.col-apr { width: 40px; text-align: center; }
     .tabela-grade-espelho tr.linha-total-bloco { font-weight: bold; background: #eee; }
     .tabela-grade-espelho tr.linha-total-bloco td.destaque { background: #dde3ea; text-align: center; }
 
@@ -687,6 +690,26 @@
     // célula/linha da tabela (mantém a indicação grudada no item mesmo se
     // a página quebrar no meio do bloco). Ord+Retranca ficam limitadas a
     // 50% da largura da página (CSS: .col-ord + .col-retranca = 8% + 42%).
+    // Numeração de Ord pra impressão: Escalada não conta como item
+    // numerado (é a chamada lida ao vivo antes do bloco de matérias em
+    // si, não uma matéria) — continua aparecendo na lista normalmente,
+    // só não consome número. A contagem 01/02/03... é dos itens
+    // seguintes, recomeçando do 1 a cada Bloco (pedido do usuário: "a
+    // escala não deve ser ignorada, contar ord 1 a partir do item
+    // seguinte"). Usada nos dois modos de impressão do Espelho — o Ord
+    // da tabela de trabalho na tela continua vindo direto de
+    // b.ordem (número real da posição, usado no arrastar-soltar).
+    function calcularOrdsImpressao(itens) {
+      const ords = new Map();
+      let contador = 0;
+      itens.forEach(b => {
+        if (b.tipo === 'escalada') return;
+        contador++;
+        ords.set(b.id, String(contador).padStart(2, '0'));
+      });
+      return ords;
+    }
+
     function montarImpressaoEspelho(espelho, blocos) {
       const grupos = {};
       blocos.forEach(b => {
@@ -696,7 +719,9 @@
       });
       const numerosBlocos = Object.keys(grupos).sort((a, b) => Number(a) - Number(b));
 
-      const blocosHtml = numerosBlocos.map(num => `
+      const blocosHtml = numerosBlocos.map(num => {
+        const ords = calcularOrdsImpressao(grupos[num]);
+        return `
         <div class="bloco-impressao-titulo">BLOCO ${num}</div>
         <table class="tabela-impressao-espelho">
           <thead>
@@ -705,7 +730,7 @@
           <tbody>
             ${grupos[num].map(b => `
               <tr>
-                <td class="col-ord">${b.ordem}</td>
+                <td class="col-ord">${ords.get(b.id) || ''}</td>
                 <td class="col-retranca">${b.indicacao_camera ? `<div class="camera-cue-impressao">[${escaparHtml(b.indicacao_camera)}]</div>` : ''}${escaparHtml(b.titulo)}</td>
                 <td>${escaparHtml(b.reporter || b.responsavel || '—')}</td>
                 <td class="col-tipo">${labelTipo[b.tipo] || b.tipo}</td>
@@ -713,7 +738,8 @@
             `).join('')}
           </tbody>
         </table>
-      `).join('');
+      `;
+      }).join('');
 
       document.getElementById('impressao-espelho').innerHTML = `
         <div class="cabecalho-impressao-espelho">
@@ -760,6 +786,7 @@
 
       const blocosHtml = numerosBlocos.map(num => {
         const itensDoBloco = grupos[num];
+        const ords = calcularOrdsImpressao(itensDoBloco);
         const totalCab = itensDoBloco.reduce((s, b) => s + duracaoCabecaBloco(b), 0);
         const totalVideo = itensDoBloco.reduce((s, b) => s + duracaoVideoBloco(b), 0);
         const totalGeral = itensDoBloco.reduce((s, b) => s + duracaoEfetivaBloco(b), 0);
@@ -769,33 +796,29 @@
         <table class="tabela-grade-espelho">
           <thead>
             <tr>
-              <th class="col-pag">Pág</th><th>Tipo</th><th>Retranca</th><th>Praça</th>
-              <th>Editor</th><th>Repórter</th><th>Cab.</th><th>VT</th><th>Total</th>
-              <th class="col-ok">OK</th><th class="col-apr">Apr</th>
+              <th class="col-pag">Ord</th><th>Tipo</th><th>Retranca</th>
+              <th>Repórter</th><th>T. Cab</th><th>T. VT</th><th>Total</th><th class="col-apr">Apr</th>
             </tr>
           </thead>
           <tbody>
             ${itensDoBloco.map(b => `
               <tr>
-                <td class="col-pag">${String(b.ordem).padStart(2, '0')}</td>
+                <td class="col-pag">${ords.get(b.id) || ''}</td>
                 <td>${labelTipo[b.tipo] || b.tipo}</td>
                 <td>${escaparHtml(b.titulo)}</td>
-                <td></td>
-                <td></td>
                 <td>${escaparHtml(b.reporter || b.responsavel || '')}</td>
                 <td>${formatarTempo(duracaoCabecaBloco(b))}</td>
                 <td>${formatarTempo(duracaoVideoBloco(b))}</td>
                 <td>${formatarTempo(duracaoEfetivaBloco(b))}</td>
-                <td class="col-ok"></td>
-                <td class="col-apr"></td>
+                <td class="col-apr">${b.status === 'concluida' ? 'OK' : ''}</td>
               </tr>
             `).join('')}
             <tr class="linha-total-bloco">
-              <td colspan="6">Total do Bloco:</td>
+              <td colspan="4">Total do Bloco:</td>
               <td class="destaque">${formatarTempo(totalCab)}</td>
               <td class="destaque">${formatarTempo(totalVideo)}</td>
               <td class="destaque">${formatarTempo(totalGeral)}</td>
-              <td></td><td></td>
+              <td></td>
             </tr>
           </tbody>
         </table>
@@ -862,7 +885,9 @@
         return podeEditar && (!meuSetorRestringe || !b.setor || b.setor === setorUsuarioAtual);
       }
 
-      container.innerHTML = numerosBlocos.map(num => `
+      container.innerHTML = numerosBlocos.map(num => {
+        const ords = calcularOrdsImpressao(grupos[num]);
+        return `
         <div class="bloco-grupo" data-bloco="${num}">
           <div class="bloco-grupo-titulo">
             <span>📌 BLOCO ${num}</span>
@@ -886,7 +911,7 @@
             <tbody>
               ${grupos[num].map(b => `
                 <tr data-id="${b.id}" data-bloco="${num}" draggable="${podeEditarEsseItem(b)}">
-                  <td>${b.ordem}</td>
+                  <td>${ords.get(b.id) || ''}</td>
                   <td><span class="tipo-badge tipo-${b.tipo}">${labelTipo[b.tipo] || b.tipo}</span></td>
                   <td class="titulo-item" title="${escaparHtml(b.titulo)}">${b.indicacao_camera ? `<span class="camera-badge">${labelCamera[b.indicacao_camera] || b.indicacao_camera}</span><br>` : ''}${escaparHtml(b.titulo)}</td>
                   <td>${escaparHtml(b.reporter || b.responsavel || '—')}</td>
@@ -912,7 +937,8 @@
           </table>
           <div class="zona-fim-bloco" data-bloco="${num}">solte aqui para jogar o item para o fim do Bloco ${num}</div>
         </div>
-      `).join('');
+      `;
+      }).join('');
 
       ligarAcoesDaTabela();
       if (podeEditar) ligarArrastarSoltar();
