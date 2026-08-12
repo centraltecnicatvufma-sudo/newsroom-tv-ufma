@@ -585,7 +585,13 @@
       return { texto: atrasado ? `⏰ Atrasado ${texto}` : `⏳ ${texto}`, nivel };
     }
 
-    function htmlContadorDeadline(deadlineIso) {
+    // Pauta Concluída/Pronta para de contar — mostra um selo fixo em vez do
+    // cronômetro (que senão ficaria crescendo "Atrasado" pra sempre, mesmo
+    // depois de a pauta já estar pronta)
+    function htmlContadorDeadline(deadlineIso, status) {
+      if (status === 'concluida') {
+        return deadlineIso ? `<span class="contador-deadline nivel-ok">✅ Concluída</span>` : '—';
+      }
       const c = formatarContagemDeadline(deadlineIso);
       if (!c) return '—';
       return `<span class="contador-deadline nivel-${c.nivel}">${c.texto}</span>`;
@@ -608,7 +614,7 @@
     function atualizarContadoresDeadline() {
       document.querySelectorAll('[data-deadline-de]').forEach(el => {
         const p = pautasCache.find(item => item.id === Number(el.dataset.deadlineDe));
-        if (p) el.innerHTML = htmlContadorDeadline(p.deadline);
+        if (p) el.innerHTML = htmlContadorDeadline(p.deadline, p.status);
       });
     }
     setInterval(atualizarContadoresDeadline, 30000);
@@ -662,7 +668,7 @@
                 <td>${p.titulo}${p.bloqueado_por ? `<span class="selo-bloqueio" title="Sendo editada agora">🔒 ${p.bloqueado_por}</span>` : ''}</td>
                 <td>${nomePrograma(p.programa_id)}</td>
                 <td>${p.data_fato ? p.data_fato.split('-').reverse().join('/') : '—'} ${p.hora_fato ? '· ' + p.hora_fato : ''}</td>
-                <td data-deadline-de="${p.id}">${htmlContadorDeadline(p.deadline)}</td>
+                <td data-deadline-de="${p.id}">${htmlContadorDeadline(p.deadline, p.status)}</td>
                 <td>${htmlIconesAtivos(p)}</td>
                 <td>
                   ${p.produtor ? `<span class="tag-equipe">🗂️ ${p.produtor}</span>` : ''}

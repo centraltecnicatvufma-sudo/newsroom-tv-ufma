@@ -302,7 +302,13 @@
       return { texto: atrasado ? `⏰ Atrasado ${texto}` : `⏳ ${texto}`, nivel };
     }
 
-    function htmlContadorDeadline(deadlineIso) {
+    // Pauta Concluída/Pronta para de contar — mostra um selo fixo em vez do
+    // cronômetro (que senão ficaria crescendo "Atrasado" pra sempre, mesmo
+    // depois de a pauta já estar pronta)
+    function htmlContadorDeadline(deadlineIso, status) {
+      if (status === 'concluida') {
+        return deadlineIso ? `<span class="contador-deadline nivel-ok">✅ Concluída</span>` : '';
+      }
       const c = formatarContagemDeadline(deadlineIso);
       return c ? `<span class="contador-deadline nivel-${c.nivel}">${c.texto}</span>` : '';
     }
@@ -340,7 +346,7 @@
             ${item.urgencia ? `<span class="tag tag-${item.urgencia}">${rotulosUrgencia[item.urgencia] || item.urgencia}</span>` : ''}
             ${responsaveis ? `<span>${responsaveis}</span>` : ''}
             ${destinos ? `<span>${destinos}</span>` : ''}
-            ${item.deadline ? `<span data-deadline-de="${item.origem}-${item.id}">${htmlContadorDeadline(item.deadline)}</span>` : ''}
+            ${item.deadline ? `<span data-deadline-de="${item.origem}-${item.id}">${htmlContadorDeadline(item.deadline, item.coluna)}</span>` : ''}
             ${item.ativos && item.ativos.length ? htmlIconesAtivos(item.ativos) : ''}
           </div>
           <a class="link-abrir" href="${item.link}" target="_blank" rel="noopener">Abrir →</a>
@@ -354,7 +360,7 @@
       document.querySelectorAll('[data-deadline-de]').forEach(el => {
         const [origem, idTexto] = el.dataset.deadlineDe.split('-');
         const item = itensCache.find(i => i.origem === origem && String(i.id) === idTexto);
-        if (item) el.innerHTML = htmlContadorDeadline(item.deadline);
+        if (item) el.innerHTML = htmlContadorDeadline(item.deadline, item.coluna);
       });
     }
     setInterval(atualizarContadoresDeadline, 30000);
