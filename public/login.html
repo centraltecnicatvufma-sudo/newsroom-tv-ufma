@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Entrar — HORUS Newsroom</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      display: flex; overflow: hidden;
+    }
+
+    /* Painel esquerdo — a marca, ocupando a tela toda (isso é a "capa"
+       que esconde a interface do sistema por trás, pedido explícito do
+       usuário). Usa a arte já cortada (sem a área branca embutida, essa
+       parte vira HTML de verdade no painel-login ao lado) preenchendo
+       o painel inteiro, sem sobras vazias. */
+    .painel-marca {
+      flex: 1 1 auto;
+      background: #060d18;
+      position: relative;
+      overflow: hidden;
+      min-width: 0;
+    }
+    .painel-marca img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
+
+    /* Painel direito — retângulo branco com cantos arredondados à
+       esquerda, replicando o mesmo desenho já usado na arte da marca. */
+    .painel-login {
+      flex: 0 0 400px;
+      background: #fff;
+      border-radius: 28px 0 0 28px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 40px;
+      position: relative; z-index: 1;
+      box-shadow: -8px 0 30px rgba(0,0,0,0.25);
+    }
+    .caixa-login { width: 100%; max-width: 300px; }
+    .caixa-login h1 { font-size: 15px; letter-spacing: 1.5px; text-transform: uppercase; color: #1b2430; margin: 0 0 26px; font-weight: bold; text-align: center; }
+    label { font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; color: #5b6472; display: block; margin: 16px 0 6px; }
+    input {
+      width: 100%; padding: 11px 12px; border: 1px solid #ddd; border-radius: 6px;
+      font-size: 14px; background: #f7f8fa; color: #1b2430;
+    }
+    input::placeholder { color: #9aa4b0; }
+    input:focus { outline: none; border-color: #336699; background: #fff; }
+    .btn-entrar {
+      width: 100%; margin-top: 24px; padding: 12px; background: #8D0333; color: #fff;
+      border: none; border-radius: 6px; font-size: 14px; font-weight: bold; letter-spacing: 0.5px;
+      cursor: pointer; text-transform: uppercase;
+    }
+    .btn-entrar:hover { background: #a80440; }
+    .btn-entrar:disabled { opacity: 0.6; cursor: default; }
+    .erro-login { color: #8D0333; font-size: 13px; margin-top: 14px; text-align: center; min-height: 16px; }
+    .sucesso-login { color: #2e8b57; font-size: 13px; margin-top: 14px; text-align: center; min-height: 16px; }
+
+    .link-primeiro-acesso { display: block; text-align: center; margin-top: 20px; font-size: 12px; color: #336699; text-decoration: none; cursor: pointer; }
+    .link-primeiro-acesso:hover { text-decoration: underline; }
+
+    #painel-primeiro-acesso { display: none; }
+    .ajuda-campo { font-size: 11px; color: #9aa4b0; margin-top: 4px; }
+
+    @media (max-width: 820px) {
+      body { flex-direction: column; overflow-y: auto; height: auto; min-height: 100%; }
+      .painel-marca { flex: 0 0 auto; height: 34vh; min-height: 200px; }
+      .painel-login { flex: 0 0 auto; border-radius: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="painel-marca">
+    <img src="imagens/horus-capa-marca.png" alt="HORUS Newsroom">
+  </div>
+
+  <div class="painel-login">
+    <div class="caixa-login">
+
+      <div id="painel-login">
+        <h1>Entre com sua conta</h1>
+        <form id="form-login">
+          <label>E-mail</label>
+          <input type="email" id="input-email" autocomplete="username" placeholder="nome@ufma.br" required>
+          <label>Senha</label>
+          <input type="password" id="input-senha" autocomplete="current-password" placeholder="••••••••" required>
+          <button type="submit" class="btn-entrar" id="btn-entrar">Entrar</button>
+          <div class="erro-login" id="erro-login"></div>
+        </form>
+        <a class="link-primeiro-acesso" id="link-primeiro-acesso">Primeiro acesso</a>
+      </div>
+
+      <div id="painel-primeiro-acesso">
+        <h1>Criar sua senha</h1>
+        <form id="form-primeiro-acesso">
+          <label>E-mail cadastrado</label>
+          <input type="email" id="pa-email" autocomplete="username" placeholder="nome@ufma.br" required>
+          <label>Nova senha</label>
+          <input type="password" id="pa-senha" autocomplete="new-password" placeholder="Mínimo de 6 caracteres" required>
+          <label>Confirmar nova senha</label>
+          <input type="password" id="pa-senha-confirmar" autocomplete="new-password" placeholder="Repita a senha" required>
+          <div class="ajuda-campo">Só funciona pra e-mail já cadastrado na Equipe que ainda não tem senha definida.</div>
+          <button type="submit" class="btn-entrar" id="btn-primeiro-acesso">Criar senha e entrar</button>
+          <div class="erro-login" id="erro-primeiro-acesso"></div>
+        </form>
+        <a class="link-primeiro-acesso" id="link-voltar-login">Voltar para o login</a>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Se já tem sessão válida, não precisa passar pelo login de novo.
+    fetch('/auth/me').then(r => { if (r.ok) window.location.href = 'pautas.html'; });
+
+    function alternarPainel(mostrarPrimeiroAcesso) {
+      document.getElementById('painel-login').style.display = mostrarPrimeiroAcesso ? 'none' : 'block';
+      document.getElementById('painel-primeiro-acesso').style.display = mostrarPrimeiroAcesso ? 'block' : 'none';
+    }
+    document.getElementById('link-primeiro-acesso').addEventListener('click', () => alternarPainel(true));
+    document.getElementById('link-voltar-login').addEventListener('click', () => alternarPainel(false));
+
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('input-email').value.trim();
+      const senha = document.getElementById('input-senha').value;
+      const btn = document.getElementById('btn-entrar');
+      const erro = document.getElementById('erro-login');
+      erro.textContent = '';
+      btn.disabled = true;
+      btn.textContent = 'Entrando...';
+
+      try {
+        const resp = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, senha })
+        });
+
+        if (!resp.ok) {
+          const corpo = await resp.json().catch(() => ({}));
+          erro.textContent = corpo.erro || 'Não foi possível entrar.';
+          btn.disabled = false;
+          btn.textContent = 'Entrar';
+          return;
+        }
+
+        window.location.href = 'pautas.html';
+      } catch (e) {
+        erro.textContent = 'Erro de conexão com o servidor.';
+        btn.disabled = false;
+        btn.textContent = 'Entrar';
+      }
+    });
+
+    document.getElementById('form-primeiro-acesso').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('pa-email').value.trim();
+      const senha = document.getElementById('pa-senha').value;
+      const senhaConfirmar = document.getElementById('pa-senha-confirmar').value;
+      const btn = document.getElementById('btn-primeiro-acesso');
+      const erro = document.getElementById('erro-primeiro-acesso');
+      erro.textContent = '';
+
+      if (senha !== senhaConfirmar) {
+        erro.textContent = 'As senhas não conferem.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Criando...';
+
+      try {
+        const resp = await fetch('/auth/primeiro-acesso', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, senha })
+        });
+
+        if (!resp.ok) {
+          const corpo = await resp.json().catch(() => ({}));
+          erro.textContent = corpo.erro || 'Não foi possível criar a senha.';
+          btn.disabled = false;
+          btn.textContent = 'Criar senha e entrar';
+          return;
+        }
+
+        window.location.href = 'pautas.html';
+      } catch (e) {
+        erro.textContent = 'Erro de conexão com o servidor.';
+        btn.disabled = false;
+        btn.textContent = 'Criar senha e entrar';
+      }
+    });
+  </script>
+</body>
+</html>

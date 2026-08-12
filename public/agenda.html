@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Agenda — HORUS Newsroom</title>
+  <script src="auth-guard.js"></script>
   <style>
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
@@ -206,6 +207,8 @@
       </select>
       <label>E-mail</label>
       <input type="email" id="input-email-membro" placeholder="nome@ufma.br">
+      <label>Senha <span id="rotulo-senha-opcional" style="text-transform:none; font-weight:normal;"></span></label>
+      <input type="password" id="input-senha-membro" placeholder="Deixe em branco pra não alterar" autocomplete="new-password">
       <div class="botoes-modal">
         <button class="btn-cancelar" id="cancelar-equipe">Cancelar</button>
         <button class="btn-confirmar" id="confirmar-equipe">Salvar</button>
@@ -400,8 +403,9 @@
           <td><span class="tag-tipo">${m.funcao}</span></td>
           <td>${m.perfil || '—'}</td>
           <td>${m.email || '—'}</td>
+          <td>${m.tem_senha ? '🔒 Definida' : '⚠️ Sem senha'}</td>
           <td class="acoes-lista">
-            <button class="btn-ver btn-editar-membro" data-id="${m.id}" data-nome="${m.nome}" data-funcao="${m.funcao}" data-perfil="${m.perfil || ''}" data-email="${m.email || ''}" title="Editar">✏️</button>
+            <button class="btn-ver btn-editar-membro" data-id="${m.id}" data-nome="${m.nome}" data-funcao="${m.funcao}" data-perfil="${m.perfil || ''}" data-email="${m.email || ''}" data-tem-senha="${m.tem_senha ? '1' : ''}" title="Editar">✏️</button>
             <button class="btn-excluir btn-excluir-membro" data-id="${m.id}" title="Excluir">🗑️</button>
           </td>
         </tr>
@@ -415,7 +419,7 @@
         ${lista.length === 0
           ? '<div class="estado-vazio">Nenhum membro cadastrado ainda.</div>'
           : `<table class="tabela-simples">
-              <thead><tr><th>Nome</th><th>Função</th><th>Perfil</th><th>E-mail</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Nome</th><th>Função</th><th>Perfil</th><th>E-mail</th><th>Senha</th><th>Ações</th></tr></thead>
               <tbody>${corpoTabela}</tbody>
             </table>`}
       `;
@@ -426,6 +430,8 @@
         document.getElementById('input-funcao-membro').value = '';
         document.getElementById('input-perfil-membro').value = '';
         document.getElementById('input-email-membro').value = '';
+        document.getElementById('input-senha-membro').value = '';
+        document.getElementById('rotulo-senha-opcional').textContent = '';
         document.getElementById('modal-equipe').classList.add('aberto');
       });
 
@@ -436,6 +442,9 @@
           document.getElementById('input-funcao-membro').value = btn.dataset.funcao;
           document.getElementById('input-perfil-membro').value = btn.dataset.perfil;
           document.getElementById('input-email-membro').value = btn.dataset.email;
+          document.getElementById('input-senha-membro').value = '';
+          document.getElementById('rotulo-senha-opcional').textContent =
+            btn.dataset.temSenha ? '(deixe em branco pra manter a atual)' : '(ainda não tem senha — sem ela não consegue logar)';
           document.getElementById('modal-equipe').classList.add('aberto');
         });
       });
@@ -460,19 +469,20 @@
       const funcao = document.getElementById('input-funcao-membro').value.trim();
       const perfil = document.getElementById('input-perfil-membro').value;
       const email = document.getElementById('input-email-membro').value.trim();
+      const senha = document.getElementById('input-senha-membro').value;
       if (!nome || !funcao) return;
 
       if (idEmEdicaoEquipe !== null) {
         await fetch(`/agenda/equipe/${idEmEdicaoEquipe}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nome, funcao, perfil, email })
+          body: JSON.stringify({ nome, funcao, perfil, email, senha })
         });
       } else {
         await fetch('/agenda/equipe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nome, funcao, perfil, email })
+          body: JSON.stringify({ nome, funcao, perfil, email, senha })
         });
       }
 

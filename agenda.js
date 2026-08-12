@@ -171,21 +171,32 @@ router.delete('/programas/:id/definitivo', (req, res) => {
 
 // --- Equipe ---
 
+const bcrypt = require('bcryptjs');
+
+// Nunca manda o hash da senha pro front — só um booleano indicando se a
+// pessoa já tem senha definida (a tela de Equipe usa isso pra avisar
+// quem ainda não consegue logar).
+function omitirSenha(membro) {
+  const { senha_hash, ...resto } = membro;
+  return { ...resto, tem_senha: !!senha_hash };
+}
+
 router.get('/equipe', (req, res) => {
   const lista = db.prepare('SELECT * FROM equipe_agenda WHERE excluido_em IS NULL ORDER BY nome ASC').all();
-  res.json(lista);
+  res.json(lista.map(omitirSenha));
 });
 
 router.get('/equipe/lixeira', (req, res) => {
   const lista = db.prepare('SELECT * FROM equipe_agenda WHERE excluido_em IS NOT NULL ORDER BY excluido_em DESC').all();
-  res.json(lista);
+  res.json(lista.map(omitirSenha));
 });
 
 router.post('/equipe', (req, res) => {
-  const { nome, funcao, perfil, email } = req.body;
-  const resultado = db.prepare('INSERT INTO equipe_agenda (nome, funcao, perfil, email) VALUES (?, ?, ?, ?)').run(nome, funcao, perfil || '', email || '');
+  const { nome, funcao, perfil, email, senha } = req.body;
+  const senhaHash = senha ? bcrypt.hashSync(senha, 10) : null;
+  const resultado = db.prepare('INSERT INTO equipe_agenda (nome, funcao, perfil, email, senha_hash) VALUES (?, ?, ?, ?, ?)').run(nome, funcao, perfil || '', email || '', senhaHash);
   const novo = db.prepare('SELECT * FROM equipe_agenda WHERE id = ?').get(resultado.lastInsertRowid);
-  res.status(201).json(novo);
+  res.status(201).json(omitirSenha(novo));
 });
 router.patch('/equipe/:id', (req, res) => {
   const id = Number(req.params.id);
@@ -199,11 +210,14 @@ router.patch('/equipe/:id', (req, res) => {
   const funcao = req.body.funcao !== undefined ? req.body.funcao : item.funcao;
   const perfil = req.body.perfil !== undefined ? req.body.perfil : item.perfil;
   const email = req.body.email !== undefined ? req.body.email : item.email;
+  // Campo Senha vem em branco quando quem está editando não quer trocá-la
+  // — só regrava o hash se vier alguma coisa de verdade no body.
+  const senhaHash = req.body.senha ? bcrypt.hashSync(req.body.senha, 10) : item.senha_hash;
 
-  db.prepare('UPDATE equipe_agenda SET nome = ?, funcao = ?, perfil = ?, email = ? WHERE id = ?').run(nome, funcao, perfil, email, id);
+  db.prepare('UPDATE equipe_agenda SET nome = ?, funcao = ?, perfil = ?, email = ?, senha_hash = ? WHERE id = ?').run(nome, funcao, perfil, email, senhaHash, id);
 
   const atualizado = db.prepare('SELECT * FROM equipe_agenda WHERE id = ?').get(id);
-  res.json(atualizado);
+  res.json(omitirSenha(atualizado));
 });
 
 router.delete('/equipe/:id', (req, res) => {

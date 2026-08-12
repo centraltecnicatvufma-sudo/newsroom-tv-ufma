@@ -265,6 +265,13 @@ db.exec(`
 try { db.exec('ALTER TABLE equipe_agenda ADD COLUMN perfil TEXT'); } catch (e) {}
 try { db.exec('ALTER TABLE equipe_agenda ADD COLUMN email TEXT'); } catch (e) {}
 
+// Senha (hash bcrypt, nunca texto puro) — habilita o login de verdade.
+// Definida direto no cadastro da Equipe por enquanto (sem convite por
+// e-mail ainda, ver project_perfil_equipe_permissoes). Pode ficar NULL
+// pra quem ainda não tem senha definida — essa pessoa simplesmente não
+// consegue logar até um Nível 6 cadastrar uma senha pra ela.
+try { db.exec('ALTER TABLE equipe_agenda ADD COLUMN senha_hash TEXT'); } catch (e) {}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS agendamentos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
