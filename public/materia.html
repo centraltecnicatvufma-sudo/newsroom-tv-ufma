@@ -210,7 +210,7 @@
     @media print {
       @page { size: A4; margin: 15mm 16mm; }
 
-      .nr-sidebar, .barra-acoes, #btn-ouvir-cabeca, .btn-ouvir-item,
+      .nr-sidebar, .barra-acoes, #btn-ouvir-cabeca, #btn-ia-cabeca, #btn-ia-texto-web, .btn-ouvir-item,
       .btn-remover-item, .btn-mover, .btn-maiusculas, .toggle-auto,
       .add-itens, #btn-add-gc, .btn-remover-gc, #bloco-cabeca,
       .seta-recolher, #bloco-texto-web, .faixa-breaking,
@@ -328,7 +328,7 @@
 
   <div class="conteudo">
     <div class="bloco" id="bloco-cabeca">
-      <h2>🎤 Cabeça do Apresentador (vai para o Teleprompter) <button id="btn-ouvir-cabeca" style="font-size:12px; padding:4px 10px; border-radius:6px; border:1px solid #ddd; background:#fafafa; cursor:pointer; margin-left:8px;">🗣️ Ouvir</button></h2>
+      <h2>🎤 Cabeça do Apresentador (vai para o Teleprompter) <button id="btn-ouvir-cabeca" style="font-size:12px; padding:4px 10px; border-radius:6px; border:1px solid #ddd; background:#fafafa; cursor:pointer; margin-left:8px;">🗣️ Ouvir</button> <button id="btn-ia-cabeca" style="font-size:12px; padding:4px 10px; border-radius:6px; border:1px solid #ddd; background:#fafafa; cursor:pointer; margin-left:4px;" title="Gerar rascunho com IA a partir dos OFFs já escritos">✨ Gerar com IA</button></h2>
       <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
         <label class="toggle-auto" title="Duração automática pelo texto (desligue pra digitar o tempo na mão)">
           <input type="checkbox" id="chk-auto-cabeca" checked>
@@ -381,7 +381,7 @@
     </div>
 
     <div class="bloco" id="bloco-texto-web">
-      <h2 class="cabecalho-recolhivel" data-alvo="corpo-texto-web"><span class="seta-recolher">▶</span>🌐 Texto Adaptado — Site / Instagram / YouTube</h2>
+      <h2 class="cabecalho-recolhivel" data-alvo="corpo-texto-web"><span class="seta-recolher">▶</span>🌐 Texto Adaptado — Site / Instagram / YouTube <button id="btn-ia-texto-web" style="font-size:12px; padding:4px 10px; border-radius:6px; border:1px solid #ddd; background:#fafafa; cursor:pointer; margin-left:4px;" title="Gerar rascunho com IA a partir dos OFFs já escritos">✨ Gerar com IA</button></h2>
       <div id="corpo-texto-web" style="display:none;">
         <div id="editor-web" class="editor-caixa"></div>
       </div>
@@ -684,6 +684,10 @@
       quillCabeca.root.setAttribute('spellcheck', 'true');
       if (p.cabeca_texto) quillCabeca.root.innerHTML = p.cabeca_texto;
       document.getElementById('btn-ouvir-cabeca').addEventListener('click', () => falarTexto(quillCabeca));
+      document.getElementById('btn-ia-cabeca').addEventListener('click', (e) => {
+        e.stopPropagation();
+        gerarComIA('gerar-cabeca', quillCabeca, e.target);
+      });
 
       cabecaMeta.duracao_segundos = p.cabeca_duracao_segundos || 0;
       cabecaMeta.duracao_automatica = p.cabeca_duracao_automatica === undefined ? true : !!p.cabeca_duracao_automatica;
@@ -724,6 +728,47 @@
       quillWeb = new Quill('#editor-web', { theme: 'snow' });
       quillWeb.root.setAttribute('spellcheck', 'true');
       if (p.texto_web) quillWeb.root.innerHTML = p.texto_web;
+      document.getElementById('btn-ia-texto-web').addEventListener('click', (e) => {
+        e.stopPropagation();
+        gerarComIA('gerar-texto-web', quillWeb, e.target, 'corpo-texto-web');
+      });
+    }
+
+    // Gera um rascunho com IA (Cabeça ou Texto Adaptado) a partir dos
+    // OFFs já escritos e joga no editor Quill correspondente — só
+    // preenche o campo, quem está editando revisa/ajusta e salva pelo
+    // fluxo normal (btn-salvar), nunca é publicado sozinho.
+    async function gerarComIA(rota, quillAlvo, botao, idSecaoRecolhivel) {
+      const textoOriginal = botao.textContent;
+      botao.disabled = true;
+      botao.textContent = '⏳ Gerando...';
+      try {
+        const resp = await fetch('/materia/' + rota, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pauta_id: pautaId })
+        });
+        const dados = await resp.json();
+        if (!resp.ok) {
+          alert(dados.erro || 'Não foi possível gerar o texto com IA.');
+          return;
+        }
+        quillAlvo.root.innerHTML = dados.texto.split('\n\n').map(par => `<p>${par}</p>`).join('');
+        // Texto Adaptado começa recolhido — se gerou o rascunho ali,
+        // expande sozinho pra quem clicou já ver o resultado
+        if (idSecaoRecolhivel) {
+          const secao = document.getElementById(idSecaoRecolhivel);
+          if (secao.style.display === 'none') {
+            secao.style.display = 'block';
+            document.querySelector(`[data-alvo="${idSecaoRecolhivel}"] .seta-recolher`).textContent = '▼';
+          }
+        }
+      } catch (erro) {
+        alert('Não foi possível gerar o texto com IA: ' + erro.message);
+      } finally {
+        botao.disabled = false;
+        botao.textContent = textoOriginal;
+      }
     }
 
     function badgeTipo(tipo) {

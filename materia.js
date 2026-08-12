@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('./banco');
 const { exigirNivelMinimo, precisaFiltrarPorSetor, setorDoUsuario } = require('./permissoes');
+const { gerarTexto, textoPuro } = require('./ia');
 
 // Mesma regra do Espelho (ver blocos.js): Operador(1) e Técnico(2) só têm
 // leitura — qualquer mudança na Lauda exige pelo menos Repórter/Redator(3).
@@ -192,6 +193,90 @@ router.delete('/gcs/:id', exigirEdicaoLauda, exigirSetorGc, (req, res) => {
   }
 
   res.status(204).send();
+});
+
+// ---- Geração de texto com IA (OpenAI) a partir dos OFFs já escritos ----
+// Só gera um RASCUNHO devolvido pra tela — nunca salva sozinho no banco.
+// Quem está editando revisa/ajusta e salva pelo fluxo normal (btn-salvar
+// em materia.html), igual a qualquer outra edição manual.
+function buscarOffs(pautaId) {
+  return db.prepare(
+    "SELECT texto FROM materia_itens WHERE pauta_id = ? AND tipo = 'OFF' ORDER BY ordem ASC"
+  ).all(pautaId);
+}
+
+function textoOffsOuErro(pautaId, res) {
+  const offs = buscarOffs(pautaId);
+  const textoOffs = offs.map(o => textoPuro(o.texto)).filter(Boolean).join('\n\n');
+  if (!textoOffs) {
+    res.status(400).json({ erro: 'Escreva pelo menos um OFF na matéria antes de gerar com IA.' });
+    return null;
+  }
+  return textoOffs;
+}
+
+// POST /materia/gerar-cabeca -> rascunho da Cabeça do Apresentador, com
+// base nos OFFs da matéria (pauta_id no corpo)
+router.post('/gerar-cabeca', exigirEdicaoLauda, exigirSetorItem, async (req, res) => {
+  const { pauta_id } = req.body;
+  if (!pauta_id) return res.status(400).json({ erro: 'Informe o pauta_id' });
+
+  const textoOffs = textoOffsOuErro(pauta_id, res);
+  if (!textoOffs) return;
+
+  const prompt = `Você é um editor de telejornalismo brasileiro. Com base no texto abaixo (os OFFs de uma reportagem em VT), escreva a CABEÇA — o texto que o apresentador lê ao vivo, olhando pra câmera, ANTES de o VT entrar no ar.
+
+Regras:
+- 2 a 4 frases curtas, linguagem de TV (direta, sem jornalês)
+- Não repita literalmente frases dos OFFs — resuma/contextualize, sem entregar todos os detalhes
+- Terceira pessoa, tom neutro e informativo
+- Não invente fatos que não estão no texto abaixo
+
+OFFs da matéria:
+"""
+${textoOffs}
+"""
+
+Escreva só a Cabeça, sem explicações antes ou depois, sem aspas envolvendo o texto.`;
+
+  try {
+    const texto = await gerarTexto(prompt);
+    res.json({ texto });
+  } catch (erro) {
+    res.status(502).json({ erro: erro.message });
+  }
+});
+
+// POST /materia/gerar-texto-web -> rascunho do Texto Adaptado (Site/
+// Instagram/YouTube), com base nos OFFs da matéria (pauta_id no corpo)
+router.post('/gerar-texto-web', exigirEdicaoLauda, exigirSetorItem, async (req, res) => {
+  const { pauta_id } = req.body;
+  if (!pauta_id) return res.status(400).json({ erro: 'Informe o pauta_id' });
+
+  const textoOffs = textoOffsOuErro(pauta_id, res);
+  if (!textoOffs) return;
+
+  const prompt = `Você é um editor de conteúdo digital de um telejornal universitário. Com base nos OFFs abaixo (uma reportagem feita pra TV), escreva uma versão adaptada pra publicar no site, Instagram e YouTube (texto de acompanhamento da publicação).
+
+Regras:
+- Pode ser mais completo que a Cabeça de TV — é pra quem vai LER, não assistir
+- Parágrafos curtos, linguagem clara, adequada pra redes sociais e site de notícias
+- Não invente fatos que não estão no texto abaixo
+- Não use "cabeça"/"off"/jargão de televisão
+
+OFFs da matéria:
+"""
+${textoOffs}
+"""
+
+Escreva só o texto adaptado, sem explicações antes ou depois, sem aspas envolvendo o texto.`;
+
+  try {
+    const texto = await gerarTexto(prompt);
+    res.json({ texto });
+  } catch (erro) {
+    res.status(502).json({ erro: erro.message });
+  }
 });
 
 module.exports = router;
