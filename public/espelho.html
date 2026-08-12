@@ -325,6 +325,14 @@
           await carregarPautasParaModal();
           await carregarEspelho();
         }
+        // Outro usuário criou/editou/moveu/excluiu um item, ou mudou o
+        // status de uma Escalada, neste MESMO Espelho (ver broadcasts em
+        // blocos.js) — recarrega sozinho, sem precisar de F5. Ignora
+        // eventos de outro espelho_id pra não recarregar à toa quem está
+        // vendo um Espelho diferente.
+        if (msg.tipo === 'blocos' && msg.espelho_id === espelhoId) {
+          await carregarEspelho();
+        }
       });
       ws.addEventListener('close', () => setTimeout(conectarTempoReal, 3000));
       ws.addEventListener('error', () => ws.close());

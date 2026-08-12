@@ -216,6 +216,7 @@ router.post('/', exigirEdicaoEspelho, exigirSetorDoItem, (req, res) => {
   );
 
   const novoBloco = db.prepare('SELECT * FROM blocos WHERE id = ?').get(resultado.lastInsertRowid);
+  req.app.get('tempoReal')?.broadcast({ tipo: 'blocos', espelho_id: Number(espelho_id) });
   res.status(201).json(novoBloco);
 });
 
@@ -294,6 +295,7 @@ router.patch('/:id/mover', exigirEdicaoEspelho, exigirSetorDoItem, (req, res) =>
     'SELECT * FROM blocos WHERE espelho_id = ? ORDER BY bloco ASC, ordem ASC'
   ).all(espelhoId);
 
+  req.app.get('tempoReal')?.broadcast({ tipo: 'blocos', espelho_id: espelhoId });
   res.json(atualizados);
 });
 
@@ -341,6 +343,7 @@ router.patch('/:id/status', exigirEdicaoEspelho, exigirSetorDoItem, (req, res) =
     .run(novo_status, editorAtual, id);
 
   const blocoAtualizado = db.prepare('SELECT * FROM blocos WHERE id = ?').get(id);
+  req.app.get('tempoReal')?.broadcast({ tipo: 'blocos', espelho_id: bloco.espelho_id });
   res.json(blocoAtualizado);
 });
 
@@ -359,6 +362,7 @@ router.patch('/:id/sincronizar-cabeca', exigirEdicaoEspelho, exigirSetorDoItem, 
   db.prepare('UPDATE blocos SET texto_script = ? WHERE id = ?')
     .run(cabecaDaPauta(bloco.pauta_id), id);
 
+  req.app.get('tempoReal')?.broadcast({ tipo: 'blocos', espelho_id: bloco.espelho_id });
   res.json(db.prepare('SELECT * FROM blocos WHERE id = ?').get(id));
 });
 
@@ -407,6 +411,7 @@ router.patch('/:id', exigirEdicaoEspelho, exigirSetorDoItem, (req, res) => {
   );
 
   const blocoAtualizado = db.prepare('SELECT * FROM blocos WHERE id = ?').get(id);
+  req.app.get('tempoReal')?.broadcast({ tipo: 'blocos', espelho_id: blocoAtualizado.espelho_id });
   res.json(blocoAtualizado);
 });
 
@@ -422,6 +427,7 @@ router.delete('/:id', exigirEdicaoEspelho, exigirSetorDoItem, (req, res) => {
   db.prepare('DELETE FROM blocos WHERE id = ?').run(id);
   renumerarBloco(bloco.espelho_id, bloco.bloco);
 
+  req.app.get('tempoReal')?.broadcast({ tipo: 'blocos', espelho_id: bloco.espelho_id });
   res.status(204).send();
 });
 
@@ -455,6 +461,7 @@ router.patch('/:id/duracao-alvo-vt', (req, res) => {
   `).run(nova_duracao, travar ? 1 : 0, id);
 
   const blocoAtualizado = db.prepare('SELECT * FROM blocos WHERE id = ?').get(id);
+  req.app.get('tempoReal')?.broadcast({ tipo: 'blocos', espelho_id: blocoAtualizado.espelho_id });
   res.json(blocoAtualizado);
 });
 
