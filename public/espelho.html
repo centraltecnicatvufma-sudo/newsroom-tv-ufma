@@ -33,6 +33,8 @@
     .zona-fim-bloco { padding: 8px 16px; font-size: 11px; color: #b6bdc7; text-align: center; border-top: 1px dashed #e6e9ee; }
     .zona-fim-bloco.ativa { background: #e7eef6; color: #336699; }
 
+    .camera-badge { display: inline-block; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; color: #fff; background: #333; margin-bottom: 3px; text-transform: uppercase; }
+
     .tipo-badge { font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; color: #fff; text-transform: uppercase; }
     .tipo-reportagem { background: #336699; }
     .tipo-standup { background: #075B91; }
@@ -71,6 +73,7 @@
     .barra-acoes-espelho button:hover { background: #2a5580; }
     .barra-acoes-espelho .separador-acoes { flex: 1; }
     .barra-acoes-espelho .btn-secundario { background: #eee; color: #333; }
+    .barra-acoes-espelho select#modo-impressao-espelho { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; color: #333; background: #fff; }
     .barra-acoes-espelho .btn-secundario:hover { background: #ddd; }
 
     .overlay-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 10; }
@@ -106,8 +109,32 @@
     .impressao-espelho table.tabela-impressao-espelho { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
     .impressao-espelho table.tabela-impressao-espelho th { text-align: left; font-size: 10px; text-transform: uppercase; color: #333; padding: 3px 6px; border-bottom: 1px solid #999; }
     .impressao-espelho table.tabela-impressao-espelho td { padding: 3px 6px; border-bottom: 1px solid #eee; vertical-align: top; }
-    .impressao-espelho table.tabela-impressao-espelho td.col-ord { width: 34px; }
+    .impressao-espelho table.tabela-impressao-espelho td.col-ord { width: 8%; }
+    .impressao-espelho table.tabela-impressao-espelho td.col-retranca { width: 42%; }
     .impressao-espelho table.tabela-impressao-espelho td.col-tipo { width: 110px; }
+    .impressao-espelho .camera-cue-impressao { font-weight: bold; font-size: 10px; letter-spacing: 0.3px; margin-bottom: 2px; }
+
+    /* Modo "Grade do Dia" — segundo formato de impressão do Espelho,
+       sem indicação de câmera, inspirado no modelo de grade de outro
+       sistema (mesmo espírito do "Imprimir Grade" de Pautas): moldura
+       em tabela cheia (bordas em toda célula, cabeçalho cinza), uma
+       tabela por Bloco, com PÁG/TIPO/RETRANCA/PRAÇA/EDITOR/REPÓRTER/
+       CAB./VT/TOTAL/OK/APR. Praça, Editor, OK e Apr não têm dado
+       equivalente no sistema — ficam em branco de propósito, pra
+       preenchimento manual no papel (igual ao modelo original).
+       Os dois modos são mutuamente exclusivos na impressão via a
+       classe body.imprimindo-grade-espelho (mesma técnica já usada em
+       pautas.html pra Grade x Pauta individual). */
+    #impressao-espelho-grade { display: none; }
+    .titulo-grade-espelho { font-size: 16px; font-weight: bold; margin: 0 0 2em; }
+    .impressao-espelho-grade .bloco-grade-titulo { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin: 14px 0 4px; }
+    .tabela-grade-espelho { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+    .tabela-grade-espelho th, .tabela-grade-espelho td { padding: 5px 8px; font-size: 11px; text-align: left; border: 1px solid #000; }
+    .tabela-grade-espelho th { background: #e0e0e0; text-transform: uppercase; }
+    .tabela-grade-espelho tbody tr:nth-child(even) { background: #f6f6f6; }
+    .tabela-grade-espelho td.col-pag, .tabela-grade-espelho td.col-ok, .tabela-grade-espelho td.col-apr { width: 30px; text-align: center; }
+    .tabela-grade-espelho tr.linha-total-bloco { font-weight: bold; background: #eee; }
+    .tabela-grade-espelho tr.linha-total-bloco td.destaque { background: #dde3ea; text-align: center; }
 
     @media print {
       @page { size: portrait; margin: 12mm; }
@@ -119,6 +146,12 @@
       .somente-impressao { display: block !important; }
       .impressao-espelho .bloco-impressao-titulo { break-after: avoid; }
       .impressao-espelho table.tabela-impressao-espelho tr { break-inside: avoid; }
+
+      #impressao-espelho-grade { display: none !important; }
+      body.imprimindo-grade-espelho .somente-impressao:not(#impressao-espelho-grade) { display: none !important; }
+      body.imprimindo-grade-espelho #impressao-espelho-grade { display: block !important; }
+      .impressao-espelho-grade .bloco-grade-titulo { break-after: avoid; }
+      .tabela-grade-espelho tr { break-inside: avoid; }
     }
   
     /* Faixa de Breaking News — mesmo alerta visível em toda tela do
@@ -194,12 +227,17 @@
     <button id="btn-novo-bloco">📌 Novo Bloco</button>
     <div class="separador-acoes"></div>
     <button class="btn-secundario" id="btn-teleprompter">📺 Abrir no Teleprompter</button>
+    <select id="modo-impressao-espelho" title="Formato de impressão">
+      <option value="camera">Com Indicação de Câmera</option>
+      <option value="grade">Grade do Dia (sem Câmera)</option>
+    </select>
     <button class="btn-secundario" id="btn-imprimir">🖨️ Imprimir Espelho</button>
   </div>
 
   <div class="conteudo" id="conteudo">Carregando...</div>
 
   <div class="somente-impressao impressao-espelho" id="impressao-espelho"></div>
+  <div class="somente-impressao impressao-espelho-grade" id="impressao-espelho-grade"></div>
 
   <div class="overlay-modal" id="modal-item">
     <div class="modal-item">
@@ -210,6 +248,14 @@
 
       <label>Bloco</label>
       <input type="number" id="mi-bloco" min="1" value="1">
+
+      <label>Indicação de Câmera</label>
+      <select id="mi-camera">
+        <option value="">Sem indicação</option>
+        <option value="CAM FECHADA">Câmera Fechada</option>
+        <option value="CAM ABERTA">Câmera Aberta</option>
+        <option value="VIRADA CAM ABERTA">Virada para Câmera Aberta</option>
+      </select>
 
       <label>Tipo</label>
       <select id="mi-tipo"></select>
@@ -291,10 +337,15 @@
     // Buscado direto aqui, não via window.usuarioLogado, pela mesma razão
     // de sugestoes.html: sem garantia de que auth-guard.js já resolveu.
     let nivelUsuarioAtual = 0;
+    let setorUsuarioAtual = null;
     async function carregarNivelUsuario() {
       try {
         const resp = await fetch('/auth/me');
-        if (resp.ok) nivelUsuarioAtual = (await resp.json()).nivel || 0;
+        if (resp.ok) {
+          const usuario = await resp.json();
+          nivelUsuarioAtual = usuario.nivel || 0;
+          setorUsuarioAtual = usuario.setor || null;
+        }
       } catch (e) {}
     }
     function aplicarPermissaoEdicaoEspelho() {
@@ -320,6 +371,12 @@
       nota_seca: 'Nota Seca', vivo: 'Vivo', escalada: 'Escalada', teaser: 'Teaser',
       nota_pe: 'Nota-pé', link: 'Link', net: 'NET', vinheta: 'Vinheta',
       passagem_bloco: 'Passagem de Bloco', vht_abertura: 'VHT Abertura', encerramento: 'Encerramento'
+    };
+
+    const labelCamera = {
+      'CAM FECHADA': '📷 Câmera Fechada',
+      'CAM ABERTA': '📷 Câmera Aberta',
+      'VIRADA CAM ABERTA': '🔁 Virada p/ Câmera Aberta'
     };
 
     // ---- Conversões de tempo ----
@@ -352,10 +409,14 @@
     // sozinho assim que existir. Antes disso, continua usando o que foi
     // preenchido no item (duracao_estimada), manual ou pré-preenchido a
     // partir da Lauda.
+    // Vem pronto do próprio bloco (b.pauta_cabeca_duracao_segundos/
+    // b.pauta_tempo_video_segundos, ver GET /blocos) — não usa mais
+    // pautasCache aqui de propósito: pautasCache vem de GET /pautas, que
+    // fica filtrada por Setor pra quem é restrito, e um Espelho pode ter
+    // itens de Setores diferentes misturados (decisão do usuário).
     function duracaoEfetivaBloco(b) {
-      const pauta = b.pauta_id ? pautasCache.find(p => p.id === b.pauta_id) : null;
-      if (pauta && pauta.tempo_video_segundos) {
-        return (pauta.cabeca_duracao_segundos || 0) + pauta.tempo_video_segundos;
+      if (b.pauta_tempo_video_segundos) {
+        return (b.pauta_cabeca_duracao_segundos || 0) + b.pauta_tempo_video_segundos;
       }
       return b.duracao_estimada || 0;
     }
@@ -366,12 +427,10 @@
     // como saber a parte de cabeça/vídeo separado — a coluna fica com "—"
     // e o total continua vindo de duracao_estimada (item digitado à mão).
     function duracaoCabecaBloco(b) {
-      const pauta = b.pauta_id ? pautasCache.find(p => p.id === b.pauta_id) : null;
-      return pauta ? (pauta.cabeca_duracao_segundos || 0) : 0;
+      return b.pauta_cabeca_duracao_segundos || 0;
     }
     function duracaoVideoBloco(b) {
-      const pauta = b.pauta_id ? pautasCache.find(p => p.id === b.pauta_id) : null;
-      return pauta ? (pauta.tempo_video_segundos || 0) : 0;
+      return b.pauta_tempo_video_segundos || 0;
     }
 
     // ---- Carregamento ----
@@ -441,6 +500,7 @@
       document.getElementById('mi-titulo-modal').textContent = 'Novo Item do Espelho';
       document.getElementById('mi-pauta').value = '';
       document.getElementById('mi-bloco').value = blocoSugerido || 1;
+      document.getElementById('mi-camera').value = '';
       document.getElementById('mi-tipo').value = 'reportagem';
       document.getElementById('mi-titulo').value = '';
       document.getElementById('mi-reporter').value = '';
@@ -457,6 +517,7 @@
       document.getElementById('mi-titulo-modal').textContent = 'Editar Item do Espelho';
       document.getElementById('mi-pauta').value = item.pauta_id || '';
       document.getElementById('mi-bloco').value = item.bloco || 1;
+      document.getElementById('mi-camera').value = item.indicacao_camera || '';
       document.getElementById('mi-tipo').value = item.tipo || 'reportagem';
       document.getElementById('mi-titulo').value = item.titulo || '';
       document.getElementById('mi-reporter').value = item.reporter || item.responsavel || '';
@@ -502,6 +563,7 @@
         responsavel: reporter,
         reporter: reporter,
         duracao_estimada: paraSegundos(document.getElementById('mi-duracao').value),
+        indicacao_camera: document.getElementById('mi-camera').value,
         // Sempre manda o texto do jeito que está no modal — vira a fonte da
         // verdade a partir de agora (nem sempre o item tem uma Lauda
         // gravada por trás, ex. Escalada ao vivo, então não faz sentido
@@ -545,17 +607,35 @@
       window.open('teleprompter.html?espelho_id=' + espelhoId, '_blank');
     });
 
-    function formatarDataImpressaoEspelho(iso) {
+    // Nome do dia da semana + data no formato pedido: "QUARTA-FEIRA
+    // (12.08.2026)". Monta a data a partir dos componentes (ano/mês/dia
+    // numéricos, não `new Date(iso)`) porque o construtor de string do Date
+    // interpreta ISO como UTC e pode voltar um dia em fusos negativos.
+    const NOMES_DIA_SEMANA_IMPRESSAO = [
+      'DOMINGO', 'SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA',
+      'QUINTA-FEIRA', 'SEXTA-FEIRA', 'SÁBADO'
+    ];
+    function formatarCabecalhoDataImpressaoEspelho(iso) {
       if (!iso) return '—';
-      const [ano, mes, dia] = String(iso).split('-');
-      return (dia && mes && ano) ? `${dia}/${mes}/${ano}` : iso;
+      const [ano, mes, dia] = String(iso).split('-').map(Number);
+      if (!ano || !mes || !dia) return iso;
+      const data = new Date(ano, mes - 1, dia);
+      const diaSemana = NOMES_DIA_SEMANA_IMPRESSAO[data.getDay()];
+      const dd = String(dia).padStart(2, '0');
+      const mm = String(mes).padStart(2, '0');
+      return `${diaSemana} (${dd}.${mm}.${ano})`;
     }
 
     // Folha de impressão do Espelho — layout enxuto pedido pelo usuário:
     // sem bordas de grade (só uma linha por baixo de cada linha/cabeçalho),
     // retrato, uma tabela por Bloco com só ORD/RETRANCA/REPÓRTER/TIPO
     // (sem Status/Lauda/tempos/Ações — informação de trabalho, não de leitura
-    // rápida em papel). Cabeçalho mostra o nome do Programa + a Data.
+    // rápida em papel). Cabeçalho mostra "ESPELHO {Programa}" + dia da
+    // semana e data. Quando o item tem Indicação de Câmera, ela aparece
+    // como uma linha "[CAM ABERTA]" acima da Retranca, dentro da mesma
+    // célula/linha da tabela (mantém a indicação grudada no item mesmo se
+    // a página quebrar no meio do bloco). Ord+Retranca ficam limitadas a
+    // 50% da largura da página (CSS: .col-ord + .col-retranca = 8% + 42%).
     function montarImpressaoEspelho(espelho, blocos) {
       const grupos = {};
       blocos.forEach(b => {
@@ -569,13 +649,13 @@
         <div class="bloco-impressao-titulo">BLOCO ${num}</div>
         <table class="tabela-impressao-espelho">
           <thead>
-            <tr><th class="col-ord">Ord</th><th>Retranca</th><th>Repórter</th><th class="col-tipo">Tipo</th></tr>
+            <tr><th class="col-ord">Ord</th><th class="col-retranca">Retranca</th><th>Repórter</th><th class="col-tipo">Tipo</th></tr>
           </thead>
           <tbody>
             ${grupos[num].map(b => `
               <tr>
                 <td class="col-ord">${b.ordem}</td>
-                <td>${escaparHtml(b.titulo)}</td>
+                <td class="col-retranca">${b.indicacao_camera ? `<div class="camera-cue-impressao">[${escaparHtml(b.indicacao_camera)}]</div>` : ''}${escaparHtml(b.titulo)}</td>
                 <td>${escaparHtml(b.reporter || b.responsavel || '—')}</td>
                 <td class="col-tipo">${labelTipo[b.tipo] || b.tipo}</td>
               </tr>
@@ -586,17 +666,115 @@
 
       document.getElementById('impressao-espelho').innerHTML = `
         <div class="cabecalho-impressao-espelho">
-          <h1>${escaparHtml(espelho.programa || 'Sem programa')}</h1>
-          <div class="data-impressao-espelho">${formatarDataImpressaoEspelho(espelho.data)}</div>
+          <h1>ESPELHO ${escaparHtml((espelho.programa || 'SEM PROGRAMA').toUpperCase())}</h1>
+          <div class="data-impressao-espelho">${formatarCabecalhoDataImpressaoEspelho(espelho.data)}</div>
+        </div>
+        ${blocosHtml}
+      `;
+    }
+
+    // Dia da semana em Título Case + data DD/MM/AAAA — formato pedido
+    // especificamente pro modo Grade, diferente do cabeçalho do modo com
+    // Indicação de Câmera (que usa CAIXA ALTA + data com ponto/parênteses).
+    const NOMES_DIA_SEMANA_GRADE = [
+      'Domingo', 'Segunda-Feira', 'Terça-Feira', 'Quarta-Feira',
+      'Quinta-Feira', 'Sexta-Feira', 'Sábado'
+    ];
+    function formatarCabecalhoDataGradeEspelho(iso) {
+      if (!iso) return '—';
+      const [ano, mes, dia] = String(iso).split('-').map(Number);
+      if (!ano || !mes || !dia) return iso;
+      const data = new Date(ano, mes - 1, dia);
+      const diaSemana = NOMES_DIA_SEMANA_GRADE[data.getDay()];
+      const dd = String(dia).padStart(2, '0');
+      const mm = String(mes).padStart(2, '0');
+      return `${diaSemana} - ${dd}/${mm}/${ano}`;
+    }
+
+    // Modo "Grade do Dia" — formato de trabalho (sem indicação de câmera),
+    // inspirado no modelo de grade de outro sistema que o usuário mostrou:
+    // uma tabela com moldura completa por Bloco, colunas PÁG/TIPO/
+    // RETRANCA/PRAÇA/EDITOR/REPÓRTER/CAB./VT/TOTAL/OK/APR e uma linha de
+    // total ao final de cada Bloco. Praça/Editor/OK/Apr não têm dado
+    // equivalente aqui — ficam em branco, pra preenchimento manual no
+    // papel, igual no modelo original.
+    function montarImpressaoEspelhoGrade(espelho, blocos) {
+      const grupos = {};
+      blocos.forEach(b => {
+        const numBloco = b.bloco || 1;
+        if (!grupos[numBloco]) grupos[numBloco] = [];
+        grupos[numBloco].push(b);
+      });
+      const numerosBlocos = Object.keys(grupos).sort((a, b) => Number(a) - Number(b));
+
+      const blocosHtml = numerosBlocos.map(num => {
+        const itensDoBloco = grupos[num];
+        const totalCab = itensDoBloco.reduce((s, b) => s + duracaoCabecaBloco(b), 0);
+        const totalVideo = itensDoBloco.reduce((s, b) => s + duracaoVideoBloco(b), 0);
+        const totalGeral = itensDoBloco.reduce((s, b) => s + duracaoEfetivaBloco(b), 0);
+
+        return `
+        <div class="bloco-grade-titulo"><span>Bloco ${String(num).padStart(2, '0')}</span></div>
+        <table class="tabela-grade-espelho">
+          <thead>
+            <tr>
+              <th class="col-pag">Pág</th><th>Tipo</th><th>Retranca</th><th>Praça</th>
+              <th>Editor</th><th>Repórter</th><th>Cab.</th><th>VT</th><th>Total</th>
+              <th class="col-ok">OK</th><th class="col-apr">Apr</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itensDoBloco.map(b => `
+              <tr>
+                <td class="col-pag">${String(b.ordem).padStart(2, '0')}</td>
+                <td>${labelTipo[b.tipo] || b.tipo}</td>
+                <td>${escaparHtml(b.titulo)}</td>
+                <td></td>
+                <td></td>
+                <td>${escaparHtml(b.reporter || b.responsavel || '')}</td>
+                <td>${formatarTempo(duracaoCabecaBloco(b))}</td>
+                <td>${formatarTempo(duracaoVideoBloco(b))}</td>
+                <td>${formatarTempo(duracaoEfetivaBloco(b))}</td>
+                <td class="col-ok"></td>
+                <td class="col-apr"></td>
+              </tr>
+            `).join('')}
+            <tr class="linha-total-bloco">
+              <td colspan="6">Total do Bloco:</td>
+              <td class="destaque">${formatarTempo(totalCab)}</td>
+              <td class="destaque">${formatarTempo(totalVideo)}</td>
+              <td class="destaque">${formatarTempo(totalGeral)}</td>
+              <td></td><td></td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+      }).join('');
+
+      document.getElementById('impressao-espelho-grade').innerHTML = `
+        <div class="titulo-grade-espelho">
+          ESPELHO ${escaparHtml((espelho.programa || 'SEM PROGRAMA').toUpperCase())}<br>
+          ${formatarCabecalhoDataGradeEspelho(espelho.data)}
         </div>
         ${blocosHtml}
       `;
     }
 
     document.getElementById('btn-imprimir').addEventListener('click', () => {
-      montarImpressaoEspelho(espelhoCache || {}, blocosCache);
+      const modo = document.getElementById('modo-impressao-espelho').value;
+      if (modo === 'grade') {
+        montarImpressaoEspelhoGrade(espelhoCache || {}, blocosCache);
+        document.body.classList.add('imprimindo-grade-espelho');
+      } else {
+        montarImpressaoEspelho(espelhoCache || {}, blocosCache);
+        document.body.classList.remove('imprimindo-grade-espelho');
+      }
       window.print();
     });
+    // Defensivo: garante que a próxima impressão não herde o modo Grade
+    // se o afterprint não disparar sozinho (mesmo cuidado já tomado em
+    // pautas.html pra Grade x impressão individual).
+    window.addEventListener('afterprint', () => document.body.classList.remove('imprimindo-grade-espelho'));
 
     // ---- Rundown ----
     function renderRundown(blocos) {
@@ -623,6 +801,15 @@
       // backend já bloqueia edição de Lauda pra ambos, ver materia.js).
       // Chat continua disponível pra todo mundo, sem exceção.
       const podeEditar = nivelUsuarioAtual >= 3;
+      // Repórter/Produtor/Editor-Chefe só editam itens do próprio Setor —
+      // um Espelho pode misturar Setores (decisão do usuário), então a
+      // checagem é por ITEM (via o Setor da Pauta vinculada a ele, que o
+      // backend já manda pronto em b.setor), não pelo Espelho inteiro.
+      // Administrador e Operador/Técnico não são restritos por Setor.
+      const meuSetorRestringe = [3, 4, 5].includes(nivelUsuarioAtual);
+      function podeEditarEsseItem(b) {
+        return podeEditar && (!meuSetorRestringe || !b.setor || b.setor === setorUsuarioAtual);
+      }
 
       container.innerHTML = numerosBlocos.map(num => `
         <div class="bloco-grupo" data-bloco="${num}">
@@ -647,10 +834,10 @@
             </thead>
             <tbody>
               ${grupos[num].map(b => `
-                <tr data-id="${b.id}" data-bloco="${num}" draggable="${podeEditar}">
+                <tr data-id="${b.id}" data-bloco="${num}" draggable="${podeEditarEsseItem(b)}">
                   <td>${b.ordem}</td>
                   <td><span class="tipo-badge tipo-${b.tipo}">${labelTipo[b.tipo] || b.tipo}</span></td>
-                  <td class="titulo-item" title="${escaparHtml(b.titulo)}">${escaparHtml(b.titulo)}</td>
+                  <td class="titulo-item" title="${escaparHtml(b.titulo)}">${b.indicacao_camera ? `<span class="camera-badge">${labelCamera[b.indicacao_camera] || b.indicacao_camera}</span><br>` : ''}${escaparHtml(b.titulo)}</td>
                   <td>${escaparHtml(b.reporter || b.responsavel || '—')}</td>
                   <td>${b.lauda_status ? `<span class="lauda-badge lauda-${b.lauda_status}">${b.lauda_status === 'pronta' ? '🟢 Pronta' : b.lauda_status === 'redacao' ? '🟡 Redação' : '🔴 Pendente'}</span>` : '—'}</td>
                   <td draggable="false"><span class="status-badge status-${b.status}" title="Status herdado da Pauta — muda em Reportagens/Edição de Vídeo">${labelStatus[b.status] || b.status}</span></td>
@@ -658,11 +845,11 @@
                   <td class="dur">${duracaoVideoBloco(b) ? formatarTempo(duracaoVideoBloco(b)) : '—'}</td>
                   <td class="dur">${formatarTempo(duracaoEfetivaBloco(b))}</td>
                   <td class="acoes-rundown" draggable="false">
-                    ${podeEditar && b.cabeca_desatualizada ? `<button class="btn-sincronizar aviso-cabeca" data-id="${b.id}" title="A Cabeça da Lauda mudou depois — clique para atualizar o texto do teleprompter">🔄</button>` : ''}
-                    ${podeEditar ? `<button class="btn-editar-item" data-id="${b.id}" title="Editar item">✏️</button>` : ''}
-                    ${podeEditar && b.pauta_id ? `<button class="btn-abrir-lauda" data-pauta="${b.pauta_id}" title="Abrir Lauda">📝</button>` : ''}
+                    ${podeEditarEsseItem(b) && b.cabeca_desatualizada ? `<button class="btn-sincronizar aviso-cabeca" data-id="${b.id}" title="A Cabeça da Lauda mudou depois — clique para atualizar o texto do teleprompter">🔄</button>` : ''}
+                    ${podeEditarEsseItem(b) ? `<button class="btn-editar-item" data-id="${b.id}" title="Editar item">✏️</button>` : ''}
+                    ${podeEditarEsseItem(b) && b.pauta_id ? `<button class="btn-abrir-lauda" data-pauta="${b.pauta_id}" title="Abrir Lauda">📝</button>` : ''}
                     ${b.pauta_id ? `<button class="btn-chat-bloco" data-pauta="${b.pauta_id}" data-titulo="${(b.titulo || '').replace(/"/g, '&quot;')}" title="Chat desta pauta">💬</button>` : ''}
-                    ${podeEditar ? `<button class="btn-remover-bloco" data-id="${b.id}" title="Remover">🗑️</button>` : ''}
+                    ${podeEditarEsseItem(b) ? `<button class="btn-remover-bloco" data-id="${b.id}" title="Remover">🗑️</button>` : ''}
                   </td>
                 </tr>
               `).join('')}

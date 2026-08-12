@@ -415,10 +415,15 @@
     // Buscado direto aqui, não via window.usuarioLogado, pela mesma razão
     // já documentada em sugestoes.html/espelho.html.
     let nivelUsuarioAtual = 0;
+    let setorUsuarioAtual = null;
     async function carregarNivelUsuario() {
       try {
         const resp = await fetch('/auth/me');
-        if (resp.ok) nivelUsuarioAtual = (await resp.json()).nivel || 0;
+        if (resp.ok) {
+          const usuario = await resp.json();
+          nivelUsuarioAtual = usuario.nivel || 0;
+          setorUsuarioAtual = usuario.setor || null;
+        }
       } catch (e) {}
     }
     // Aplica o modo somente-leitura no painel de uma Pauta aberta: trava
@@ -533,8 +538,16 @@
         membros.map(m => `<option value="${m.nome}">${m.nome} (${m.funcao})</option>`).join('');
     }
 
+    // Repórter/Produtor/Editor-Chefe só podem escolher Programas do
+    // próprio Setor — evita levar a pauta pra um 403 na hora de salvar.
+    // Administrador e Operador/Técnico continuam vendo todos os Programas.
+    function programasVisiveisParaMim() {
+      if (![3, 4, 5].includes(nivelUsuarioAtual)) return programasCache;
+      return programasCache.filter(p => !p.setor || p.setor === setorUsuarioAtual);
+    }
+
     function preencherSelectsPainel(container, dadosPauta) {
-      const opcoesPrograma = '<option value="">Selecione...</option>' + programasCache.map(p =>
+      const opcoesPrograma = '<option value="">Selecione...</option>' + programasVisiveisParaMim().map(p =>
         `<option value="${p.id}">${p.nome}</option>`
       ).join('');
       elCampo(container, 'programa').innerHTML = opcoesPrograma;
@@ -816,7 +829,7 @@
 
           <div class="form-pauta-campos">
             <div class="campo">
-              <label>Programa</label>
+              <label>Programa *</label>
               <select data-campo="programa"></select>
             </div>
             <div class="campo">
@@ -1425,6 +1438,11 @@
       if (pautaId !== null) {
         const resp = await fetch('/pautas/' + pautaId);
         dadosPauta = await resp.json();
+        if (!resp.ok) {
+          if (nivelUsuarioAtual >= 3) Bloqueio.liberar(pautaId);
+          alert(dadosPauta.erro || 'Não foi possível abrir esta pauta.');
+          return;
+        }
       }
 
       // Toda pauta nova já nasce com "Informações" e "Sugestão de Imagens"
@@ -1550,6 +1568,7 @@
     async function salvarPauta(idAba) {
       const dados = coletarDadosFormulario(idAba);
       if (!dados.titulo) { alert('Preencha ao menos a retranca da pauta.'); return; }
+      if (!dados.programa_id) { alert('Escolha um Programa antes de salvar — é obrigatório.'); return; }
 
       const aba = abas[idAba];
       let pautaSalva;
@@ -1560,6 +1579,7 @@
           body: JSON.stringify(dados)
         });
         pautaSalva = await resp.json();
+        if (!resp.ok) { alert(pautaSalva.erro || 'Não foi possível salvar a pauta.'); return; }
       } else {
         const resp = await fetch('/pautas', {
           method: 'POST',
@@ -1567,6 +1587,7 @@
           body: JSON.stringify(dados)
         });
         pautaSalva = await resp.json();
+        if (!resp.ok) { alert(pautaSalva.erro || 'Não foi possível criar a pauta.'); return; }
       }
 
       const agendaId = await sincronizarAgenda(pautaSalva);

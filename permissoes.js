@@ -34,4 +34,27 @@ function exigirNivelMinimo(nivelMinimo) {
   };
 }
 
-module.exports = { NIVEL_POR_PERFIL, nivelDoUsuario, exigirNivelMinimo };
+// ---- Restrição por Setor (Jornalismo / Produção / Mídias Sociais) ----
+// Só Níveis 3, 4 e 5 (Repórter, Produtor, Editor-Chefe) são restritos ao
+// próprio Setor — Níveis 1 e 2 continuam vendo tudo (regra já existente,
+// mantida) e Nível 6 (Administrador) tem acesso total, sem restrição de
+// setor nenhuma. Decisão do usuário, ver memória de projeto
+// project_perfil_equipe_permissoes.
+const NIVEIS_RESTRITOS_POR_SETOR = [3, 4, 5];
+
+function precisaFiltrarPorSetor(usuario) {
+  return NIVEIS_RESTRITOS_POR_SETOR.includes(nivelDoUsuario(usuario));
+}
+
+// Busca fresca no banco (não confia em nada guardado no JWT/sessão) — o
+// Setor de alguém pode mudar a qualquer momento sem precisar relogar.
+function setorDoUsuario(usuarioId) {
+  const db = require('./banco');
+  const membro = db.prepare('SELECT setor FROM equipe_agenda WHERE id = ?').get(usuarioId);
+  return membro ? membro.setor : null;
+}
+
+module.exports = {
+  NIVEL_POR_PERFIL, nivelDoUsuario, exigirNivelMinimo,
+  NIVEIS_RESTRITOS_POR_SETOR, precisaFiltrarPorSetor, setorDoUsuario
+};

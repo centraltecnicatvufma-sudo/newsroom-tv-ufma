@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('./banco');
-const { exigirNivelMinimo } = require('./permissoes');
+const { exigirNivelMinimo, precisaFiltrarPorSetor, setorDoUsuario } = require('./permissoes');
 
 // Operador(1) e Técnico(2) têm só "leitura do Rundown aprovado" —
 // qualquer mudança no Espelho (criar/editar/mover/excluir item,
@@ -9,6 +9,31 @@ const { exigirNivelMinimo } = require('./permissoes');
 // continua aberto pra qualquer perfil logado ("visualizar todas as
 // páginas").
 const exigirEdicaoEspelho = exigirNivelMinimo(3);
+
+// Um Espelho pode misturar itens de vários Setores (decisão do usuário)
+// — o Espelho inteiro fica visível pra todo mundo, mas editar um item
+// específico exige que o Setor da Pauta vinculada a ELE bata com o
+// Setor de quem está editando (Repórter/Produtor/Editor-Chefe). Item
+// sem pauta vinculada (manual) não tem Setor — fica liberado.
+function exigirSetorDoItem(req, res, next) {
+  if (!precisaFiltrarPorSetor(req.usuario)) return next();
+
+  let pautaId = req.body?.pauta_id;
+  if (req.params.id) {
+    const bloco = db.prepare('SELECT pauta_id FROM blocos WHERE id = ?').get(req.params.id);
+    if (bloco) pautaId = bloco.pauta_id;
+  }
+  if (!pautaId) return next();
+
+  const pauta = db.prepare('SELECT programa_id FROM pautas WHERE id = ?').get(pautaId);
+  if (!pauta || !pauta.programa_id) return next();
+
+  const setorDoItem = db.prepare('SELECT setor FROM programas_quadros WHERE id = ?').get(pauta.programa_id)?.setor;
+  if (setorDoItem && setorDoItem !== setorDoUsuario(req.usuario.id)) {
+    return res.status(403).json({ erro: 'Este item é de outro Setor' });
+  }
+  next();
+}
 
 // Fluxo de status do espelho, na ordem em que a redação percorre — mesmo
 // vocabulário de status da Pauta (em_producao/em_gravacao/em_edicao/
@@ -127,16 +152,40 @@ router.get('/', (req, res) => {
     b.lauda_status = b.pauta_id ? calcularLaudaStatus(b.pauta_id) : null;
     // Avisa a tela quando a Cabeça da Lauda mudou depois da cópia para o espelho
     b.cabeca_desatualizada = !!(b.pauta_id && cabecaDaPauta(b.pauta_id) !== (b.texto_script || ''));
+    // Setor da pauta vinculada (via Programa dela) — usado no front pra
+    // esconder os botões de editar/excluir de item de outro Setor.
+    // Tempo de Cabeça/Vídeo da pauta vinculada também vêm prontos aqui —
+    // um Espelho pode misturar Setores (decisão do usuário), e a lista
+    // de Pautas que o front usa (GET /pautas) fica filtrada por Setor
+    // pra quem é restrito; sem isso, T.CAB/T.VÍDEO sumiriam pra itens de
+    // outro Setor dentro do mesmo Espelho, mesmo a linha continuando
+    // visível.
+    if (b.pauta_id) {
+      const pauta = db.prepare(`
+        SELECT pq.setor, p.cabeca_duracao_segundos, p.tempo_video_segundos
+        FROM pautas p
+        LEFT JOIN programas_quadros pq ON pq.id = p.programa_id
+        WHERE p.id = ?
+      `).get(b.pauta_id);
+      b.setor = pauta?.setor || null;
+      b.pauta_cabeca_duracao_segundos = pauta?.cabeca_duracao_segundos || 0;
+      b.pauta_tempo_video_segundos = pauta?.tempo_video_segundos || 0;
+    } else {
+      b.setor = null;
+      b.pauta_cabeca_duracao_segundos = 0;
+      b.pauta_tempo_video_segundos = 0;
+    }
   });
 
   res.json(blocos);
 });
 
 // POST /blocos -> cria um novo item dentro de um bloco do espelho
-router.post('/', exigirEdicaoEspelho, (req, res) => {
+router.post('/', exigirEdicaoEspelho, exigirSetorDoItem, (req, res) => {
   const {
     espelho_id, pauta_id, bloco, tipo, titulo,
-    responsavel, reporter, duracao_estimada, duracao_alvo_vt, texto_script
+    responsavel, reporter, duracao_estimada, duracao_alvo_vt, texto_script,
+    indicacao_camera
   } = req.body;
 
   if (!espelho_id) return res.status(400).json({ erro: "Informe o espelho_id" });
@@ -157,13 +206,13 @@ router.post('/', exigirEdicaoEspelho, (req, res) => {
     INSERT INTO blocos (
       espelho_id, pauta_id, bloco, ordem, tipo, titulo,
       responsavel, reporter, duracao_estimada, duracao_alvo_vt,
-      status, editor_atual, texto_script
+      status, editor_atual, texto_script, indicacao_camera
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?)
   `).run(
     espelho_id, pauta_id || null, numeroBloco, novaOrdem, tipo, titulo,
     responsavel || '', reporter || '', duracao_estimada || 0, duracao_alvo_vt || null,
-    STATUS_INICIAL, script
+    STATUS_INICIAL, script, indicacao_camera || ''
   );
 
   const novoBloco = db.prepare('SELECT * FROM blocos WHERE id = ?').get(resultado.lastInsertRowid);
@@ -171,7 +220,7 @@ router.post('/', exigirEdicaoEspelho, (req, res) => {
 });
 
 // PATCH /blocos/:id/mover -> move o item para outra posição, inclusive para outro bloco
-router.patch('/:id/mover', exigirEdicaoEspelho, (req, res) => {
+router.patch('/:id/mover', exigirEdicaoEspelho, exigirSetorDoItem, (req, res) => {
   const id = Number(req.params.id);
   const item = db.prepare('SELECT * FROM blocos WHERE id = ?').get(id);
 
@@ -290,7 +339,7 @@ router.patch('/:id/status', (req, res) => {
 });
 
 // PATCH /blocos/:id/sincronizar-cabeca -> repuxa a Cabeça da Lauda para o texto do teleprompter
-router.patch('/:id/sincronizar-cabeca', exigirEdicaoEspelho, (req, res) => {
+router.patch('/:id/sincronizar-cabeca', exigirEdicaoEspelho, exigirSetorDoItem, (req, res) => {
   const id = Number(req.params.id);
   const bloco = db.prepare('SELECT * FROM blocos WHERE id = ?').get(id);
 
@@ -308,7 +357,7 @@ router.patch('/:id/sincronizar-cabeca', exigirEdicaoEspelho, (req, res) => {
 });
 
 // PATCH /blocos/:id -> edita os campos gerais do item
-router.patch('/:id', exigirEdicaoEspelho, (req, res) => {
+router.patch('/:id', exigirEdicaoEspelho, exigirSetorDoItem, (req, res) => {
   const id = Number(req.params.id);
   const bloco = db.prepare('SELECT * FROM blocos WHERE id = ?').get(id);
 
@@ -318,7 +367,7 @@ router.patch('/:id', exigirEdicaoEspelho, (req, res) => {
 
   const campos = [
     'pauta_id', 'tipo', 'titulo', 'responsavel', 'reporter',
-    'duracao_estimada', 'duracao_alvo_vt', 'texto_script'
+    'duracao_estimada', 'duracao_alvo_vt', 'texto_script', 'indicacao_camera'
   ];
 
   const atualizado = {};
@@ -341,12 +390,13 @@ router.patch('/:id', exigirEdicaoEspelho, (req, res) => {
   db.prepare(`
     UPDATE blocos SET
       pauta_id = ?, tipo = ?, titulo = ?, responsavel = ?, reporter = ?,
-      duracao_estimada = ?, duracao_alvo_vt = ?, texto_script = ?
+      duracao_estimada = ?, duracao_alvo_vt = ?, texto_script = ?, indicacao_camera = ?
     WHERE id = ?
   `).run(
     atualizado.pauta_id || null, atualizado.tipo, atualizado.titulo,
     atualizado.responsavel, atualizado.reporter,
     atualizado.duracao_estimada, atualizado.duracao_alvo_vt, atualizado.texto_script,
+    atualizado.indicacao_camera || '',
     id
   );
 
@@ -355,7 +405,7 @@ router.patch('/:id', exigirEdicaoEspelho, (req, res) => {
 });
 
 // DELETE /blocos/:id -> remove um item do espelho
-router.delete('/:id', exigirEdicaoEspelho, (req, res) => {
+router.delete('/:id', exigirEdicaoEspelho, exigirSetorDoItem, (req, res) => {
   const id = Number(req.params.id);
   const bloco = db.prepare('SELECT espelho_id, bloco FROM blocos WHERE id = ?').get(id);
 

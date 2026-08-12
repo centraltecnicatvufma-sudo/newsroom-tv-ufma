@@ -120,8 +120,8 @@ router.get('/programas/lixeira', (req, res) => {
 });
 
 router.post('/programas', (req, res) => {
-  const { tipo, nome } = req.body;
-  const resultado = db.prepare('INSERT INTO programas_quadros (tipo, nome) VALUES (?, ?)').run(tipo, nome);
+  const { tipo, nome, setor } = req.body;
+  const resultado = db.prepare('INSERT INTO programas_quadros (tipo, nome, setor) VALUES (?, ?, ?)').run(tipo, nome, setor || '');
   const novo = db.prepare('SELECT * FROM programas_quadros WHERE id = ?').get(resultado.lastInsertRowid);
   res.status(201).json(novo);
 });
@@ -136,8 +136,9 @@ router.patch('/programas/:id', (req, res) => {
 
   const tipo = req.body.tipo !== undefined ? req.body.tipo : item.tipo;
   const nome = req.body.nome !== undefined ? req.body.nome : item.nome;
+  const setor = req.body.setor !== undefined ? req.body.setor : item.setor;
 
-  db.prepare('UPDATE programas_quadros SET tipo = ?, nome = ? WHERE id = ?').run(tipo, nome, id);
+  db.prepare('UPDATE programas_quadros SET tipo = ?, nome = ?, setor = ? WHERE id = ?').run(tipo, nome, setor, id);
 
   const atualizado = db.prepare('SELECT * FROM programas_quadros WHERE id = ?').get(id);
   res.json(atualizado);
@@ -192,9 +193,9 @@ router.get('/equipe/lixeira', (req, res) => {
 });
 
 router.post('/equipe', (req, res) => {
-  const { nome, funcao, perfil, email, senha } = req.body;
+  const { nome, funcao, perfil, email, senha, setor } = req.body;
   const senhaHash = senha ? bcrypt.hashSync(senha, 10) : null;
-  const resultado = db.prepare('INSERT INTO equipe_agenda (nome, funcao, perfil, email, senha_hash) VALUES (?, ?, ?, ?, ?)').run(nome, funcao, perfil || '', email || '', senhaHash);
+  const resultado = db.prepare('INSERT INTO equipe_agenda (nome, funcao, perfil, email, senha_hash, setor) VALUES (?, ?, ?, ?, ?, ?)').run(nome, funcao, perfil || '', email || '', senhaHash, setor || '');
   const novo = db.prepare('SELECT * FROM equipe_agenda WHERE id = ?').get(resultado.lastInsertRowid);
   res.status(201).json(omitirSenha(novo));
 });
@@ -210,11 +211,12 @@ router.patch('/equipe/:id', (req, res) => {
   const funcao = req.body.funcao !== undefined ? req.body.funcao : item.funcao;
   const perfil = req.body.perfil !== undefined ? req.body.perfil : item.perfil;
   const email = req.body.email !== undefined ? req.body.email : item.email;
+  const setor = req.body.setor !== undefined ? req.body.setor : item.setor;
   // Campo Senha vem em branco quando quem está editando não quer trocá-la
   // — só regrava o hash se vier alguma coisa de verdade no body.
   const senhaHash = req.body.senha ? bcrypt.hashSync(req.body.senha, 10) : item.senha_hash;
 
-  db.prepare('UPDATE equipe_agenda SET nome = ?, funcao = ?, perfil = ?, email = ?, senha_hash = ? WHERE id = ?').run(nome, funcao, perfil, email, senhaHash, id);
+  db.prepare('UPDATE equipe_agenda SET nome = ?, funcao = ?, perfil = ?, email = ?, senha_hash = ?, setor = ? WHERE id = ?').run(nome, funcao, perfil, email, senhaHash, setor, id);
 
   const atualizado = db.prepare('SELECT * FROM equipe_agenda WHERE id = ?').get(id);
   res.json(omitirSenha(atualizado));

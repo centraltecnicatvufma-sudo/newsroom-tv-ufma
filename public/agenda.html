@@ -182,6 +182,13 @@
       </div>
       <label>Nome</label>
       <input type="text" id="input-nome-programa" placeholder="Nome do programa/quadro">
+      <label>Setor</label>
+      <select id="input-setor-programa">
+        <option value="">Selecione...</option>
+        <option value="Jornalismo">Jornalismo</option>
+        <option value="Produção">Produção</option>
+        <option value="Mídias Sociais">Mídias Sociais</option>
+      </select>
       <div class="botoes-modal">
         <button class="btn-cancelar" id="cancelar-programa">Cancelar</button>
         <button class="btn-confirmar" id="confirmar-programa">Cadastrar</button>
@@ -204,6 +211,13 @@
         <option value="Repórter / Redator">Repórter / Redator (Nível 3)</option>
         <option value="Técnico">Técnico (Nível 2)</option>
         <option value="Operador">Operador (Nível 1)</option>
+      </select>
+      <label>Setor</label>
+      <select id="input-setor-membro">
+        <option value="">Selecione...</option>
+        <option value="Jornalismo">Jornalismo</option>
+        <option value="Produção">Produção</option>
+        <option value="Mídias Sociais">Mídias Sociais</option>
       </select>
       <label>E-mail</label>
       <input type="email" id="input-email-membro" placeholder="nome@ufma.br">
@@ -313,8 +327,9 @@
         <tr>
           <td>${p.nome}</td>
           <td><span class="tag-tipo">${rotuloTipo[p.tipo] || p.tipo}</span></td>
+          <td>${p.setor || '—'}</td>
           <td class="acoes-lista">
-            <button class="btn-ver btn-editar-programa" data-id="${p.id}" data-nome="${p.nome}" data-tipo="${p.tipo}" title="Editar">✏️</button>
+            <button class="btn-ver btn-editar-programa" data-id="${p.id}" data-nome="${p.nome}" data-tipo="${p.tipo}" data-setor="${p.setor || ''}" title="Editar">✏️</button>
             <button class="btn-excluir btn-excluir-programa" data-id="${p.id}" title="Excluir">🗑️</button>
           </td>
         </tr>
@@ -328,7 +343,7 @@
         ${lista.length === 0
           ? '<div class="estado-vazio">Nenhum programa ou quadro cadastrado ainda.</div>'
           : `<table class="tabela-simples">
-              <thead><tr><th>Nome</th><th>Tipo</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Nome</th><th>Tipo</th><th>Setor</th><th>Ações</th></tr></thead>
               <tbody>${corpoTabela}</tbody>
             </table>`}
       `;
@@ -336,6 +351,7 @@
       document.getElementById('btn-add-programa').addEventListener('click', () => {
         idEmEdicaoGlobal = null;
         document.getElementById('input-nome-programa').value = '';
+        document.getElementById('input-setor-programa').value = '';
         document.querySelector('input[name="tipo-programa"][value="programa"]').checked = true;
         document.getElementById('modal-programa').classList.add('aberto');
       });
@@ -344,6 +360,7 @@
         btn.addEventListener('click', () => {
           idEmEdicaoGlobal = Number(btn.dataset.id);
           document.getElementById('input-nome-programa').value = btn.dataset.nome;
+          document.getElementById('input-setor-programa').value = btn.dataset.setor;
           document.querySelector(`input[name="tipo-programa"][value="${btn.dataset.tipo}"]`).checked = true;
           document.getElementById('modal-programa').classList.add('aberto');
         });
@@ -369,18 +386,19 @@
       if (!nome) return;
 
       const tipo = document.querySelector('input[name="tipo-programa"]:checked').value;
+      const setor = document.getElementById('input-setor-programa').value;
 
       if (idEmEdicaoGlobal !== null) {
         await fetch(`/agenda/programas/${idEmEdicaoGlobal}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tipo, nome })
+          body: JSON.stringify({ tipo, nome, setor })
         });
       } else {
         await fetch('/agenda/programas', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tipo, nome })
+          body: JSON.stringify({ tipo, nome, setor })
         });
       }
 
@@ -402,10 +420,11 @@
           <td>${m.nome}</td>
           <td><span class="tag-tipo">${m.funcao}</span></td>
           <td>${m.perfil || '—'}</td>
+          <td>${m.setor || '—'}</td>
           <td>${m.email || '—'}</td>
           <td>${m.tem_senha ? '🔒 Definida' : '⚠️ Sem senha'}</td>
           <td class="acoes-lista">
-            <button class="btn-ver btn-editar-membro" data-id="${m.id}" data-nome="${m.nome}" data-funcao="${m.funcao}" data-perfil="${m.perfil || ''}" data-email="${m.email || ''}" data-tem-senha="${m.tem_senha ? '1' : ''}" title="Editar">✏️</button>
+            <button class="btn-ver btn-editar-membro" data-id="${m.id}" data-nome="${m.nome}" data-funcao="${m.funcao}" data-perfil="${m.perfil || ''}" data-setor="${m.setor || ''}" data-email="${m.email || ''}" data-tem-senha="${m.tem_senha ? '1' : ''}" title="Editar">✏️</button>
             <button class="btn-excluir btn-excluir-membro" data-id="${m.id}" title="Excluir">🗑️</button>
           </td>
         </tr>
@@ -419,7 +438,7 @@
         ${lista.length === 0
           ? '<div class="estado-vazio">Nenhum membro cadastrado ainda.</div>'
           : `<table class="tabela-simples">
-              <thead><tr><th>Nome</th><th>Função</th><th>Perfil</th><th>E-mail</th><th>Senha</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Nome</th><th>Função</th><th>Perfil</th><th>Setor</th><th>E-mail</th><th>Senha</th><th>Ações</th></tr></thead>
               <tbody>${corpoTabela}</tbody>
             </table>`}
       `;
@@ -429,6 +448,7 @@
         document.getElementById('input-nome-membro').value = '';
         document.getElementById('input-funcao-membro').value = '';
         document.getElementById('input-perfil-membro').value = '';
+        document.getElementById('input-setor-membro').value = '';
         document.getElementById('input-email-membro').value = '';
         document.getElementById('input-senha-membro').value = '';
         document.getElementById('rotulo-senha-opcional').textContent = '';
@@ -441,6 +461,7 @@
           document.getElementById('input-nome-membro').value = btn.dataset.nome;
           document.getElementById('input-funcao-membro').value = btn.dataset.funcao;
           document.getElementById('input-perfil-membro').value = btn.dataset.perfil;
+          document.getElementById('input-setor-membro').value = btn.dataset.setor;
           document.getElementById('input-email-membro').value = btn.dataset.email;
           document.getElementById('input-senha-membro').value = '';
           document.getElementById('rotulo-senha-opcional').textContent =
@@ -468,6 +489,7 @@
       const nome = document.getElementById('input-nome-membro').value.trim();
       const funcao = document.getElementById('input-funcao-membro').value.trim();
       const perfil = document.getElementById('input-perfil-membro').value;
+      const setor = document.getElementById('input-setor-membro').value;
       const email = document.getElementById('input-email-membro').value.trim();
       const senha = document.getElementById('input-senha-membro').value;
       if (!nome || !funcao) return;
@@ -476,13 +498,13 @@
         await fetch(`/agenda/equipe/${idEmEdicaoEquipe}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nome, funcao, perfil, email, senha })
+          body: JSON.stringify({ nome, funcao, perfil, setor, email, senha })
         });
       } else {
         await fetch('/agenda/equipe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nome, funcao, perfil, email, senha })
+          body: JSON.stringify({ nome, funcao, perfil, setor, email, senha })
         });
       }
 

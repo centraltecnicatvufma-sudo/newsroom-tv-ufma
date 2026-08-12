@@ -138,7 +138,7 @@ router.patch('/senha', exigirLogin, (req, res) => {
 // mudar, a sessão já aberta reflete a mudança na próxima checagem, sem
 // precisar relogar).
 router.get('/me', exigirLogin, (req, res) => {
-  const membro = db.prepare('SELECT id, nome, perfil, email FROM equipe_agenda WHERE id = ? AND excluido_em IS NULL').get(req.usuario.id);
+  const membro = db.prepare('SELECT id, nome, perfil, email, setor FROM equipe_agenda WHERE id = ? AND excluido_em IS NULL').get(req.usuario.id);
   if (!membro) return res.status(401).json({ erro: 'Usuário não encontrado' });
   // nivel calculado aqui (não guardado na tabela) — fonte única de
   // verdade é permissoes.js, o front nunca duplica esse mapeamento.

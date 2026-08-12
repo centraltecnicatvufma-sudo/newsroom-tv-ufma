@@ -504,6 +504,28 @@
       });
     }
 
+    // Repórter/Produtor/Editor-Chefe só acessam Laudas do próprio Setor
+    // — a garantia real é o backend (GET /pautas/:id volta 403), isso
+    // aqui só troca a tela em branco por uma mensagem clara.
+    function mostrarSetorBloqueado() {
+      // Se um lock de edição chegou a ser reivindicado antes de descobrir
+      // que a pauta é de outro Setor (a checagem de bloqueio roda antes
+      // da de Setor), libera na hora — não faz sentido segurar o lock de
+      // uma pauta que nem dá pra ver.
+      Bloqueio.liberar(Number(pautaId));
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed; inset:0; background:rgba(6,13,24,0.92); z-index:5000; display:flex; align-items:center; justify-content:center; color:#fff; font-family:Arial,sans-serif; text-align:center; padding:20px;';
+      overlay.innerHTML = `
+        <div style="max-width:420px;">
+          <div style="font-size:40px; margin-bottom:12px;">🚫</div>
+          <div style="font-size:16px; margin-bottom:20px;">Esta pauta é de outro Setor — você não tem acesso a ela.</div>
+          <a href="pautas.html" style="display:inline-block; background:#336699; color:#fff; text-decoration:none; padding:10px 18px; border-radius:6px; font-size:13px;">Voltar para Pautas</a>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+    }
+
     window.addEventListener('pagehide', () => Bloqueio.liberar(Number(pautaId)));
 
     const labelStatus = {
@@ -563,6 +585,10 @@
         fetch('/agenda/programas')
       ]);
       const p = await respPauta.json();
+      if (!respPauta.ok) {
+        mostrarSetorBloqueado();
+        throw new Error('sem acesso a esta pauta (Setor diferente)');
+      }
       const programas = await respProgramas.json();
       const nomePrograma = (programas.find(pr => pr.id === p.programa_id) || {}).nome;
 

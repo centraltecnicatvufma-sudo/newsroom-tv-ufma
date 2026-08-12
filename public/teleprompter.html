@@ -27,6 +27,7 @@
   .coluna-textos .item:hover { background: #f4f5f7; }
   .coluna-textos .item.ativo { background: #e7eef6; color: #336699; font-weight: bold; }
   .coluna-textos .item .tipo { font-size: 11px; color: #999; }
+  .coluna-textos .item .camera-badge-tp { font-size: 10px; font-weight: bold; color: #8D0333; margin-top: 2px; }
 
   .area-edicao { flex: 1; display: flex; flex-direction: column; min-width: 0; }
   .painel-editar { height: 35%; border-bottom: 1px solid #eee; padding: 10px; display: flex; flex-direction: column; background: #fff; }
@@ -39,6 +40,11 @@
      mesmo jeito, e só o zoom visual muda de tela pra tela */
   .escala-rolagem { position: absolute; top: 0; left: 50%; transform-origin: top center; }
   .texto-rolagem { width: 100%; padding: 0 40px; font-weight: bold; line-height: 1.5; text-align: center; color: #FFD400; white-space: pre-wrap; text-transform: uppercase; }
+  .indicador-camera-op { position: absolute; top: 0; left: 0; right: 0; z-index: 5; text-align: center; padding: 4px; font-size: 11px; font-weight: bold; letter-spacing: 0.5px; color: #fff; display: none; }
+  .indicador-camera-op.visivel { display: block; }
+  .indicador-camera-op.cam-fechada { background: #444; }
+  .indicador-camera-op.cam-aberta { background: #1f8a3b; }
+  .indicador-camera-op.virada-cam-aberta { background: #c0392b; }
 
   .toolbar-inferior { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #eef1f5; border-top: 1px solid #ddd; }
   .toolbar-inferior button { background: #fff; color: #336699; border: 1px solid #ddd; border-radius: 6px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
@@ -113,6 +119,7 @@
         <textarea id="texto-editar" placeholder="Cole, digite ou selecione um item da lista..."></textarea>
       </div>
       <div class="painel-rolagem" id="painel-rolagem">
+        <div class="indicador-camera-op" id="indicador-camera-op"></div>
         <div class="escala-rolagem" id="escala-rolagem">
           <div class="texto-rolagem" id="texto-rolagem"></div>
         </div>
@@ -168,7 +175,11 @@
         titulo: b.titulo,
         tipo: 'Bloco ' + (b.bloco || 1) + ' · ' + (b.tipo || ''),
         // O texto que vai ao ar é sempre caixa alta, não importa como foi escrito na Lauda
-        texto: (b.texto_script || '').toUpperCase()
+        texto: (b.texto_script || '').toUpperCase(),
+        // Indicação de câmera do Espelho ("CAM FECHADA" / "CAM ABERTA" /
+        // "VIRADA CAM ABERTA") — segue o item pro apresentador saber
+        // quando precisa virar de câmera (ver enviarParaApresentador).
+        indicacaoCamera: b.indicacao_camera || ''
       }));
 
       renderListaTextos();
@@ -195,6 +206,7 @@
             </div>
           </div>
           <div class="tipo">${item.tipo || 'manual'}</div>
+          ${item.indicacaoCamera ? `<div class="camera-badge-tp">[${item.indicacaoCamera}]</div>` : ''}
         `;
         div.addEventListener('click', (e) => {
           if (e.target.classList.contains('btn-loop') || e.target.classList.contains('btn-remover-item') || e.target.classList.contains('btn-renomear')) return;
@@ -255,6 +267,31 @@
       return itemAtivoIndex !== null ? itens[itemAtivoIndex] : null;
     }
 
+    // Indicação de câmera do item ativo — mostrada tanto no monitor do
+    // operador (aqui) quanto, via enviarParaApresentador(), no monitor do
+    // apresentador, pra ele saber a hora certa de virar de câmera.
+    const CAMERA_CLASSE = {
+      'CAM FECHADA': 'cam-fechada',
+      'CAM ABERTA': 'cam-aberta',
+      'VIRADA CAM ABERTA': 'virada-cam-aberta'
+    };
+    const CAMERA_TEXTO = {
+      'CAM FECHADA': '📷 CÂMERA FECHADA',
+      'CAM ABERTA': '📷 CÂMERA ABERTA',
+      'VIRADA CAM ABERTA': '🔁 VIRAR PARA CÂMERA ABERTA'
+    };
+    function atualizarIndicadorCameraOperador() {
+      const el = document.getElementById('indicador-camera-op');
+      const indicacao = (itemAtivo() && itemAtivo().indicacaoCamera) || '';
+      if (!indicacao) {
+        el.className = 'indicador-camera-op';
+        el.textContent = '';
+        return;
+      }
+      el.className = 'indicador-camera-op visivel ' + (CAMERA_CLASSE[indicacao] || '');
+      el.textContent = CAMERA_TEXTO[indicacao] || indicacao;
+    }
+
     function selecionarItem(index) {
       itemAtivoIndex = index;
       const item = itens[index];
@@ -264,6 +301,7 @@
       posicaoY = 0;
       textoEl.style.transform = 'translateY(0px)';
       renderListaTextos();
+      atualizarIndicadorCameraOperador();
       enviarParaApresentador();
     }
 
@@ -387,6 +425,35 @@
       return referenciaAtual().altura;
     }
 
+    // posicaoY é a linha do tempo "mestra", calibrada pro tamanho REAL da
+    // tela do apresentador (por isso funciona perfeito lá — texto nasce
+    // exatamente fora da borda de baixo e sai exatamente pela borda de
+    // cima). O painel de pré-visualização do operador é uma caixa pequena
+    // dentro da própria página, com uma proporção totalmente diferente da
+    // tela cheia do apresentador — escalar essa mesma posicaoY só pela
+    // largura (ver aplicarEscala) faz o texto nascer já parcialmente
+    // DENTRO da caixinha, cortado, em vez de nascer fora dela (bug
+    // relatado: só "aparecia" pro operador depois que já tinha passado da
+    // 1ª linha no apresentador). Esta função pega o PROGRESSO (0 a 1) da
+    // linha do tempo mestra e remapeia pro início/fim reais da caixa do
+    // operador — assim o texto sempre nasce e morre fora da área visível
+    // dela também, não importa a proporção da caixa.
+    function posicaoLocalOperador(posicaoGlobal, alturaTexto) {
+      const painel = document.getElementById('painel-rolagem');
+      const { largura } = referenciaAtual();
+      const fator = painel.clientWidth / largura;
+      if (!fator) return posicaoGlobal;
+
+      const inicioGlobal = posicaoInicial();
+      const fimGlobal = -alturaTexto;
+      const alcanceGlobal = inicioGlobal - fimGlobal;
+      const progresso = alcanceGlobal ? (inicioGlobal - posicaoGlobal) / alcanceGlobal : 0;
+
+      const inicioLocal = painel.clientHeight / fator;
+      const fimLocal = -alturaTexto;
+      return inicioLocal - progresso * (inicioLocal - fimLocal);
+    }
+
     function passoAnimacao() {
       if (!rodando) return;
       const textoEl = document.getElementById('texto-rolagem');
@@ -408,7 +475,7 @@
         else { posicaoY = posicaoInicial(); rodando = false; }
       }
 
-      textoEl.style.transform = 'translateY(' + posicaoY + 'px)';
+      textoEl.style.transform = 'translateY(' + posicaoLocalOperador(posicaoY, alturaTexto) + 'px)';
       enviarParaApresentador();
       acompanharItemAtivoDuranteLeitura();
 
@@ -502,7 +569,8 @@
       if (!rodando && posicaoY === 0) {
         prepararTextoParaRolagem();
         posicaoY = posicaoInicial();
-        document.getElementById('texto-rolagem').style.transform = 'translateY(' + posicaoY + 'px)';
+        const textoEl = document.getElementById('texto-rolagem');
+        textoEl.style.transform = 'translateY(' + posicaoLocalOperador(posicaoY, textoEl.scrollHeight) + 'px)';
       }
       play();
     });
@@ -544,6 +612,12 @@
       } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey) && !digitando) {
         e.preventDefault();
         desfazerRemocao();
+      } else if (e.key === '.' && !digitando) {
+        fontSize = Math.min(fontSize + 4, 120);
+        atualizarFonteNaTela();
+      } else if (e.key === ',' && !digitando) {
+        fontSize = Math.max(fontSize - 4, 20);
+        atualizarFonteNaTela();
       } else if (e.key === ' ' && !digitando) {
         e.preventDefault();
         if (rodando) {
@@ -552,7 +626,8 @@
           if (posicaoY === 0) {
             prepararTextoParaRolagem();
             posicaoY = posicaoInicial();
-            document.getElementById('texto-rolagem').style.transform = 'translateY(' + posicaoY + 'px)';
+            const textoEl = document.getElementById('texto-rolagem');
+            textoEl.style.transform = 'translateY(' + posicaoLocalOperador(posicaoY, textoEl.scrollHeight) + 'px)';
           }
           play();
         }
@@ -569,7 +644,8 @@
         texto: document.getElementById('texto-rolagem').textContent,
         posicaoY: posicaoY,
         fontSize: fontSize,
-        referenciaLargura: referenciaAtual().largura
+        referenciaLargura: referenciaAtual().largura,
+        indicacaoCamera: (itemAtivo() && itemAtivo().indicacaoCamera) || ''
       });
     }
 
@@ -644,15 +720,47 @@
               font-weight:bold; text-transform:uppercase; white-space:pre-wrap;
               line-height:1.5;
             }
+            /* Aviso de câmera do apresentador — fixo (fora da rolagem),
+               precisa ficar visível o tempo todo pra ele saber a hora de
+               virar de câmera, por isso não escala/mexe junto com o texto.
+               Espelhado (scaleX(-1)) igual ao texto: a tela do apresentador
+               é lida através do vidro/espelho do teleprompter, então tudo
+               que aparece nela precisa estar invertido pra ler certo. */
+            #indicador-camera {
+              position:absolute; top:0; left:0; right:0; z-index:5;
+              text-align:center; padding:14px; box-sizing:border-box;
+              font-family:Arial, sans-serif; font-weight:bold; font-size:28px;
+              letter-spacing:1px; color:#fff; display:none;
+              transform: scaleX(-1);
+            }
+            #indicador-camera.visivel { display:block; }
+            #indicador-camera.cam-fechada { background:rgba(68,68,68,0.9); }
+            #indicador-camera.cam-aberta { background:rgba(31,138,59,0.9); }
+            #indicador-camera.virada-cam-aberta { background:rgba(192,57,43,0.92); }
           </style>
         </head>
         <body>
-          <div id="palco"><div id="escala"><div id="texto"></div></div></div>
+          <div id="palco">
+            <div id="indicador-camera"></div>
+            <div id="escala"><div id="texto"></div></div>
+          </div>
           <script>
             const canal = new BroadcastChannel('teleprompter-tv-ufma');
             const palco = document.getElementById('palco');
             const escala = document.getElementById('escala');
             const textoEl = document.getElementById('texto');
+            const indicadorEl = document.getElementById('indicador-camera');
+
+            const CAMERA_CLASSE = {
+              'CAM FECHADA': 'cam-fechada',
+              'CAM ABERTA': 'cam-aberta',
+              'VIRADA CAM ABERTA': 'virada-cam-aberta'
+            };
+            const CAMERA_TEXTO = {
+              'CAM FECHADA': '📷 CÂMERA FECHADA',
+              'CAM ABERTA': '📷 CÂMERA ABERTA',
+              'VIRADA CAM ABERTA': '🔁 VIRAR PARA CÂMERA ABERTA'
+            };
 
             // Mesma largura de referência recebida do operador — garante que
             // a quebra de linha aqui seja idêntica à da tela do operador
@@ -689,6 +797,14 @@
               textoEl.textContent = d.texto || '';
               textoEl.style.fontSize = d.fontSize + 'px';
               textoEl.style.transform = 'scaleX(-1) translateY(' + d.posicaoY + 'px)';
+
+              if (!d.indicacaoCamera) {
+                indicadorEl.className = '';
+                indicadorEl.textContent = '';
+              } else {
+                indicadorEl.className = 'visivel ' + (CAMERA_CLASSE[d.indicacaoCamera] || '');
+                indicadorEl.textContent = CAMERA_TEXTO[d.indicacaoCamera] || d.indicacaoCamera;
+              }
             };
           <\/script>
         </body>

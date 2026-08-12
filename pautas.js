@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('./banco');
-const { nivelDoUsuario, exigirNivelMinimo } = require('./permissoes');
+const { nivelDoUsuario, exigirNivelMinimo, precisaFiltrarPorSetor, setorDoUsuario } = require('./permissoes');
 
 function buscarFontes(pautaId) {
   return db.prepare('SELECT * FROM pauta_fontes WHERE pauta_id = ?').all(pautaId);
@@ -44,9 +44,21 @@ const SELECT_PAUTAS = `
       SELECT SUM(duracao_segundos) FROM materia_itens WHERE materia_itens.pauta_id = pautas.id
     ), 0)) AS duracao_estimada_segundos,
     (SELECT COUNT(*) FROM materia_itens WHERE materia_itens.pauta_id = pautas.id) AS materia_itens_qtd,
-    (SELECT usuario_nome FROM pautas_bloqueios WHERE pauta_id = pautas.id LIMIT 1) AS bloqueado_por
+    (SELECT usuario_nome FROM pautas_bloqueios WHERE pauta_id = pautas.id LIMIT 1) AS bloqueado_por,
+    (SELECT setor FROM programas_quadros WHERE id = pautas.programa_id) AS setor
   FROM pautas
 `;
+
+// Uma pauta sem Programa vinculado não tem Setor nenhum — fica visível
+// pra todo mundo (nunca escondida por engano). Repórter(3)/Produtor(4)/
+// Editor-Chefe(5) só enxergam pautas do próprio Setor; Administrador(6)
+// e Operador/Técnico(1-2) continuam vendo tudo (regra já existente,
+// mantida — ver permissoes.js).
+function podeAcessarSetorDaPauta(usuario, pauta) {
+  if (!precisaFiltrarPorSetor(usuario)) return true;
+  if (!pauta.setor) return true;
+  return pauta.setor === setorDoUsuario(usuario.id);
+}
 
 // Checklist de ativos multimídia: 10 colunas (necessario+pronto x 5 tipos,
 // ver banco.js). Gerado por código pra não repetir os 5 nomes 4 vezes
@@ -209,6 +221,19 @@ router.get('/', (req, res) => {
   if (data_fato) { query += ' AND data_fato = ?'; params.push(data_fato); }
   if (busca) { query += ' AND titulo LIKE ?'; params.push('%' + busca + '%'); }
 
+  // Repórter/Produtor/Editor-Chefe só veem pautas do próprio Setor
+  // (Setor vem do Programa vinculado — pauta sem Programa fica visível
+  // pra todo mundo). Administrador e Operador/Técnico continuam vendo
+  // tudo — ver permissoes.js.
+  if (precisaFiltrarPorSetor(req.usuario)) {
+    const meuSetor = setorDoUsuario(req.usuario.id);
+    query += ` AND (
+      (SELECT setor FROM programas_quadros WHERE id = pautas.programa_id) IS NULL
+      OR (SELECT setor FROM programas_quadros WHERE id = pautas.programa_id) = ?
+    )`;
+    params.push(meuSetor);
+  }
+
   query += ' ORDER BY id DESC';
 
   const lista = db.prepare(query).all(...params);
@@ -220,6 +245,9 @@ router.get('/:id', (req, res) => {
   const id = Number(req.params.id);
   const pauta = db.prepare(SELECT_PAUTAS + ' WHERE pautas.id = ?').get(id);
   if (!pauta) return res.status(404).json({ erro: 'Pauta não encontrada' });
+  if (!podeAcessarSetorDaPauta(req.usuario, pauta)) {
+    return res.status(403).json({ erro: 'Esta pauta é de outro Setor' });
+  }
   pauta.fontes = buscarFontes(id);
   pauta.textos_extra = buscarTextosExtra(id);
   res.json(pauta);
@@ -237,6 +265,14 @@ router.post('/', exigirNivelMinimo(3), (req, res) => {
   } = req.body;
 
   if (!titulo) return res.status(400).json({ erro: 'Retranca é obrigatória' });
+  if (!programa_id) return res.status(400).json({ erro: 'Programa é obrigatório', campo: 'programa_id' });
+
+  if (precisaFiltrarPorSetor(req.usuario)) {
+    const programa = db.prepare('SELECT setor FROM programas_quadros WHERE id = ?').get(programa_id);
+    if (programa && programa.setor && programa.setor !== setorDoUsuario(req.usuario.id)) {
+      return res.status(403).json({ erro: 'Você só pode criar pautas de Programas do seu próprio Setor' });
+    }
+  }
 
   const colunasAtivos = camposAtivos();
   const valoresAtivos = colunasAtivos.map(c => req.body[c] ? 1 : 0);
@@ -340,6 +376,27 @@ router.patch('/:id', (req, res) => {
           ? 'Técnico só pode mudar o status de 🟣 Gravado/Em Edição para 🟠 Aguardando Revisão, na Edição de Vídeo'
           : 'Seu perfil não pode editar pautas'
       });
+    }
+  }
+
+  // Repórter/Produtor/Editor-Chefe só editam pautas do próprio Setor
+  // (e não podem "mover" uma pauta pra um Programa de outro Setor).
+  // Administrador e Operador/Técnico não passam por aqui (Operador/
+  // Técnico já foram barrados ou liberados acima; Administrador nunca é
+  // restrito por Setor).
+  if (precisaFiltrarPorSetor(req.usuario)) {
+    const meuSetor = setorDoUsuario(req.usuario.id);
+    const setorAtual = item.programa_id
+      ? db.prepare('SELECT setor FROM programas_quadros WHERE id = ?').get(item.programa_id)?.setor
+      : null;
+    if (setorAtual && setorAtual !== meuSetor) {
+      return res.status(403).json({ erro: 'Esta pauta é de outro Setor' });
+    }
+    if (req.body.programa_id !== undefined && Number(req.body.programa_id) !== item.programa_id) {
+      const novoSetor = db.prepare('SELECT setor FROM programas_quadros WHERE id = ?').get(req.body.programa_id)?.setor;
+      if (novoSetor && novoSetor !== meuSetor) {
+        return res.status(403).json({ erro: 'Você não pode mover esta pauta para um Programa de outro Setor' });
+      }
     }
   }
 
@@ -501,8 +558,15 @@ router.delete('/:id/bloquear/forcar', (req, res) => {
 // restaurada, o conteúdo volta junto.
 router.delete('/:id', exigirNivelMinimo(3), (req, res) => {
   const id = Number(req.params.id);
-  const pauta = db.prepare('SELECT agenda_id FROM pautas WHERE id = ? AND excluido_em IS NULL').get(id);
+  const pauta = db.prepare('SELECT agenda_id, programa_id FROM pautas WHERE id = ? AND excluido_em IS NULL').get(id);
   if (!pauta) return res.status(404).json({ erro: 'Pauta não encontrada' });
+
+  if (precisaFiltrarPorSetor(req.usuario) && pauta.programa_id) {
+    const setorAtual = db.prepare('SELECT setor FROM programas_quadros WHERE id = ?').get(pauta.programa_id)?.setor;
+    if (setorAtual && setorAtual !== setorDoUsuario(req.usuario.id)) {
+      return res.status(403).json({ erro: 'Esta pauta é de outro Setor' });
+    }
+  }
 
   db.prepare('UPDATE pautas SET excluido_em = ? WHERE id = ?').run(new Date().toISOString(), id);
 

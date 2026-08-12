@@ -1,11 +1,39 @@
 const express = require('express');
 const router = express.Router();
 const db = require('./banco');
-const { exigirNivelMinimo } = require('./permissoes');
+const { exigirNivelMinimo, precisaFiltrarPorSetor, setorDoUsuario } = require('./permissoes');
 
 // Mesma regra do Espelho (ver blocos.js): Operador(1) e Técnico(2) só têm
 // leitura — qualquer mudança na Lauda exige pelo menos Repórter/Redator(3).
 const exigirEdicaoLauda = exigirNivelMinimo(3);
+
+// Mesma regra de Setor do Espelho (ver blocos.js): Repórter/Produtor/
+// Editor-Chefe só editam a Lauda de uma pauta do próprio Setor. `tabela`
+// é sempre uma string fixa escrita no código (materia_itens/materia_gcs),
+// nunca vem de fora — interpolar ela na query é seguro.
+function exigirSetorDaLauda(tabela) {
+  return (req, res, next) => {
+    if (!precisaFiltrarPorSetor(req.usuario)) return next();
+
+    let pautaId = req.body?.pauta_id;
+    if (req.params.id) {
+      const item = db.prepare(`SELECT pauta_id FROM ${tabela} WHERE id = ?`).get(req.params.id);
+      if (item) pautaId = item.pauta_id;
+    }
+    if (!pautaId) return next();
+
+    const pauta = db.prepare('SELECT programa_id FROM pautas WHERE id = ?').get(pautaId);
+    if (!pauta || !pauta.programa_id) return next();
+
+    const setor = db.prepare('SELECT setor FROM programas_quadros WHERE id = ?').get(pauta.programa_id)?.setor;
+    if (setor && setor !== setorDoUsuario(req.usuario.id)) {
+      return res.status(403).json({ erro: 'Este conteúdo é de outro Setor' });
+    }
+    next();
+  };
+}
+const exigirSetorItem = exigirSetorDaLauda('materia_itens');
+const exigirSetorGc = exigirSetorDaLauda('materia_gcs');
 
 // GET /materia?pauta_id=1 -> lista os itens da matéria de uma pauta, na ordem
 router.get('/', (req, res) => {
@@ -25,7 +53,7 @@ router.get('/', (req, res) => {
 // POST /materia -> adiciona um novo item (OFF, SONORA, PASSAGEM, ARTE ou
 // SOBE_SOM) à matéria. duracao_automatica começa ligada por padrão (o tempo
 // é estimado a partir do texto até o repórter desligar manualmente).
-router.post('/', exigirEdicaoLauda, (req, res) => {
+router.post('/', exigirEdicaoLauda, exigirSetorItem, (req, res) => {
   const { pauta_id, tipo, texto } = req.body;
 
   const ultimo = db.prepare(
@@ -43,7 +71,7 @@ router.post('/', exigirEdicaoLauda, (req, res) => {
 });
 
 // PATCH /materia/:id -> edita o texto, as indicações ao editor e/ou a duração de um item
-router.patch('/:id', exigirEdicaoLauda, (req, res) => {
+router.patch('/:id', exigirEdicaoLauda, exigirSetorItem, (req, res) => {
   const id = Number(req.params.id);
   const item = db.prepare('SELECT * FROM materia_itens WHERE id = ?').get(id);
 
@@ -64,7 +92,7 @@ router.patch('/:id', exigirEdicaoLauda, (req, res) => {
 });
 
 // DELETE /materia/:id -> remove um item
-router.delete('/:id', exigirEdicaoLauda, (req, res) => {
+router.delete('/:id', exigirEdicaoLauda, exigirSetorItem, (req, res) => {
   const id = Number(req.params.id);
   const resultado = db.prepare('DELETE FROM materia_itens WHERE id = ?').run(id);
 
@@ -76,7 +104,7 @@ router.delete('/:id', exigirEdicaoLauda, (req, res) => {
 });
 
 // PATCH /materia/:id/ordem -> move um item para uma nova posição, reorganizando os outros
-router.patch('/:id/ordem', exigirEdicaoLauda, (req, res) => {
+router.patch('/:id/ordem', exigirEdicaoLauda, exigirSetorItem, (req, res) => {
   const id = Number(req.params.id);
   const { nova_ordem } = req.body;
 
@@ -126,7 +154,7 @@ router.get('/gcs', (req, res) => {
 });
 
 // POST /materia/gcs -> adiciona um GC novo
-router.post('/gcs', exigirEdicaoLauda, (req, res) => {
+router.post('/gcs', exigirEdicaoLauda, exigirSetorGc, (req, res) => {
   const { pauta_id, nome, cargo, tempo_entrada } = req.body;
 
   const resultado = db.prepare(`
@@ -139,7 +167,7 @@ router.post('/gcs', exigirEdicaoLauda, (req, res) => {
 });
 
 // PATCH /materia/gcs/:id -> edita um GC
-router.patch('/gcs/:id', exigirEdicaoLauda, (req, res) => {
+router.patch('/gcs/:id', exigirEdicaoLauda, exigirSetorGc, (req, res) => {
   const id = Number(req.params.id);
   const item = db.prepare('SELECT * FROM materia_gcs WHERE id = ?').get(id);
   if (!item) return res.status(404).json({ erro: "GC não encontrado" });
@@ -155,7 +183,7 @@ router.patch('/gcs/:id', exigirEdicaoLauda, (req, res) => {
 });
 
 // DELETE /materia/gcs/:id -> remove um GC
-router.delete('/gcs/:id', exigirEdicaoLauda, (req, res) => {
+router.delete('/gcs/:id', exigirEdicaoLauda, exigirSetorGc, (req, res) => {
   const id = Number(req.params.id);
   const resultado = db.prepare('DELETE FROM materia_gcs WHERE id = ?').run(id);
 

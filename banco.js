@@ -250,6 +250,12 @@ try {
   // Coluna já existe — tudo bem, ignora o erro
 }
 
+// Indicação de câmera (Fechada / Aberta / Virada pra Aberta) — aparece
+// na impressão do Espelho e no Teleprompter, pra avisar o apresentador
+// quando precisa virar de câmera. Texto livre com valores fixos vindos
+// do front (não um enum travado no banco), vazio = sem indicação.
+try { db.exec(`ALTER TABLE blocos ADD COLUMN indicacao_camera TEXT`); } catch (e) {}
+
 // Item sem bloco definido pertence ao Bloco 1
 db.exec(`UPDATE blocos SET bloco = 1 WHERE bloco IS NULL OR bloco < 1`);
 
@@ -291,6 +297,13 @@ db.exec(`
   )
 `);
 
+// Setor (Jornalismo / Produção / Mídias Sociais) — é através dele que
+// Equipe e Programas & Quadros se relacionam pra restrição de acesso por
+// setor (ver permissoes.js): o Setor de uma Pauta vem do Programa dela
+// (pautas.programa_id -> programas_quadros.setor), nunca é um campo
+// direto da pauta.
+try { db.exec('ALTER TABLE programas_quadros ADD COLUMN setor TEXT'); } catch (e) {}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS equipe_agenda (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -312,6 +325,12 @@ try { db.exec('ALTER TABLE equipe_agenda ADD COLUMN email TEXT'); } catch (e) {}
 // pra quem ainda não tem senha definida — essa pessoa simplesmente não
 // consegue logar até um Nível 6 cadastrar uma senha pra ela.
 try { db.exec('ALTER TABLE equipe_agenda ADD COLUMN senha_hash TEXT'); } catch (e) {}
+
+// Setor do membro — usado junto com o de Programas & Quadros pra
+// restringir acesso por setor (Níveis 3, 4 e 5 só veem/editam produções
+// do próprio Setor; Níveis 1, 2 e 6 continuam vendo tudo, ver
+// permissoes.js).
+try { db.exec('ALTER TABLE equipe_agenda ADD COLUMN setor TEXT'); } catch (e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS agendamentos (
