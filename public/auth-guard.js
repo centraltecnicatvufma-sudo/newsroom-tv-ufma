@@ -118,6 +118,18 @@
     bloco.querySelector('.nr-usuario-perfil').textContent = usuario.perfil || 'Perfil não definido';
     sidebar.appendChild(bloco);
 
+    // Link de Histórico só aparece na sidebar pra quem é Administrador/TI
+    // — não é a proteção de verdade (essa é a checagem de perfil dentro
+    // de GET /historico-acoes, no backend), só evita mostrar um link que
+    // ia dar 403 pra quase todo mundo.
+    if (usuario.perfil === 'Administrador / TI' && !sidebar.querySelector('a[href="historico.html"]')) {
+      const linkHistorico = document.createElement('a');
+      linkHistorico.href = 'historico.html';
+      linkHistorico.textContent = '📜 Histórico';
+      if (location.pathname.endsWith('historico.html')) linkHistorico.classList.add('nr-ativo');
+      sidebar.insertBefore(linkHistorico, bloco);
+    }
+
     injetarModalTrocarSenha();
     bloco.querySelector('#nr-btn-trocar-senha').addEventListener('click', () => {
       document.getElementById('nr-modal-trocar-senha').classList.add('aberto');

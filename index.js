@@ -16,6 +16,8 @@ const escalaRouter = require('./escala');
 const chatRouter = require('./chat');
 const authRouter = require('./auth');
 const { exigirLogin } = authRouter;
+const historicoRouter = require('./historico');
+const { registrarAcoes } = historicoRouter;
 const { criarServidorTempoReal } = require('./tempo_real');
 
 app.use(express.json());
@@ -34,6 +36,8 @@ app.set('tempoReal', criarServidorTempoReal(servidor));
 // não busca dado nenhum sem estar logado (ver public/auth-guard.js).
 app.use('/auth', authRouter);
 app.use(exigirLogin);
+app.use(registrarAcoes);
+app.use('/historico-acoes', historicoRouter);
 
 app.use('/pautas', pautasRouter);
 app.use('/espelhos', espelhosRouter);

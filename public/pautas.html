@@ -29,6 +29,7 @@
     table.lista-pautas th { background: #eef1f5; text-align: left; padding: 10px 12px; font-size: 12px; color: #5b6472; text-transform: uppercase; }
     table.lista-pautas td { padding: 10px 12px; font-size: 13px; border-top: 1px solid #f0f0f0; vertical-align: top; }
     .tag-equipe { display: inline-block; background: #eef1f5; border-radius: 4px; padding: 2px 8px; font-size: 11px; margin-right: 4px; }
+    .selo-bloqueio { display: block; margin-top: 2px; font-size: 11px; color: #B85C38; font-weight: normal; }
 
     .status-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; color: #fff; font-weight: bold; white-space: nowrap; }
     .status-em_producao { background: #C98A1F; }
@@ -353,7 +354,20 @@
   </div>
 
   <script src="chat-painel.js"></script>
+  <script src="bloqueio.js"></script>
   <script>
+    // Libera todos os bloqueios das abas de pauta abertas quando a tela é
+    // fechada/recarregada — mais rápido que esperar a conexão WebSocket
+    // cair sozinha (que é a rede de segurança real, ver bloqueio.js).
+    window.addEventListener('pagehide', () => {
+      Object.values(abas || {}).forEach(a => { if (a.pautaId !== null) Bloqueio.liberar(a.pautaId); });
+    });
+
+    // Atualiza a lista em tempo real quando alguém começa/termina de
+    // editar uma pauta (em qualquer aba do sistema, inclusive na Lauda)
+    // — mantém o selo 🔒 sempre correto sem precisar recarregar a página.
+    Bloqueio.aoMudar(() => { if (abaAtivaId === 'capa') carregarPautas(); });
+
     // ---- Faixa de Breaking News (mesmo alerta em todas as telas) ----
     // Disparado a partir do Mapa de Produções; aqui só exibe e permite
     // encerrar, propagado na hora via WebSocket (tempo_real.js).
@@ -609,7 +623,7 @@
             ${pautasCache.map(p => `
               <tr>
                 <td>#P-${p.id}</td>
-                <td>${p.titulo}</td>
+                <td>${p.titulo}${p.bloqueado_por ? `<span class="selo-bloqueio" title="Sendo editada agora">🔒 ${p.bloqueado_por}</span>` : ''}</td>
                 <td>${nomePrograma(p.programa_id)}</td>
                 <td>${p.data_fato ? p.data_fato.split('-').reverse().join('/') : '—'} ${p.hora_fato ? '· ' + p.hora_fato : ''}</td>
                 <td data-deadline-de="${p.id}">${htmlContadorDeadline(p.deadline)}</td>
@@ -633,6 +647,9 @@
                     </div>
                   </span>
                   <button class="btn-excluir" data-id="${p.id}" title="Excluir">🗑️</button>
+                  ${p.bloqueado_por && window.usuarioLogado?.perfil === 'Administrador / TI'
+                    ? `<button class="btn-forcar-destravamento" data-id="${p.id}" title="Forçar destravamento (só Administrador)">🔓</button>`
+                    : ''}
                 </td>
               </tr>
             `).join('')}
@@ -678,6 +695,13 @@
       });
       conteudo.querySelectorAll('.btn-excluir').forEach(btn => {
         btn.addEventListener('click', () => excluirPauta(Number(btn.dataset.id)));
+      });
+      conteudo.querySelectorAll('.btn-forcar-destravamento').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Forçar o destravamento desta pauta? A pessoa que está editando pode perder o que ainda não salvou.')) return;
+          await Bloqueio.forcarDestravamento(Number(btn.dataset.id));
+          carregarPautas();
+        });
       });
     }
 
@@ -1357,6 +1381,15 @@
       if (pautaId !== null) {
         const existente = Object.values(abas).find(a => a.pautaId === pautaId);
         if (existente) { mudarAbaAtiva(existente.id); return; }
+
+        // Pauta e Lauda compartilham o mesmo bloqueio (ver bloqueio.js) —
+        // se outra pessoa está com essa retranca aberta em qualquer uma
+        // das duas telas, não abre pra edição aqui também.
+        const resultadoBloqueio = await Bloqueio.tentarBloquear(pautaId);
+        if (!resultadoBloqueio.ok) {
+          alert(`🔒 Esta pauta está sendo editada por ${resultadoBloqueio.bloqueadoPor} agora. Tente novamente quando ela for fechada.`);
+          return;
+        }
       }
 
       const idAba = 'aba' + (++contadorAbas);
@@ -1528,6 +1561,8 @@
     }
 
     function fecharAba(idAba) {
+      const aba = abas[idAba];
+      if (aba && aba.pautaId !== null) Bloqueio.liberar(aba.pautaId);
       document.getElementById('painel-' + idAba)?.remove();
       delete abas[idAba];
       if (abaAtivaId === idAba) {

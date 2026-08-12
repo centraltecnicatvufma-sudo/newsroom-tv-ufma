@@ -42,7 +42,8 @@ const SELECT_PAUTAS = `
     (COALESCE(pautas.cabeca_duracao_segundos, 0) + COALESCE((
       SELECT SUM(duracao_segundos) FROM materia_itens WHERE materia_itens.pauta_id = pautas.id
     ), 0)) AS duracao_estimada_segundos,
-    (SELECT COUNT(*) FROM materia_itens WHERE materia_itens.pauta_id = pautas.id) AS materia_itens_qtd
+    (SELECT COUNT(*) FROM materia_itens WHERE materia_itens.pauta_id = pautas.id) AS materia_itens_qtd,
+    (SELECT usuario_nome FROM pautas_bloqueios WHERE pauta_id = pautas.id LIMIT 1) AS bloqueado_por
   FROM pautas
 `;
 
@@ -401,6 +402,70 @@ router.patch('/:id', (req, res) => {
   item_atualizado.textos_extra = buscarTextosExtra(id);
   avisarMudanca(req);
   res.json(item_atualizado);
+});
+
+// ---- Bloqueio cooperativo de edição (Pauta e/ou Lauda) ----
+// Ver banco.js (pautas_bloqueios) e tempo_real.js pra como a liberação
+// automática por queda de conexão funciona. Pedido do usuário: enquanto
+// uma Pauta está aberta pra edição OU a Lauda dela está aberta, mais
+// ninguém pode mexer em nada relacionado até fechar.
+
+// POST /pautas/:id/bloquear -> tenta reservar a edição pra essa
+// conexão. 200 se conseguiu (ou já era dono), 409 se outra pessoa já
+// está editando.
+router.post('/:id/bloquear', (req, res) => {
+  const id = Number(req.params.id);
+  const { conexaoId } = req.body;
+  if (!conexaoId) return res.status(400).json({ erro: 'conexaoId é obrigatório' });
+
+  const existentes = db.prepare(
+    'SELECT DISTINCT usuario_id, usuario_nome FROM pautas_bloqueios WHERE pauta_id = ?'
+  ).all(id);
+
+  const deOutraPessoa = existentes.find(b => b.usuario_id !== req.usuario.id);
+  if (deOutraPessoa) {
+    return res.status(409).json({ erro: 'Já está sendo editada', bloqueado_por: deOutraPessoa.usuario_nome });
+  }
+
+  db.prepare(`
+    INSERT INTO pautas_bloqueios (pauta_id, conexao_id, usuario_id, usuario_nome, bloqueado_em)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(pauta_id, conexao_id) DO UPDATE SET bloqueado_em = excluded.bloqueado_em
+  `).run(id, conexaoId, req.usuario.id, req.usuario.nome, new Date().toISOString());
+
+  req.app.get('tempoReal')?.broadcast({ tipo: 'bloqueio', pauta_id: id, bloqueado: true, bloqueado_por: req.usuario.nome });
+  res.json({ ok: true });
+});
+
+// DELETE /pautas/:id/bloquear -> libera só a visão desta conexão (ex.
+// fechou a aba da Pauta, mas a Lauda dela pode continuar aberta noutra
+// conexão do mesmo usuário — só broadcast "destravado" quando a
+// última visão sair).
+router.delete('/:id/bloquear', (req, res) => {
+  const id = Number(req.params.id);
+  const conexaoId = req.body?.conexaoId || req.query.conexaoId;
+  if (conexaoId) {
+    db.prepare('DELETE FROM pautas_bloqueios WHERE pauta_id = ? AND conexao_id = ?').run(id, conexaoId);
+  }
+  const restante = db.prepare('SELECT COUNT(*) AS c FROM pautas_bloqueios WHERE pauta_id = ?').get(id).c;
+  if (restante === 0) {
+    req.app.get('tempoReal')?.broadcast({ tipo: 'bloqueio', pauta_id: id, bloqueado: false });
+  }
+  res.status(204).send();
+});
+
+// DELETE /pautas/:id/bloquear/forcar -> só Administrador/TI, destrava
+// mesmo com outra pessoa ainda com a aba aberta (rede de segurança pra
+// bloqueio preso). Botão só aparece pra esse perfil no front, mas a
+// checagem de verdade é aqui.
+router.delete('/:id/bloquear/forcar', (req, res) => {
+  if (req.usuario.perfil !== 'Administrador / TI') {
+    return res.status(403).json({ erro: 'Só um Administrador pode forçar o destravamento' });
+  }
+  const id = Number(req.params.id);
+  db.prepare('DELETE FROM pautas_bloqueios WHERE pauta_id = ?').run(id);
+  req.app.get('tempoReal')?.broadcast({ tipo: 'bloqueio', pauta_id: id, bloqueado: false });
+  res.status(204).send();
 });
 
 // DELETE /pautas/:id -> manda pra lixeira (soft delete). Os registros

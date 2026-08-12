@@ -160,6 +160,47 @@ db.exec(`
   )
 `);
 
+// Bloqueio cooperativo de edição — enquanto alguém está com a Pauta
+// aberta (aba em pautas.html) OU com a Lauda dela aberta (materia.html),
+// mais ninguém pode editar a mesma coisa até liberar. Uma linha por
+// "visão" aberta (aba de Pauta, tela de Lauda), amarrada à conexão
+// WebSocket que a criou (ver tempo_real.js/conexaoId) — não um lock
+// único por pauta — assim a MESMA pessoa pode ter a Pauta e a Lauda
+// abertas ao mesmo tempo sem se autobloquear, e cada visão libera
+// independente quando fecha (ou quando a conexão cai, sem precisar de
+// nenhuma ação explícita — ver tempo_real.js). PRIMARY KEY composta
+// evita duas linhas pra mesma visão se o cliente tentar bloquear de
+// novo (ex. reconexão).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS pautas_bloqueios (
+    pauta_id INTEGER NOT NULL,
+    conexao_id TEXT NOT NULL,
+    usuario_id INTEGER,
+    usuario_nome TEXT,
+    bloqueado_em TEXT,
+    PRIMARY KEY (pauta_id, conexao_id)
+  )
+`);
+
+// Histórico de ações — quem mexeu no quê, guardado automaticamente por
+// um middleware genérico (ver historico.js) em cima de toda requisição
+// que muda dado (POST/PATCH/DELETE), não linha por linha em cada rota.
+// Sem corpo da requisição salvo aqui de propósito (evita guardar senha
+// ou texto grande de lauda sem necessidade) — só o "quem fez o quê e
+// quando", o suficiente pra auditoria. Acesso só pra Administrador/TI.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS historico_acoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER,
+    usuario_nome TEXT,
+    metodo TEXT,
+    rota TEXT,
+    descricao TEXT,
+    status_http INTEGER,
+    criado_em TEXT
+  )
+`);
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS materia_gcs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

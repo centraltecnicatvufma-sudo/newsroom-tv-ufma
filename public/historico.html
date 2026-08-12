@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Histórico — HORUS Newsroom</title>
+  <script src="auth-guard.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+
+    .topo { background: #336699; color: #fff; padding: 14px 20px; }
+    .topo h1 { font-size: 18px; margin: 0 0 4px; }
+    .topo .sub { font-size: 12px; opacity: 0.9; }
+
+    .filtros { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; padding: 14px 20px; background: #fff; border-bottom: 1px solid #eee; }
+    .filtros label { display: block; font-size: 11px; color: #5b6472; margin-bottom: 4px; }
+    .filtros select, .filtros input { padding: 7px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; }
+    .filtros .btn-limpar { background: #eee; color: #333; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; height: 34px; }
+
+    .conteudo { flex: 1; overflow-y: auto; padding: 20px; }
+    .largura-maxima { max-width: 1100px; margin: 0 auto; }
+
+    table.tabela-historico { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    table.tabela-historico th { background: #eef1f5; text-align: left; padding: 10px 12px; font-size: 11px; color: #5b6472; text-transform: uppercase; }
+    table.tabela-historico td { padding: 9px 12px; font-size: 13px; border-top: 1px solid #f0f0f0; vertical-align: middle; }
+    table.tabela-historico .col-quando { white-space: nowrap; color: #5b6472; font-size: 12px; }
+    table.tabela-historico .metodo-badge { font-size: 10px; padding: 2px 7px; border-radius: 4px; color: #fff; font-weight: bold; }
+    .metodo-POST { background: #2e8b57; }
+    .metodo-PATCH, .metodo-PUT { background: #336699; }
+    .metodo-DELETE { background: #8D0333; }
+    .status-erro { color: #8D0333; font-weight: bold; }
+
+    .estado-vazio { text-align: center; color: #999; padding: 60px 20px; }
+    .acesso-restrito { text-align: center; color: #8D0333; padding: 80px 20px; font-size: 15px; }
+
+    /* Faixa de Breaking News — mesmo alerta visível em toda tela do sistema */
+    .faixa-breaking { display: none; align-items: center; gap: 14px; background: #8D0333; color: #fff; padding: 10px 20px; font-size: 14px; animation: pulso-breaking 2.2s ease-in-out infinite; }
+    .faixa-breaking .breaking-icone { font-weight: bold; white-space: nowrap; }
+    .faixa-breaking .breaking-mensagem { flex: 1; }
+    .faixa-breaking .breaking-meta { font-size: 11px; opacity: 0.85; white-space: nowrap; }
+    .faixa-breaking button { background: rgba(255,255,255,0.2); color: #fff; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 12px; white-space: nowrap; }
+    .faixa-breaking button:hover { background: rgba(255,255,255,0.35); }
+    @keyframes pulso-breaking {
+      0%, 100% { box-shadow: inset 0 0 0 rgba(255,255,255,0); }
+      50% { box-shadow: inset 0 0 20px rgba(255,255,255,0.25); }
+    }
+
+    /* ---- Navegação lateral (unificada em todas as telas) ---- */
+    body { height: 100vh; margin: 0; display: flex; flex-direction: row; overflow: hidden; }
+    .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+    .nr-sidebar .nr-logo { padding: 0 20px 20px; border-bottom: 1px solid #4d7fb3; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
+    .nr-sidebar .nr-titulo, .nr-sidebar .nr-subtitulo { font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+    .nr-sidebar .nr-subtitulo { margin-top: 4px; }
+    .nr-sidebar a, .nr-sidebar .nr-item-desabilitado { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #e8f0f7; text-decoration: none; font-size: 14px; }
+    .nr-sidebar a:hover { background: #4d7fb3; color: #fff; }
+    .nr-sidebar a.nr-ativo { background: #244d70; color: #fff; font-weight: bold; border-left: 4px solid #8D0333; padding-left: 16px; }
+    .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
+    .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
+    .nr-app { flex: 1; min-width: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+  </style>
+</head>
+<body>
+  <div class="nr-sidebar">
+    <a href="index.html" class="nr-logo">
+      <div class="nr-titulo">HORUS</div>
+      <div class="nr-subtitulo">NEWSROOM</div>
+    </a>
+    <a href="sugestoes.html">📋 Sugestões de Pauta</a>
+    <a href="pautas.html">📝 Pautas</a>
+    <a href="mapa-producao.html">🗺 Mapa de Produções</a>
+    <a href="reportagens.html">🎬 Reportagens</a>
+    <a href="edicao-video.html">🎞️ Edição de Vídeo</a>
+    <a href="espelhos.html">📽️ Espelhos</a>
+    <a href="busca.html">🔍 Busca Geral</a>
+    <a href="calendario.html">📅 Calendário</a>
+    <a href="agenda.html">🗓 Agenda</a>
+    <a href="escala.html">👥 Escala de Equipes</a>
+    <a href="teleprompter.html">🎙 Teleprompter</a>
+    <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
+    <a href="graficos.html">📊 Gráficos Gerenciais</a>
+    <a href="relatorios.html">📄 Relatórios</a>
+    <a href="lixeira.html">🗑 Lixeira</a>
+  </div>
+  <div class="nr-app">
+
+  <div class="topo">
+    <h1>HORUS NEWSROOM — Histórico de Ações</h1>
+    <div class="sub">Quem mexeu no quê, e quando — visível só pra Administrador/TI</div>
+  </div>
+
+  <div class="faixa-breaking" id="faixa-breaking">
+    <span class="breaking-icone">🚨 BREAKING NEWS</span>
+    <span class="breaking-mensagem" id="breaking-mensagem"></span>
+    <span class="breaking-meta" id="breaking-meta"></span>
+    <button id="btn-encerrar-breaking" title="Encerrar este alerta">✕ Encerrar</button>
+  </div>
+
+  <div class="filtros">
+    <div>
+      <label>Usuário</label>
+      <select id="filtro-usuario"><option value="">Todos</option></select>
+    </div>
+    <div>
+      <label>De</label>
+      <input type="date" id="filtro-data-de">
+    </div>
+    <div>
+      <label>Até</label>
+      <input type="date" id="filtro-data-ate">
+    </div>
+    <button class="btn-limpar" id="btn-limpar-filtros">Limpar filtros</button>
+  </div>
+
+  <div class="conteudo">
+    <div class="largura-maxima" id="area-conteudo">Carregando...</div>
+  </div>
+
+  </div>
+
+  <script>
+    // ---- Faixa de Breaking News (mesmo alerta em todas as telas) ----
+    async function carregarAlertaBreakingNews() {
+      const resp = await fetch('/alertas/ativo');
+      const alerta = await resp.json();
+      const faixa = document.getElementById('faixa-breaking');
+      if (!faixa) return;
+      if (alerta) {
+        document.getElementById('breaking-mensagem').textContent = alerta.mensagem;
+        const quando = new Date(alerta.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('breaking-meta').textContent = (alerta.criado_por ? alerta.criado_por + ' · ' : '') + quando;
+        faixa.style.display = 'flex';
+      } else {
+        faixa.style.display = 'none';
+      }
+    }
+    document.getElementById('btn-encerrar-breaking')?.addEventListener('click', async () => {
+      if (!confirm('Encerrar esse alerta de Breaking News?')) return;
+      await fetch('/alertas/encerrar', { method: 'PATCH' });
+      await carregarAlertaBreakingNews();
+    });
+    (function conectarBreakingNews() {
+      const protocolo = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocolo}//${location.host}/ws/tempo-real`);
+      ws.addEventListener('message', (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (msg.tipo === 'alerta') carregarAlertaBreakingNews();
+      });
+      ws.addEventListener('close', () => setTimeout(conectarBreakingNews, 3000));
+      ws.addEventListener('error', () => ws.close());
+    })();
+    carregarAlertaBreakingNews();
+
+    function escaparHtml(texto) {
+      const div = document.createElement('div');
+      div.textContent = texto == null ? '' : String(texto);
+      return div.innerHTML;
+    }
+
+    function formatarQuando(iso) {
+      const d = new Date(iso);
+      return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function carregarFiltroUsuarios() {
+      const resp = await fetch('/agenda/equipe');
+      const equipe = await resp.json();
+      document.getElementById('filtro-usuario').innerHTML =
+        '<option value="">Todos</option>' +
+        equipe.map(m => `<option value="${m.id}">${escaparHtml(m.nome)}</option>`).join('');
+    }
+
+    async function carregarHistorico() {
+      const area = document.getElementById('area-conteudo');
+
+      const params = new URLSearchParams();
+      const usuarioId = document.getElementById('filtro-usuario').value;
+      const dataDe = document.getElementById('filtro-data-de').value;
+      const dataAte = document.getElementById('filtro-data-ate').value;
+      if (usuarioId) params.set('usuario_id', usuarioId);
+      if (dataDe) params.set('data_inicio', dataDe);
+      if (dataAte) params.set('data_fim', dataAte);
+
+      const resp = await fetch('/historico-acoes?' + params.toString());
+
+      if (resp.status === 403) {
+        area.innerHTML = '<div class="acesso-restrito">🔒 Este histórico é visível só pra Administrador/TI.</div>';
+        return;
+      }
+
+      const lista = await resp.json();
+
+      if (lista.length === 0) {
+        area.innerHTML = '<div class="estado-vazio">Nenhuma ação registrada com esses filtros.</div>';
+        return;
+      }
+
+      area.innerHTML = `
+        <table class="tabela-historico">
+          <thead>
+            <tr><th>Quando</th><th>Usuário</th><th>Ação</th><th></th></tr>
+          </thead>
+          <tbody>
+            ${lista.map(a => `
+              <tr>
+                <td class="col-quando">${formatarQuando(a.criado_em)}</td>
+                <td>${escaparHtml(a.usuario_nome)}</td>
+                <td>${escaparHtml(a.descricao)}</td>
+                <td>
+                  <span class="metodo-badge metodo-${a.metodo}">${a.metodo}</span>
+                  ${a.status_http >= 400 ? `<span class="status-erro" title="A ação falhou (HTTP ${a.status_http})"> ⚠️</span>` : ''}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    document.getElementById('filtro-usuario').addEventListener('change', carregarHistorico);
+    document.getElementById('filtro-data-de').addEventListener('change', carregarHistorico);
+    document.getElementById('filtro-data-ate').addEventListener('change', carregarHistorico);
+    document.getElementById('btn-limpar-filtros').addEventListener('click', () => {
+      document.getElementById('filtro-usuario').value = '';
+      document.getElementById('filtro-data-de').value = '';
+      document.getElementById('filtro-data-ate').value = '';
+      carregarHistorico();
+    });
+
+    carregarFiltroUsuarios();
+    carregarHistorico();
+  </script>
+</body>
+</html>

@@ -336,6 +336,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
   <script src="chat-painel.js"></script>
+  <script src="bloqueio.js"></script>
   <script>
     // ---- Faixa de Breaking News (mesmo alerta em todas as telas) ----
     // Disparado a partir do Mapa de Produções; aqui só exibe e permite
@@ -447,6 +448,40 @@
       document.body.innerHTML = '<p style="padding:20px;">Nenhuma pauta informada. Volte para a tela de Pautas e clique em "Criar Texto / Lauda".</p>';
       throw new Error('sem pauta_id');
     }
+
+    // Bloqueio cooperativo (ver bloqueio.js): a Pauta e a Lauda compartilham
+    // o mesmo lock — se essa retranca já está aberta em pautas.html ou
+    // nesta própria tela por outra pessoa, cobre a tela inteira e nem
+    // carrega o conteúdo, em vez de deixar editar por cima.
+    async function mostrarBloqueioTotal(nomeBloqueadoPor) {
+      let souAdministrador = false;
+      try {
+        const resp = await fetch('/auth/me');
+        if (resp.ok) souAdministrador = (await resp.json()).perfil === 'Administrador / TI';
+      } catch (e) {}
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed; inset:0; background:rgba(6,13,24,0.92); z-index:5000; display:flex; align-items:center; justify-content:center; color:#fff; font-family:Arial,sans-serif; text-align:center; padding:20px;';
+      overlay.innerHTML = `
+        <div style="max-width:420px;">
+          <div style="font-size:40px; margin-bottom:12px;">🔒</div>
+          <div style="font-size:16px; margin-bottom:8px;">Esta pauta está sendo editada agora por</div>
+          <div style="font-size:20px; font-weight:bold; margin-bottom:20px;">${nomeBloqueadoPor}</div>
+          <div style="font-size:13px; color:#9fb3c8; margin-bottom:24px;">Espere fechar, ou volte mais tarde.</div>
+          <a href="pautas.html" style="display:inline-block; background:#336699; color:#fff; text-decoration:none; padding:10px 18px; border-radius:6px; font-size:13px; margin-right:8px;">Voltar para Pautas</a>
+          ${souAdministrador ? '<button id="btn-forcar-destravamento-lauda" style="background:#8D0333; color:#fff; border:none; padding:10px 18px; border-radius:6px; font-size:13px; cursor:pointer;">Forçar destravamento</button>' : ''}
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      document.getElementById('btn-forcar-destravamento-lauda')?.addEventListener('click', async () => {
+        if (!confirm('Forçar o destravamento? A pessoa que está editando pode perder o que ainda não salvou.')) return;
+        await Bloqueio.forcarDestravamento(Number(pautaId));
+        window.location.reload();
+      });
+    }
+
+    window.addEventListener('pagehide', () => Bloqueio.liberar(Number(pautaId)));
 
     const labelStatus = {
       em_producao: 'Em Produção', em_gravacao: 'Em Gravação',
@@ -948,6 +983,12 @@
     });
 
     (async function init() {
+      const resultadoBloqueio = await Bloqueio.tentarBloquear(Number(pautaId));
+      if (!resultadoBloqueio.ok) {
+        await mostrarBloqueioTotal(resultadoBloqueio.bloqueadoPor);
+        return;
+      }
+
       await carregarPauta();
       await carregarItens();
       await carregarGcs();
