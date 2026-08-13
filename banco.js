@@ -1,5 +1,5 @@
 const Database = require('better-sqlite3');
-const db = new Database('newsroom.db');
+const db = new Database(process.env.DB_PATH || 'newsroom.db');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS pautas (

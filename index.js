@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const fs = require('fs');
 const cookieParser = require('cookie-parser');
 const app = express();
 const porta = process.env.PORT || 3000;
@@ -23,6 +24,23 @@ const { criarServidorTempoReal } = require('./tempo_real');
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static('public'));
+
+// Rota temporária pra transferir o newsroom.db real uma única vez pra um
+// deploy novo (ex.: Render), sem nunca commitar dados reais no git. Só
+// existe se ADMIN_UPLOAD_TOKEN estiver definido no ambiente — remover essa
+// variável (ou a rota inteira) depois do upload único fecha essa porta.
+if (process.env.ADMIN_UPLOAD_TOKEN) {
+  app.post('/admin/importar-banco', express.raw({ type: '*/*', limit: '200mb' }), (req, res) => {
+    if (req.get('x-admin-token') !== process.env.ADMIN_UPLOAD_TOKEN) {
+      return res.status(403).json({ erro: 'Token inválido' });
+    }
+    const destino = process.env.DB_PATH || 'newsroom.db';
+    fs.writeFileSync(destino, req.body);
+    res.json({ ok: true, bytes: req.body.length });
+    console.log(`Banco importado via /admin/importar-banco (${req.body.length} bytes). Reiniciando processo...`);
+    setTimeout(() => process.exit(0), 200);
+  });
+}
 
 // Registrado no app pra qualquer rota acessar via req.app.get('tempoReal')
 // sem precisar de import circular entre index.js e os módulos de rota
