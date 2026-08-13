@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ajuda — HORUS Newsroom</title>
+  <script src="auth-guard.js"></script>
+  <script src="chat-painel.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: row; overflow: hidden; }
+
+    .topo { background: #336699; color: #fff; padding: 14px 20px; }
+    .topo h1 { font-size: 18px; margin: 0; }
+    .topo p { margin: 6px 0 0; font-size: 13px; color: #d9e6f2; }
+
+    .faixa-breaking { display: none; align-items: center; gap: 14px; background: #8D0333; color: #fff; padding: 10px 20px; font-size: 14px; animation: pulso-breaking 2.2s ease-in-out infinite; }
+    .faixa-breaking .breaking-icone { font-weight: bold; white-space: nowrap; }
+    .faixa-breaking .breaking-mensagem { flex: 1; }
+    .faixa-breaking .breaking-meta { font-size: 11px; opacity: 0.85; white-space: nowrap; }
+    .faixa-breaking button { background: rgba(255,255,255,0.2); color: #fff; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 12px; white-space: nowrap; }
+    .faixa-breaking button:hover { background: rgba(255,255,255,0.35); }
+    @keyframes pulso-breaking { 0%, 100% { opacity: 1; } 50% { opacity: 0.85; } }
+
+    .nr-sidebar { width: 220px; flex-shrink: 0; background: #336699; color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+    .nr-sidebar .nr-logo { padding: 0 20px 20px; border-bottom: 1px solid #4d7fb3; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
+    .nr-sidebar .nr-titulo, .nr-sidebar .nr-subtitulo { font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+    .nr-sidebar .nr-subtitulo { margin-top: 4px; }
+    .nr-sidebar a, .nr-sidebar .nr-item-desabilitado { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #e8f0f7; text-decoration: none; font-size: 14px; }
+    .nr-sidebar a:hover { background: #4d7fb3; color: #fff; }
+    .nr-sidebar a.nr-ativo { background: #244d70; color: #fff; font-weight: bold; border-left: 4px solid #8D0333; padding-left: 16px; }
+    .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
+    .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
+
+    .nr-app { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .conteudo { flex: 1; overflow-y: auto; padding: 24px; }
+    .largura-maxima { max-width: 880px; margin: 0 auto; }
+
+    .sumario { background: #fff; border-radius: 10px; padding: 18px 22px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 24px; }
+    .sumario h2 { font-size: 14px; text-transform: uppercase; color: #5b6472; margin: 0 0 10px; }
+    .sumario ul { columns: 2; column-gap: 24px; margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.9; }
+    .sumario a { color: #336699; text-decoration: none; }
+    .sumario a:hover { text-decoration: underline; }
+
+    article.secao-ajuda { background: #fff; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 18px; scroll-margin-top: 16px; }
+    article.secao-ajuda h2 { font-size: 17px; margin: 0 0 4px; color: #244d70; }
+    article.secao-ajuda .descricao { font-size: 13px; color: #5b6472; margin: 0 0 14px; }
+    article.secao-ajuda h3 { font-size: 13px; text-transform: uppercase; color: #8D0333; margin: 16px 0 8px; }
+    article.secao-ajuda ol, article.secao-ajuda ul { margin: 0 0 8px; padding-left: 20px; font-size: 14px; line-height: 1.7; }
+    article.secao-ajuda p { font-size: 14px; line-height: 1.7; margin: 0 0 8px; }
+    .tecla, .botao-ref { display: inline-block; background: #eef1f5; border: 1px solid #dde2e8; border-radius: 4px; padding: 1px 7px; font-size: 12px; font-family: Consolas, monospace; color: #244d70; }
+    .dica { background: #fff8e6; border-left: 3px solid #C98A1F; border-radius: 4px; padding: 8px 12px; font-size: 13px; margin: 10px 0; }
+    .dica strong { color: #8D0333; }
+    .nivel-restrito { background: #fdeeee; border-left: 3px solid #8D0333; border-radius: 4px; padding: 8px 12px; font-size: 13px; margin: 10px 0; }
+
+    @media print {
+      .nr-sidebar, .horus-chat-bolha, .horus-chat-painel, .faixa-breaking { display: none !important; }
+    }
+
+    @media (max-width: 768px) {
+      body { flex-direction: column; height: auto; }
+      .nr-sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; padding: 10px; }
+      .sumario ul { columns: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="nr-sidebar">
+    <a href="index.html" class="nr-logo">
+      <div class="nr-titulo">HORUS</div>
+      <div class="nr-subtitulo">NEWSROOM</div>
+    </a>
+    <a href="sugestoes.html">📋 Sugestões de Pauta</a>
+    <a href="pautas.html">📝 Pautas</a>
+    <a href="mapa-producao.html">🗺 Mapa de Produções</a>
+    <a href="reportagens.html">🎬 Reportagens</a>
+    <a href="edicao-video.html">🎞️ Edição de Vídeo</a>
+    <a href="espelhos.html">📽️ Espelhos</a>
+    <a href="busca.html">🔍 Busca Geral</a>
+    <a href="calendario.html">📅 Calendário</a>
+    <a href="agenda.html">🗓 Agenda</a>
+    <a href="escala.html">👥 Escala de Equipes</a>
+    <a href="teleprompter.html">🎙 Teleprompter</a>
+    <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
+    <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
+    <a href="graficos.html">📊 Gráficos Gerenciais</a>
+    <a href="relatorios.html">📄 Relatórios</a>
+    <a href="lixeira.html">🗑 Lixeira</a>
+    <a href="ajuda.html" class="nr-ativo">❓ Ajuda</a>
+  </div>
+  <div class="nr-app">
+
+  <div class="topo">
+    <h1>HORUS NEWSROOM — Central de Ajuda</h1>
+    <p>Guia completo de uso do sistema, tela por tela.</p>
+  </div>
+
+  <div class="faixa-breaking" id="faixa-breaking">
+    <span class="breaking-icone">🚨 BREAKING NEWS</span>
+    <span class="breaking-mensagem" id="breaking-mensagem"></span>
+    <span class="breaking-meta" id="breaking-meta"></span>
+    <button id="btn-encerrar-breaking" title="Encerrar este alerta">✕ Encerrar</button>
+  </div>
+
+  <div class="conteudo">
+    <div class="largura-maxima">
+
+      <div class="sumario">
+        <h2>Índice</h2>
+        <ul>
+          <li><a href="#primeiros-passos">Primeiros passos</a></li>
+          <li><a href="#sugestoes">Sugestões de Pauta</a></li>
+          <li><a href="#pautas">Pautas</a></li>
+          <li><a href="#mapa-producao">Mapa de Produções</a></li>
+          <li><a href="#reportagens">Reportagens</a></li>
+          <li><a href="#edicao-video">Edição de Vídeo</a></li>
+          <li><a href="#espelhos">Espelhos e Espelho (Rundown)</a></li>
+          <li><a href="#camera">Indicação de Câmera</a></li>
+          <li><a href="#lauda">Lauda da Matéria</a></li>
+          <li><a href="#ia">Geração de texto com IA</a></li>
+          <li><a href="#teleprompter">Teleprompter</a></li>
+          <li><a href="#busca">Busca Geral</a></li>
+          <li><a href="#calendario">Calendário</a></li>
+          <li><a href="#agenda">Agenda</a></li>
+          <li><a href="#escala">Escala de Equipes</a></li>
+          <li><a href="#graficos">Gráficos Gerenciais</a></li>
+          <li><a href="#relatorios">Relatórios</a></li>
+          <li><a href="#lixeira">Lixeira</a></li>
+          <li><a href="#historico">Histórico de Ações</a></li>
+          <li><a href="#chat">Chat</a></li>
+          <li><a href="#breaking">Breaking News</a></li>
+          <li><a href="#desfazer">Desfazer / Refazer</a></li>
+          <li><a href="#bloqueio">Edição simultânea (bloqueio)</a></li>
+          <li><a href="#permissoes">Níveis de permissão</a></li>
+        </ul>
+      </div>
+
+      <article class="secao-ajuda" id="primeiros-passos">
+        <h2>1. Primeiros passos</h2>
+        <p class="descricao">Como entrar no sistema e se orientar pela tela.</p>
+        <ol>
+          <li>Acesse o endereço do HORUS Newsroom e entre com seu e-mail e senha cadastrados. Se é a primeira vez e ainda não tem senha, use o link "Criar senha" na tela de login — só funciona se um administrador já tiver te cadastrado em <strong>Agenda → Equipe</strong>.</li>
+          <li>A barra azul à esquerda (menu lateral) está presente em quase todas as telas — é por ela que você navega entre Pautas, Sugestões, Espelhos, Agenda etc.</li>
+          <li>No celular, o menu vira uma gaveta: toque no ícone ☰ no topo pra abrir.</li>
+          <li>O balão 💬 no canto da tela abre o Chat da Redação Geral, disponível em qualquer tela.</li>
+        </ol>
+        <div class="dica"><strong>Dica:</strong> a Lauda, o Espelho de um telejornal específico e a Reportagem de uma Pauta específica não têm entrada própria no menu — você chega nelas clicando num item de Pautas, Espelhos ou Reportagens.</div>
+      </article>
+
+      <article class="secao-ajuda" id="sugestoes">
+        <h2>2. Sugestões de Pauta</h2>
+        <p class="descricao">Onde qualquer pessoa da equipe propõe uma ideia de matéria antes dela virar Pauta oficial.</p>
+        <h3>Como criar uma sugestão</h3>
+        <ol>
+          <li>Clique em <span class="botao-ref">+ Nova Sugestão</span>.</li>
+          <li>Preencha retranca, resumo, editoria e demais campos disponíveis.</li>
+          <li>Salve — a sugestão fica visível pra quem decide a pauta do dia.</li>
+        </ol>
+        <h3>Aprovando uma sugestão</h3>
+        <p>Quem tem permissão pode transformar a sugestão aprovada diretamente numa Pauta, sem redigitar nada — os dados já digitados na sugestão são aproveitados.</p>
+      </article>
+
+      <article class="secao-ajuda" id="pautas">
+        <h2>3. Pautas</h2>
+        <p class="descricao">O núcleo do sistema — cada matéria em produção é uma Pauta, com Retranca, equipe, status e conteúdo.</p>
+        <h3>Criar e editar</h3>
+        <ol>
+          <li>Clique em <span class="botao-ref">+ Nova Pauta</span> ou em uma pauta existente na lista pra abrir a aba de edição.</li>
+          <li>Preencha Retranca, Tipo, Data/Hora do fato, Repórter, Cinegrafista, Produtor.</li>
+          <li>Use as caixas de texto (Informações, Sugestão de Imagens, e outras que você mesmo pode criar) pra registrar orientação de pauta — elas podem ser renomeadas ou removidas clicando no ✕.</li>
+          <li>Adicione Entrevistados com endereço e observação, se houver.</li>
+          <li>O Status (🟡 Em Produção, 🔵 Em Gravação, 🟣 Gravado/Em Edição, 🟢 Concluída) é atualizado conforme a matéria avança.</li>
+        </ol>
+        <h3>Filtros e busca</h3>
+        <p>Use os filtros de Programa, Status e Data no topo da lista, ou o campo de busca por texto. O botão <span class="botao-ref">🖨️ Imprimir Grade</span> imprime a lista do dia selecionado no filtro de Data.</p>
+        <h3>Imprimir uma Pauta</h3>
+        <p>Dentro da Pauta aberta, use a opção de impressão — o layout reproduz o mesmo padrão de duas tabelas (Retranca/Data/Hora/Tipo e Repórter/Cinegrafista/Produtor) usado na Lauda.</p>
+        <div class="nivel-restrito"><strong>Restrito por Setor:</strong> quem é dos níveis 3, 4 ou 5 só vê e edita pautas do próprio Setor (Jornalismo, Produção ou Mídias Sociais). Níveis 1, 2 e 6 veem tudo.</div>
+      </article>
+
+      <article class="secao-ajuda" id="mapa-producao">
+        <h2>4. Mapa de Produções</h2>
+        <p class="descricao">Visão geral de tudo que está em produção no momento, em tempo real.</p>
+        <ul>
+          <li>Use <span class="botao-ref">👤 Minhas Pautas</span> pra ver só o que tem seu nome como repórter, cinegrafista, produtor ou quem enviou a sugestão.</li>
+          <li>O botão <span class="botao-ref">🚨 Disparar Breaking News</span> dispara o alerta de última hora que aparece em todas as telas do sistema até alguém encerrar.</li>
+        </ul>
+      </article>
+
+      <article class="secao-ajuda" id="reportagens">
+        <h2>5. Reportagens</h2>
+        <p class="descricao">Lista filtrada das Pautas do ponto de vista de quem está produzindo a reportagem em si (com filtros de data e status próprios). Cada item abre direto na Lauda da matéria.</p>
+      </article>
+
+      <article class="secao-ajuda" id="edicao-video">
+        <h2>6. Edição de Vídeo</h2>
+        <p class="descricao">Fila de trabalho voltada pra quem edita as matérias — mesma base de Pautas, com filtro por status e busca, focada no que já foi gravado e está aguardando ou em edição.</p>
+      </article>
+
+      <article class="secao-ajuda" id="espelhos">
+        <h2>7. Espelhos e Espelho (Rundown)</h2>
+        <p class="descricao">O Espelho é o roteiro/rundown do telejornal: a ordem em que cada matéria e bloco entram no ar.</p>
+        <h3>Espelhos (lista)</h3>
+        <p>Mostra todos os telejornais montados. Clique em um pra abrir o Espelho daquele dia/edição.</p>
+        <h3>Dentro do Espelho</h3>
+        <ol>
+          <li>Arraste os itens pra reordenar a sequência do telejornal.</li>
+          <li>Itens do tipo <strong>Escalada</strong> não entram na numeração de Ord (nem na tela, nem na impressão) — o primeiro item de verdade sempre é Ord 1.</li>
+          <li>Itens do tipo Escalada têm status próprio, editável clicando direto no badge: alterna só entre <strong>Em Produção</strong> e <strong>Concluída</strong>.</li>
+          <li>Edições feitas por você aparecem em tempo real pra quem mais estiver olhando o mesmo Espelho, sem precisar dar F5.</li>
+        </ol>
+        <h3>Impressão</h3>
+        <p>Dois modos: impressão normal do Espelho, e <strong>Grade do Dia</strong> — colunas ORD / TIPO / RETRANCA / REPÓRTER / T.CAB / T.VT / TOTAL / APR (APR mostra "OK" quando o item está com status Concluída).</p>
+      </article>
+
+      <article class="secao-ajuda" id="camera">
+        <h2>8. Indicação de Câmera</h2>
+        <p class="descricao">Cada item do Espelho pode ter uma indicação de câmera (Fechada, Aberta ou Virada), pra orientar o apresentador na hora de trocar de câmera ao vivo.</p>
+        <ul>
+          <li>Defina no dropdown de câmera de cada item, dentro do Espelho.</li>
+          <li>Aparece como badge na tela do Espelho, nos dois modos de impressão, e como banner no Teleprompter — espelhado horizontalmente (como todo o texto do Teleprompter), pra ficar legível no rig físico do vidro do teleprompter.</li>
+        </ul>
+      </article>
+
+      <article class="secao-ajuda" id="lauda">
+        <h2>9. Lauda da Matéria</h2>
+        <p class="descricao">É onde o texto da matéria é escrito de verdade: Cabeça do Apresentador (vai pro Teleprompter) e o Corpo do VT (Offs, Sonoras, Passagens, Artes, Sobe Som).</p>
+        <ol>
+          <li>Abra a partir de uma Pauta ou de Reportagens.</li>
+          <li>Escreva a Cabeça do Apresentador — é esse texto que aparece no Teleprompter.</li>
+          <li>Monte o Corpo do VT adicionando OFFs, Sonoras, Passagens, Artes/GCs e Sobe Som, na ordem que devem entrar.</li>
+          <li>Preencha o Texto Adaptado pra Site/Instagram/YouTube, se a matéria também for publicada nessas plataformas.</li>
+          <li>Use o dropdown de layout de impressão (Padrão / Uma coluna) — uma prévia abre mostrando exatamente como vai sair no papel antes de imprimir de verdade.</li>
+        </ol>
+        <div class="dica"><strong>Dica:</strong> enquanto uma Pauta ou a Lauda dela está aberta pra edição por alguém, mais ninguém consegue editar a mesma retranca ao mesmo tempo — veja a seção <a href="#bloqueio">Edição simultânea</a>.</div>
+      </article>
+
+      <article class="secao-ajuda" id="ia">
+        <h2>10. Geração de texto com IA</h2>
+        <p class="descricao">Botão <span class="botao-ref">✨ Gerar com IA</span>, disponível ao lado da Cabeça do Apresentador e do Texto Adaptado, dentro da Lauda.</p>
+        <ol>
+          <li>Escreva pelo menos um OFF na matéria — a IA usa o texto dos OFFs já escritos como base.</li>
+          <li>Clique em <span class="botao-ref">✨ Gerar com IA</span> na Cabeça do Apresentador ou no Texto Adaptado.</li>
+          <li>O texto gerado aparece como <strong>rascunho</strong> — revise e ajuste antes de salvar. Nada é salvo automaticamente.</li>
+        </ol>
+      </article>
+
+      <article class="secao-ajuda" id="teleprompter">
+        <h2>11. Teleprompter</h2>
+        <p class="descricao">Tela cheia, sem menu lateral, pensada pra ficar de frente pro apresentador no estúdio.</p>
+        <ul>
+          <li>Mostra a Cabeça do Apresentador de cada item do Espelho, na ordem do rundown.</li>
+          <li>O texto é espelhado horizontalmente de propósito — é assim que funciona o vidro físico do teleprompter.</li>
+          <li>Mostra também o banner de Indicação de Câmera, também espelhado, e um preview pro operador da câmera de qual indicação vem a seguir.</li>
+        </ul>
+      </article>
+
+      <article class="secao-ajuda" id="busca">
+        <h2>12. Busca Geral</h2>
+        <p class="descricao">Um campo de busca único que procura em Pautas, Sugestões, Agenda, Programas, Efemérides e Espelhos ao mesmo tempo.</p>
+        <p>Digite ao menos 2 letras — os resultados aparecem agrupados por tipo. Clique em qualquer resultado pra ir direto pra ele na tela de origem.</p>
+      </article>
+
+      <article class="secao-ajuda" id="calendario">
+        <h2>13. Calendário</h2>
+        <p class="descricao">Planejamento de longo prazo: datas importantes, prazos e efemérides (datas comemorativas que se repetem todo ano).</p>
+        <ol>
+          <li>Clique em <span class="botao-ref">+ Nova Efeméride</span> pra cadastrar uma data.</li>
+          <li>Marque "recorrente anual" se ela deve voltar a aparecer todo ano automaticamente.</li>
+          <li>Use <span class="botao-ref">Hoje</span> pra voltar rápido pro mês atual.</li>
+        </ol>
+      </article>
+
+      <article class="secao-ajuda" id="agenda">
+        <h2>14. Agenda</h2>
+        <p class="descricao">Reúne três abas: Agenda Semanal (visão consolidada), Por Dia, Programas &amp; Quadros, e Equipe.</p>
+        <h3>Programas &amp; Quadros</h3>
+        <p>Cadastro dos programas e quadros da emissora — é essa lista que alimenta os filtros de "Programa" usados em Pautas, Sugestões etc. Clique em <span class="botao-ref">+ Novo Item</span> pra cadastrar.</p>
+        <h3>Equipe</h3>
+        <p>Cadastro de pessoas: nome, e-mail, função e Setor (Jornalismo, Produção ou Mídias Sociais). É por aqui que um administrador cadastra alguém antes dela conseguir criar a própria senha na tela de login.</p>
+        <h3>Agendamentos</h3>
+        <p>Compromissos do dia a dia (gravações externas, entrevistas marcadas etc.) — <span class="botao-ref">+ Novo Agendamento</span>.</p>
+      </article>
+
+      <article class="secao-ajuda" id="escala">
+        <h2>15. Escala de Equipes</h2>
+        <p class="descricao">Grade de turnos: quem trabalha em qual horário, dia a dia.</p>
+        <ul>
+          <li>Clique numa célula da grade pra atribuir um turno (Manhã, Tarde, Noite, Plantão ou um turno customizado) a uma pessoa naquele dia.</li>
+          <li><span class="botao-ref">Vincular</span> cria duplas fixas (ex.: Repórter + Cinegrafista que sempre trabalham juntos), pra agilizar o preenchimento da escala.</li>
+          <li><span class="botao-ref">+ Novo Turno</span> cadastra um tipo de turno com horário próprio.</li>
+          <li><span class="botao-ref">🗑️ Limpar</span> apaga a escala da semana visível, se precisar recomeçar.</li>
+        </ul>
+      </article>
+
+      <article class="secao-ajuda" id="graficos">
+        <h2>16. Gráficos Gerenciais</h2>
+        <p class="descricao">Painel voltado a editores-chefe e direção, com indicadores de produção: Desempenho de Prazos, Gargalos no Fluxo de Trabalho, Produtividade por pessoa, Volume por Editoria, Mix de Mídia e Picos de Publicação.</p>
+        <p>Os gráficos são calculados automaticamente a partir do histórico de status das Pautas — não precisa preencher nada à parte.</p>
+      </article>
+
+      <article class="secao-ajuda" id="relatorios">
+        <h2>17. Relatórios</h2>
+        <p class="descricao">Relatório de Produtividade com filtros por função (Repórter, Cinegrafista, Editor de Imagens, Produtor, Motorista), Programa, Editoria e período.</p>
+        <p>Escolha os filtros desejados e o relatório monta a lista/contagem correspondente na hora, pronta pra imprimir ou conferir na tela.</p>
+      </article>
+
+      <article class="secao-ajuda" id="lixeira">
+        <h2>18. Lixeira</h2>
+        <p class="descricao">Tudo que é excluído (Pautas, Sugestões, Programas, Equipe, Turnos, Efemérides e outros) vai primeiro pra Lixeira, não some na hora.</p>
+        <ol>
+          <li>Filtre por tipo de registro, se quiser.</li>
+          <li>Restaure um item excluído por engano, ou exclua definitivamente quando tiver certeza.</li>
+        </ol>
+        <div class="dica"><strong>Atalho:</strong> logo depois de excluir algo em qualquer tela, um toast aparece com a opção de Desfazer na hora — não precisa nem vir até a Lixeira. Veja <a href="#desfazer">Desfazer/Refazer</a>.</div>
+      </article>
+
+      <article class="secao-ajuda" id="historico">
+        <h2>19. Histórico de Ações</h2>
+        <p class="descricao">Registro automático de quem mexeu no quê e quando, em todo o sistema.</p>
+        <p>Filtre por Usuário e por período (De/Até) pra encontrar uma ação específica.</p>
+        <div class="nivel-restrito"><strong>Acesso restrito:</strong> essa tela só aparece pra Administrador/TI.</div>
+      </article>
+
+      <article class="secao-ajuda" id="chat">
+        <h2>20. Chat</h2>
+        <p class="descricao">Duas formas de conversar sem sair do sistema:</p>
+        <ul>
+          <li><strong>Chat da Pauta</strong> — painel retrátil dentro de cada Pauta/Lauda, pra discutir aquela matéria especificamente.</li>
+          <li><strong>Chat Geral (Redação Geral)</strong> — o balão 💬 flutuante, visível em qualquer tela (menos no Teleprompter), pra conversa geral da redação.</li>
+        </ul>
+        <p>O autor de cada mensagem é sempre quem está logado — não tem como enviar mensagem em nome de outra pessoa.</p>
+      </article>
+
+      <article class="secao-ajuda" id="breaking">
+        <h2>21. Breaking News</h2>
+        <p class="descricao">Alerta de última hora que aparece como faixa vermelha pulsante no topo de todas as telas.</p>
+        <ol>
+          <li>Dispare pelo Mapa de Produções, com <span class="botao-ref">🚨 Disparar Breaking News</span>.</li>
+          <li>A faixa aparece pra todo mundo em tempo real, sem precisar recarregar a página.</li>
+          <li>Qualquer pessoa com permissão pode encerrar o alerta pelo botão <span class="botao-ref">✕ Encerrar</span> na própria faixa.</li>
+        </ol>
+      </article>
+
+      <article class="secao-ajuda" id="desfazer">
+        <h2>22. Desfazer / Refazer</h2>
+        <p class="descricao">Funciona pra exclusões em Pautas, Sugestões, Programas, Equipe, Escala e Efemérides.</p>
+        <ul>
+          <li>Atalho de teclado: <span class="tecla">Ctrl</span> + <span class="tecla">Z</span> pra desfazer, <span class="tecla">Ctrl</span> + <span class="tecla">Y</span> pra refazer.</li>
+          <li>Ou clique em Desfazer no toast que aparece na hora, logo após excluir algo.</li>
+          <li>Só considera as suas próprias ações — não desfaz o que outra pessoa fez.</li>
+        </ul>
+      </article>
+
+      <article class="secao-ajuda" id="bloqueio">
+        <h2>23. Edição simultânea (bloqueio)</h2>
+        <p class="descricao">Enquanto uma Pauta ou a Lauda dela está aberta pra edição por alguém, o sistema mostra um selo 🔒 pra quem mais tentar abrir a mesma pauta — evita duas pessoas sobrescrevendo o trabalho uma da outra ao mesmo tempo.</p>
+        <p>O bloqueio libera sozinho quando a pessoa fecha a aba ou navega pra outra tela.</p>
+      </article>
+
+      <article class="secao-ajuda" id="permissoes">
+        <h2>24. Níveis de permissão</h2>
+        <p class="descricao">O sistema tem 6 níveis de acesso, definidos no cadastro de cada pessoa em Agenda → Equipe. Em caso de dúvida sobre o que você consegue ou não fazer numa tela, o nível da sua conta é o motivo.</p>
+        <p>Fale com um Administrador/TI se precisar de mais acesso do que tem hoje.</p>
+      </article>
+
+    </div>
+  </div>
+  </div>
+
+  <script>
+    async function carregarAlertaBreakingNews() {
+      const resp = await fetch('/alertas/ativo');
+      const alerta = await resp.json();
+      const faixa = document.getElementById('faixa-breaking');
+      if (!faixa) return;
+      if (alerta) {
+        document.getElementById('breaking-mensagem').textContent = alerta.mensagem;
+        const quando = new Date(alerta.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('breaking-meta').textContent = (alerta.criado_por ? alerta.criado_por + ' · ' : '') + quando;
+        faixa.style.display = 'flex';
+      } else {
+        faixa.style.display = 'none';
+      }
+    }
+
+    document.getElementById('btn-encerrar-breaking')?.addEventListener('click', async () => {
+      if (!confirm('Encerrar esse alerta de Breaking News?')) return;
+      await fetch('/alertas/encerrar', { method: 'PATCH' });
+      await carregarAlertaBreakingNews();
+    });
+
+    (function conectarBreakingNews() {
+      const protocolo = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocolo}//${location.host}/ws/tempo-real`);
+      ws.addEventListener('message', (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (msg.tipo === 'alerta') carregarAlertaBreakingNews();
+      });
+      ws.addEventListener('close', () => setTimeout(conectarBreakingNews, 3000));
+      ws.addEventListener('error', () => ws.close());
+    })();
+
+    carregarAlertaBreakingNews();
+  </script>
+</body>
+</html>
