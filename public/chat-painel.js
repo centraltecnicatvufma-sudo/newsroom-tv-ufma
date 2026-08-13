@@ -101,6 +101,16 @@
         z-index: 890; display: flex; align-items: center; justify-content: center;
       }
       .horus-chat-bolha:hover { background: #2a5580; }
+
+      /* Nada do Chat pode aparecer numa folha impressa — a bolha é
+         position:fixed direto no body, fora de qualquer área que as
+         telas já escondem no @media print delas (cada tela cuida da
+         PRÓPRIA impressão; isto aqui é o único jeito de garantir que o
+         Chat nunca vaza pra nenhuma delas, atual ou futura, sem
+         precisar lembrar de repetir a regra em cada uma). */
+      @media print {
+        .horus-chat-bolha, .horus-chat-painel { display: none !important; }
+      }
     `;
     document.head.appendChild(estilo);
   }

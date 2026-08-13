@@ -118,11 +118,14 @@
        orientação, fontes) — só aparece no papel, nunca na tela */
     .somente-impressao { display: none; }
     .info-impressao { text-align: justify; }
-    .info-impressao .linha-info { margin-bottom: 6px; }
-    .info-impressao .linha-info strong { color: #5b6472; font-weight: bold; margin-right: 4px; }
-    .info-impressao .destinos-impressao span { display: inline-block; margin-right: 14px; }
     .info-impressao table.fontes-impressao { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
     .info-impressao table.fontes-impressao th, .info-impressao table.fontes-impressao td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; }
+    /* Cabeçalho em duas tabelas, mesmo padrão já usado na impressão da
+       Pauta (pautas.html) — Retranca/Data/Hora/Tipo numa linha,
+       Repórter/Cinegrafista/Produtor na outra. */
+    .info-impressao table.tabela-impressao-cabecalho { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    .info-impressao table.tabela-impressao-cabecalho th, .info-impressao table.tabela-impressao-cabecalho td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
+    .info-impressao table.tabela-impressao-cabecalho th { background: #eee; text-transform: uppercase; }
 
     /* Pop-up de pré-visualização de impressão — mostra, dentro de um
        iframe com "cara de folha A4", exatamente o que vai pro papel em
@@ -210,11 +213,11 @@
     @media print {
       @page { size: A4; margin: 15mm 16mm; }
 
-      .nr-sidebar, .barra-acoes, #btn-ouvir-cabeca, #btn-ia-cabeca, #btn-ia-texto-web, .btn-ouvir-item,
+      .nr-sidebar, .nr-topo-mobile, .barra-acoes, #btn-ouvir-cabeca, #btn-ia-cabeca, #btn-ia-texto-web, .btn-ouvir-item,
       .btn-remover-item, .btn-mover, .btn-maiusculas, .toggle-auto,
       .add-itens, #btn-add-gc, .btn-remover-gc, #bloco-cabeca,
       .seta-recolher, #bloco-texto-web, .faixa-breaking,
-      .overlay-preview, #bloco-gcs { display: none !important; }
+      .overlay-preview, #bloco-gcs, #bloco-corpo-vt > h2, .total-vt { display: none !important; }
 
       body { background: #fff; }
       .nr-app { height: auto !important; overflow: visible !important; }
@@ -624,51 +627,45 @@
     }
 
     // Monta o cabeçalho que só aparece na impressão — só os campos que o
-    // repórter pediu (Título, Programa, Status, Repórter, Cinegrafista,
-    // Produtor, Local, Data/Hora do Fato, Destinos); Motorista, Equipamentos,
-    // Orientação, Roteiro e Fontes ficam de fora de propósito.
-    function montarInfoImpressao(p, nomePrograma) {
-      const destinos = [
-        p.destino_tv ? '📺 TV' : null,
-        p.destino_instagram ? '📷 Instagram' : null,
-        p.destino_youtube ? '▶️ YouTube' : null,
-        p.destino_site ? '🌐 Site' : null,
-      ].filter(Boolean);
-
+    // repórter pediu — duas tabelas, mesmo padrão já usado na impressão
+    // da Pauta (pautas.html): Retranca/Data/Hora/Tipo numa linha,
+    // Repórter/Cinegrafista/Produtor na outra. Programa, Status, Local e
+    // Destinos saíram do cabeçalho de propósito (pedido do usuário — só
+    // esses dois blocos ficam); Motorista, Equipamentos, Orientação,
+    // Roteiro e Fontes continuam de fora, como já era antes.
+    function montarInfoImpressao(p) {
       document.getElementById('info-impressao').innerHTML = `
-        <div class="linha-info"><strong>Retranca:</strong>${escaparHtml(p.titulo) || '—'}</div>
-        <div class="linha-info">
-          <strong>Programa:</strong>${escaparHtml(nomePrograma) || '—'}
-          &nbsp;&nbsp;<strong>Status:</strong>${labelStatus[p.status] || p.status || '—'}
-        </div>
-        <div class="linha-info">
-          <strong>Repórter:</strong>${escaparHtml(p.reporter) || '—'}
-          &nbsp;&nbsp;<strong>Cinegrafista:</strong>${escaparHtml(p.cinegrafista) || '—'}
-          &nbsp;&nbsp;<strong>Produtor:</strong>${escaparHtml(p.produtor) || '—'}
-        </div>
-        <div class="linha-info">
-          <strong>Local:</strong>${escaparHtml(p.local) || '—'}
-          &nbsp;&nbsp;<strong>Data do Fato:</strong>${formatarData(p.data_fato)}
-          &nbsp;&nbsp;<strong>Hora do Fato:</strong>${escaparHtml(p.hora_fato) || '—'}
-        </div>
-        <div class="linha-info destinos-impressao">
-          <strong>Destinos:</strong> ${destinos.length ? destinos.map(d => `<span>${d}</span>`).join('') : '—'}
-        </div>
+        <table class="tabela-impressao-cabecalho">
+          <thead><tr><th>Retranca</th><th>Data</th><th>Hora</th><th>Tipo</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>${escaparHtml(p.titulo) || '—'}</td>
+              <td>${formatarData(p.data_fato)}</td>
+              <td>${escaparHtml(p.hora_fato) || '—'}</td>
+              <td>${escaparHtml(p.tipo) || '—'}</td>
+            </tr>
+          </tbody>
+        </table>
+        <table class="tabela-impressao-cabecalho">
+          <thead><tr><th>Repórter</th><th>Cinegrafista</th><th>Produtor</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>${escaparHtml(p.reporter) || '—'}</td>
+              <td>${escaparHtml(p.cinegrafista) || '—'}</td>
+              <td>${escaparHtml(p.produtor) || '—'}</td>
+            </tr>
+          </tbody>
+        </table>
       `;
     }
 
     async function carregarPauta() {
-      const [respPauta, respProgramas] = await Promise.all([
-        fetch('/pautas/' + pautaId),
-        fetch('/agenda/programas')
-      ]);
+      const respPauta = await fetch('/pautas/' + pautaId);
       const p = await respPauta.json();
       if (!respPauta.ok) {
         mostrarSetorBloqueado();
         throw new Error('sem acesso a esta pauta (Setor diferente)');
       }
-      const programas = await respProgramas.json();
-      const nomePrograma = (programas.find(pr => pr.id === p.programa_id) || {}).nome;
 
       document.getElementById('sub-pauta').textContent = 'Pauta #P-' + p.id;
       tituloPautaAtual = p.titulo || ('Pauta #P-' + p.id);
@@ -678,7 +675,7 @@
         <div><strong>Cinegrafista:</strong>${p.cinegrafista || '—'}</div>
         <div><strong>Status:</strong>${p.status || '—'}</div>
       `;
-      montarInfoImpressao(p, nomePrograma);
+      montarInfoImpressao(p);
 
       quillCabeca = new Quill('#editor-cabeca', { theme: 'snow' });
       quillCabeca.root.setAttribute('spellcheck', 'true');
@@ -1087,10 +1084,16 @@
     document.getElementById('btn-imprimir').addEventListener('click', executarImpressao);
 
     // ---- Pré-visualização de impressão ----
-    // Pega as regras de dentro de @media print do próprio <style> desta
+    // Pega SÓ as regras de dentro de @media print do próprio <style> desta
     // página (via CSSOM) e devolve como regras normais, sem a media query
     // — aplicadas dentro do iframe, isso reproduz exatamente o que sai no
     // papel, sem duplicar nenhuma regra de CSS numa segunda folha de estilo.
+    // Importante ficar só nas regras de print: a versão antiga também
+    // levava QUALQUER outra regra da página (`else if (regra.cssText)`),
+    // inclusive coisas de estado de tela como `.overlay-preview.aberto
+    // { display: flex; }` — isso fazia o próprio modal de preview,
+    // clonado junto por estar dentro do <body>, reaparecer VISÍVEL demtro
+    // do iframe sempre que ele já estivesse aberto (ver mostrarPreviewImpressao).
     function extrairCssImpressaoSemMediaQuery() {
       let css = '';
       for (const folha of document.styleSheets) {
@@ -1099,8 +1102,6 @@
         for (const regra of regras) {
           if (regra.type === CSSRule.MEDIA_RULE && regra.media.mediaText.includes('print')) {
             for (const sub of regra.cssRules) css += sub.cssText + '\n';
-          } else if (regra.cssText) {
-            css += regra.cssText + '\n';
           }
         }
       }
@@ -1114,9 +1115,17 @@
       // Clone "morto": sem os <script> da própria página (que ficam dentro
       // do <body>, ver materia.html) — se fossem junto, reexecutariam
       // dentro do iframe e apagariam o conteúdo (o init() deles não acha
-      // pauta_id na URL do iframe e mostra a tela de erro por cima de tudo)
+      // pauta_id na URL do iframe e mostra a tela de erro por cima de tudo).
+      // Também remove o PRÓPRIO modal de preview do clone — sem isso, na
+      // 2ª vez que a pré-visualização abre (trocando o dropdown sem
+      // fechar antes), o body clonado já contém o modal marcado "aberto"
+      // com o iframe anterior ainda dentro dele, e esse aninhamento cresce
+      // a cada troca (texto indo se sobrepondo/duplicando visualmente).
       const corpoClonado = document.body.cloneNode(true);
       corpoClonado.querySelectorAll('script').forEach(el => el.remove());
+      corpoClonado.querySelector('#modal-preview-impressao')?.remove();
+      corpoClonado.querySelector('#horus-chat-bolha')?.remove();
+      corpoClonado.querySelector('#horus-chat-painel')?.remove();
       const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
         body { margin: 0; }
         ${extrairCssImpressaoSemMediaQuery()}
