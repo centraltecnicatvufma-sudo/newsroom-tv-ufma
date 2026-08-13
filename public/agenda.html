@@ -481,15 +481,54 @@
     });
 
     let idEmEdicaoEquipe = null;
+    let equipeCacheCompleta = [];
+
+    function equipeFiltrada() {
+      const busca = (document.getElementById('busca-equipe')?.value || '').trim().toLowerCase();
+      const lista = busca
+        ? equipeCacheCompleta.filter(m => [m.nome, m.funcao, m.perfil, m.setor, m.email]
+            .some(campo => (campo || '').toLowerCase().includes(busca)))
+        : equipeCacheCompleta.slice();
+      lista.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
+      return lista;
+    }
 
     async function renderEquipe() {
       const conteudo = document.getElementById('conteudo');
-      conteudo.innerHTML = '<h1>Equipe</h1><p>Carregando...</p>';
+      conteudo.innerHTML = `
+        <div class="cabecalho-secao">
+          <h1>Equipe</h1>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <input type="text" id="busca-equipe" placeholder="🔍 Buscar por nome, função, setor..." style="padding:7px 10px; border-radius:6px; border:1px solid #ddd; font-size:13px; min-width:220px;">
+            <button class="btn-adicionar" id="btn-add-membro">+ Novo Membro</button>
+          </div>
+        </div>
+        <div id="corpo-equipe"><p>Carregando...</p></div>
+      `;
+
+      document.getElementById('busca-equipe').addEventListener('input', renderTabelaEquipe);
+      document.getElementById('btn-add-membro').addEventListener('click', () => {
+        idEmEdicaoEquipe = null;
+        document.getElementById('input-nome-membro').value = '';
+        document.getElementById('input-funcao-membro').value = '';
+        document.getElementById('input-perfil-membro').value = '';
+        document.getElementById('input-setor-membro').value = '';
+        document.getElementById('input-email-membro').value = '';
+        document.getElementById('input-senha-membro').value = '';
+        document.getElementById('rotulo-senha-opcional').textContent = '';
+        document.getElementById('modal-equipe').classList.add('aberto');
+      });
 
       const resposta = await fetch('/agenda/equipe');
-      const lista = await resposta.json();
+      equipeCacheCompleta = await resposta.json();
+      renderTabelaEquipe();
+    }
 
-      let corpoTabela = lista.map(m => `
+    function renderTabelaEquipe() {
+      const corpo = document.getElementById('corpo-equipe');
+      const lista = equipeFiltrada();
+
+      const corpoTabela = lista.map(m => `
         <tr>
           <td>${m.nome}</td>
           <td><span class="tag-tipo">${m.funcao}</span></td>
@@ -504,30 +543,12 @@
         </tr>
       `).join('');
 
-      conteudo.innerHTML = `
-        <div class="cabecalho-secao">
-          <h1>Equipe</h1>
-          <button class="btn-adicionar" id="btn-add-membro">+ Novo Membro</button>
-        </div>
-        ${lista.length === 0
-          ? '<div class="estado-vazio">Nenhum membro cadastrado ainda.</div>'
-          : `<table class="tabela-simples">
-              <thead><tr><th>Nome</th><th>Função</th><th>Perfil</th><th>Setor</th><th>E-mail</th><th>Senha</th><th>Ações</th></tr></thead>
-              <tbody>${corpoTabela}</tbody>
-            </table>`}
-      `;
-
-      document.getElementById('btn-add-membro').addEventListener('click', () => {
-        idEmEdicaoEquipe = null;
-        document.getElementById('input-nome-membro').value = '';
-        document.getElementById('input-funcao-membro').value = '';
-        document.getElementById('input-perfil-membro').value = '';
-        document.getElementById('input-setor-membro').value = '';
-        document.getElementById('input-email-membro').value = '';
-        document.getElementById('input-senha-membro').value = '';
-        document.getElementById('rotulo-senha-opcional').textContent = '';
-        document.getElementById('modal-equipe').classList.add('aberto');
-      });
+      corpo.innerHTML = lista.length === 0
+        ? '<div class="estado-vazio">Nenhum membro encontrado.</div>'
+        : `<table class="tabela-simples">
+            <thead><tr><th>Nome</th><th>Função</th><th>Perfil</th><th>Setor</th><th>E-mail</th><th>Senha</th><th>Ações</th></tr></thead>
+            <tbody>${corpoTabela}</tbody>
+          </table>`;
 
       document.querySelectorAll('.btn-editar-membro').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -550,7 +571,9 @@
           if (!confirmar) return;
 
           await fetch(`/agenda/equipe/${btn.dataset.id}`, { method: 'DELETE' });
-          renderEquipe();
+          const resposta = await fetch('/agenda/equipe');
+          equipeCacheCompleta = await resposta.json();
+          renderTabelaEquipe();
           window.HorusUndo?.registrar({ tipo: 'Membro da Equipe', titulo: btn.dataset.nome, urlBase: '/agenda/equipe/' + btn.dataset.id });
         });
       });
