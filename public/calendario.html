@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <title>Calendário — HORUS Newsroom</title>
   <script src="auth-guard.js"></script>
+  <script src="undo-desfazer.js"></script>
+  <script src="chat-painel.js"></script>
   <style>
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
@@ -374,13 +376,20 @@
       document.querySelectorAll('.btn-excluir-evento').forEach(btn => {
         btn.addEventListener('click', async () => {
           if (!confirm('Mover esta efeméride para a lixeira?')) return;
+          const evento = eventosCache.find(e => e.id === Number(btn.dataset.id));
           await fetch('/calendario/eventos/' + btn.dataset.id, { method: 'DELETE' });
           await carregarDados();
           renderCalendario();
           renderListaEventos();
+          window.HorusUndo?.registrar({ tipo: 'Efeméride', titulo: evento?.titulo || ('#' + btn.dataset.id), urlBase: '/calendario/eventos/' + btn.dataset.id });
         });
       });
     }
+    window.addEventListener('horus-undo-mudou', async () => {
+      await carregarDados();
+      renderCalendario();
+      renderListaEventos();
+    });
 
     function abrirModalEvento(evento) {
       idEmEdicaoEvento = evento ? evento.id : null;

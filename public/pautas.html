@@ -14,6 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="HORUS">
   <link rel="apple-touch-icon" href="imagens/icone-apple-touch.png">
   <script src="auth-guard.js"></script>
+  <script src="undo-desfazer.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
@@ -837,17 +838,24 @@
       const confirmar = confirm('Mover esta pauta para a lixeira?');
       if (!confirmar) return;
 
+      const pauta = pautasCache.find(p => p.id === id);
       const resposta = await fetch('/pautas/' + id, { method: 'DELETE' });
 
       if (resposta.ok) {
         const abaAberta = Object.values(abas).find(a => a.pautaId === id);
         if (abaAberta) fecharAba(abaAberta.id);
         carregarPautas();
+        window.HorusUndo?.registrar({ tipo: 'Pauta', titulo: pauta?.titulo || ('#P-' + id), urlBase: '/pautas/' + id });
       } else {
         const erro = await resposta.json().catch(() => ({}));
         alert('Não foi possível excluir a pauta: ' + (erro.erro || 'erro desconhecido'));
       }
     }
+    // Depois de desfazer/refazer uma exclusão (ver undo-desfazer.js), a
+    // pauta pode ter voltado a aparecer ou sumido de novo — recarrega a
+    // lista pra refletir.
+    window.addEventListener('horus-undo-mudou', carregarPautas);
+
     document.getElementById('filtro-programa').addEventListener('change', carregarPautas);
     document.getElementById('filtro-status').addEventListener('change', carregarPautas);
     document.getElementById('filtro-data').addEventListener('change', carregarPautas);
@@ -1113,8 +1121,17 @@
 
       listaEl.querySelectorAll('.remover-texto-extra').forEach(btn => {
         btn.addEventListener('click', () => {
-          aba.textosExtra.splice(Number(btn.dataset.i), 1);
+          const indice = Number(btn.dataset.i);
+          const [removido] = aba.textosExtra.splice(indice, 1);
           renderTextosExtra(idAba);
+          window.HorusUndo?.registrarAcaoLocal({
+            tipo: 'Caixa',
+            titulo: removido.titulo || 'sem título',
+            aoDesfazer: () => {
+              aba.textosExtra.splice(indice, 0, removido);
+              renderTextosExtra(idAba);
+            }
+          });
         });
       });
       listaEl.querySelectorAll('.campo-titulo-extra').forEach(el => el.addEventListener('input', () => aba.textosExtra[el.dataset.i].titulo = el.value));

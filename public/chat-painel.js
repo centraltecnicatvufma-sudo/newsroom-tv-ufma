@@ -89,8 +89,33 @@
       .horus-chat-footer { display: flex; gap: 8px; padding: 10px; border-top: 1px solid #eee; flex-shrink: 0; }
       .horus-chat-footer input { flex: 1; padding: 9px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
       .horus-chat-footer button { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 9px 14px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+
+      /* Bolha flutuante — único jeito de chegar no canal geral
+         (Redação Geral) em telas que não têm nenhum botão de chat por
+         Pauta (Agenda, Escala, Sugestões etc.). Fica por cima de tudo,
+         inclusive do próprio painel do chat quando ele está fechado. */
+      .horus-chat-bolha {
+        position: fixed; right: 20px; bottom: 20px; width: 52px; height: 52px;
+        border-radius: 50%; background: #336699; color: #fff; border: none;
+        font-size: 22px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+        z-index: 890; display: flex; align-items: center; justify-content: center;
+      }
+      .horus-chat-bolha:hover { background: #2a5580; }
     `;
     document.head.appendChild(estilo);
+  }
+
+  function injetarBolhaFlutuante() {
+    if (document.getElementById('horus-chat-bolha')) return;
+    injetarEstilo();
+    const bolha = document.createElement('button');
+    bolha.type = 'button';
+    bolha.id = 'horus-chat-bolha';
+    bolha.className = 'horus-chat-bolha';
+    bolha.title = 'Chat da Redação Geral';
+    bolha.textContent = '💬';
+    bolha.addEventListener('click', () => abrirGeral());
+    document.body.appendChild(bolha);
   }
 
   function injetarPainel() {
@@ -405,4 +430,13 @@
   }
 
   window.ChatPauta = { abrir, abrirGeral, fechar };
+
+  // A bolha existe assim que o script carrega, independente de alguém
+  // já ter aberto algum chat — é o único jeito de chegar na Redação
+  // Geral em telas sem nenhum botão de chat por Pauta.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injetarBolhaFlutuante);
+  } else {
+    injetarBolhaFlutuante();
+  }
 })();

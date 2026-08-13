@@ -14,6 +14,8 @@
   <meta name="apple-mobile-web-app-title" content="HORUS">
   <link rel="apple-touch-icon" href="imagens/icone-apple-touch.png">
   <script src="auth-guard.js"></script>
+  <script src="undo-desfazer.js"></script>
+  <script src="chat-painel.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
@@ -440,9 +442,13 @@
 
           await fetch(`/agenda/programas/${btn.dataset.id}`, { method: 'DELETE' });
           renderProgramas();
+          window.HorusUndo?.registrar({ tipo: 'Programa', titulo: btn.dataset.nome, urlBase: '/agenda/programas/' + btn.dataset.id });
         });
       });
     }
+    // Recarrega só a aba que está sendo mostrada agora, reaproveitando o
+    // mesmo despachante de abas já existente
+    window.addEventListener('horus-undo-mudou', () => trocarAba(abaAtiva));
 
     document.getElementById('cancelar-programa').addEventListener('click', () => {
       document.getElementById('modal-programa').classList.remove('aberto');
@@ -492,7 +498,7 @@
           <td>${m.tem_senha ? '🔒 Definida' : '⚠️ Sem senha'}</td>
           <td class="acoes-lista">
             <button class="btn-ver btn-editar-membro" data-id="${m.id}" data-nome="${m.nome}" data-funcao="${m.funcao}" data-perfil="${m.perfil || ''}" data-setor="${m.setor || ''}" data-email="${m.email || ''}" data-tem-senha="${m.tem_senha ? '1' : ''}" title="Editar">✏️</button>
-            <button class="btn-excluir btn-excluir-membro" data-id="${m.id}" title="Excluir">🗑️</button>
+            <button class="btn-excluir btn-excluir-membro" data-id="${m.id}" data-nome="${m.nome}" title="Excluir">🗑️</button>
           </td>
         </tr>
       `).join('');
@@ -544,6 +550,7 @@
 
           await fetch(`/agenda/equipe/${btn.dataset.id}`, { method: 'DELETE' });
           renderEquipe();
+          window.HorusUndo?.registrar({ tipo: 'Membro da Equipe', titulo: btn.dataset.nome, urlBase: '/agenda/equipe/' + btn.dataset.id });
         });
       });
     }

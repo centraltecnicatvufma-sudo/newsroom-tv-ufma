@@ -14,6 +14,8 @@
   <meta name="apple-mobile-web-app-title" content="HORUS">
   <link rel="apple-touch-icon" href="imagens/icone-apple-touch.png">
   <script src="auth-guard.js"></script>
+  <script src="undo-desfazer.js"></script>
+  <script src="chat-painel.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
@@ -657,9 +659,11 @@
       document.querySelectorAll('.btn-excluir-turno').forEach(btn => {
         btn.addEventListener('click', async () => {
           if (!confirm('Mover este tipo de turno para a lixeira? Quem já está escalado com ele mantém a data marcada, só perde o vínculo de horário.')) return;
+          const turno = turnosCache.find(t => t.id === Number(btn.dataset.id));
           await fetch('/escala/turnos/' + btn.dataset.id, { method: 'DELETE' });
           turnosCache = await (await fetch('/escala/turnos')).json();
           renderListaTurnos();
+          window.HorusUndo?.registrar({ tipo: 'Turno', titulo: turno?.nome || ('#' + btn.dataset.id), urlBase: '/escala/turnos/' + btn.dataset.id });
         });
       });
     }
@@ -722,6 +726,12 @@
       renderDuplas();
       renderListaTurnos();
     })();
+
+    window.addEventListener('horus-undo-mudou', async () => {
+      await carregarDados();
+      renderGrade();
+      renderListaTurnos();
+    });
   </script>
   </div>
 </body>

@@ -14,6 +14,8 @@
   <meta name="apple-mobile-web-app-title" content="HORUS">
   <link rel="apple-touch-icon" href="imagens/icone-apple-touch.png">
   <script src="auth-guard.js"></script>
+  <script src="undo-desfazer.js"></script>
+  <script src="chat-painel.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
@@ -601,11 +603,14 @@
 
     async function excluirCard(id) {
       if (!confirm('Mover esta sugestão para a lixeira?')) return;
+      const sugestao = sugestoesCache.find(s => s.id === id);
       await fetch('/sugestoes/' + id, { method: 'DELETE' });
       if (cardExpandidoId === id) cardExpandidoId = null;
       await carregarSugestoes();
       renderQuadro();
+      window.HorusUndo?.registrar({ tipo: 'Sugestão', titulo: sugestao?.titulo || ('#' + id), urlBase: '/sugestoes/' + id });
     }
+    window.addEventListener('horus-undo-mudou', async () => { await carregarSugestoes(); renderQuadro(); });
 
     document.getElementById('filtro-status').addEventListener('change', renderQuadro);
     document.getElementById('filtro-editoria').addEventListener('change', renderQuadro);
@@ -867,10 +872,12 @@
     async function excluirSugestaoDaAba(idAba) {
       const aba = abas[idAba];
       if (!confirm('Mover esta sugestão para a lixeira?')) return;
+      const sugestao = sugestoesCache.find(s => s.id === aba.sugestaoId);
       await fetch('/sugestoes/' + aba.sugestaoId, { method: 'DELETE' });
       fecharAba(idAba);
       await carregarSugestoes();
       renderQuadro();
+      window.HorusUndo?.registrar({ tipo: 'Sugestão', titulo: sugestao?.titulo || aba.tituloAba, urlBase: '/sugestoes/' + aba.sugestaoId });
     }
 
     function fecharAba(idAba) {
