@@ -111,11 +111,9 @@
     .impressao-vt p:last-child { margin-bottom: 0; }
 
     /* Cabeça do Apresentador impressa é opcional (checkbox na barra de
-       impressão) — a regra que ESCONDE por padrão (display:none) mora
-       dentro do @media print mais abaixo, de propósito: a pré-visualização
-       (extrairCssImpressaoSemMediaQuery) só reaproveita regras de DENTRO
-       de @media print, então uma regra de esconder aqui fora nunca
-       chegaria lá — a Cabeça apareceria sempre na prévia, checkbox ou não. */
+       impressão) — a regra que esconde por padrão fica dentro do
+       @media print mais abaixo, junto da regra que mostra com o
+       checkbox marcado. */
     #impressao-cabeca { text-align: justify; font-size: 12px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #ccc; }
     #impressao-cabeca strong { display: block; font-size: 11px; margin-bottom: 4px; }
     #impressao-cabeca p { margin: 0 0 4px; }
@@ -140,25 +138,6 @@
     .info-impressao table.tabela-impressao-cabecalho th, .info-impressao table.tabela-impressao-cabecalho td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
     .info-impressao table.tabela-impressao-cabecalho th { background: #eee; text-transform: uppercase; }
 
-    /* Pop-up de pré-visualização de impressão — mostra, dentro de um
-       iframe com "cara de folha A4", exatamente o que vai pro papel em
-       cada layout (Padrão/Uma coluna), reaproveitando o próprio CSS de
-       @media print da página (extraído via CSSOM, sem duplicar regra
-       nenhuma) aplicado sem a media query dentro do iframe. */
-    /* A prévia inteira rola pela barra de rolagem NATIVA do navegador (não
-       um scroll aninhado dentro de um modal com altura travada) — assim
-       dá pra ver a página impressa inteira, do início ao fim, do jeito
-       óbvio que todo mundo já sabe rolar, sem depender de um scrollbar
-       escondido dentro de uma área pequena que ninguém percebe que existe. */
-    .overlay-preview { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 20; overflow-y: auto; padding: 24px 0; }
-    .overlay-preview.aberto { display: block; }
-    .janela-preview { background: #3d4552; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; max-width: 94vw; margin: 0 auto; width: fit-content; }
-    .cabecalho-preview { display: flex; justify-content: space-between; align-items: center; color: #fff; font-size: 13px; padding: 0 4px; position: sticky; top: 0; background: #3d4552; }
-    .cabecalho-preview button { background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 6px; padding: 7px 14px; cursor: pointer; font-size: 13px; }
-    .cabecalho-preview button:hover { background: rgba(255,255,255,0.3); }
-    .area-folha-preview { border-radius: 4px; }
-    .folha-preview { background: #fff; width: 210mm; box-shadow: 0 4px 24px rgba(0,0,0,0.4); margin: 0 auto; }
-    .folha-preview iframe { width: 100%; border: none; display: block; }
 
     /* Faixa de Breaking News — mesmo alerta visível em toda tela do
        sistema, disparado a partir do Mapa de Produções, propagado na hora
@@ -235,7 +214,7 @@
       .btn-remover-item, .btn-mover, .btn-maiusculas, .toggle-auto,
       .add-itens, #btn-add-gc, .btn-remover-gc, #bloco-cabeca,
       .seta-recolher, #bloco-texto-web, .faixa-breaking,
-      .overlay-preview, #bloco-gcs, #bloco-corpo-vt > h2, .total-vt { display: none !important; }
+      #bloco-gcs, #bloco-corpo-vt > h2, .total-vt { display: none !important; }
 
       body { background: #fff; }
       .nr-app { height: auto !important; overflow: visible !important; }
@@ -433,23 +412,6 @@
     </select>
     <button class="btn-imprimir" id="btn-imprimir">🖨️ Imprimir Lauda</button>
     <button class="btn-salvar" id="btn-salvar">💾 Salvar Lauda</button>
-  </div>
-
-  <div class="overlay-preview" id="modal-preview-impressao">
-    <div class="janela-preview">
-      <div class="cabecalho-preview">
-        <span id="titulo-preview-impressao">Pré-visualização</span>
-        <div style="display:flex; gap:8px;">
-          <button id="btn-imprimir-de-verdade">🖨️ Imprimir</button>
-          <button id="btn-fechar-preview">✕ Fechar</button>
-        </div>
-      </div>
-      <div class="area-folha-preview">
-        <div class="folha-preview">
-          <iframe id="iframe-preview-impressao" title="Pré-visualização de impressão"></iframe>
-        </div>
-      </div>
-    </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
@@ -1131,85 +1093,11 @@
       document.body.classList.toggle('impressao-uma-coluna', layout === 'uma-coluna');
       window.print();
     }
-    // "Imprimir Lauda" agora abre a pré-visualização em vez de imprimir
-    // direto — trocar o layout ou marcar "Imprimir a Cabeça também" só
-    // guarda a escolha, sem abrir nada sozinho; só esse clique mostra a
-    // prévia, e só o botão "🖨️ Imprimir" dentro dela imprime de verdade.
-    document.getElementById('btn-imprimir').addEventListener('click', () => {
-      mostrarPreviewImpressao(document.getElementById('layout-impressao').value);
-    });
-    document.getElementById('btn-imprimir-de-verdade').addEventListener('click', executarImpressao);
-
-    // ---- Pré-visualização de impressão ----
-    // Pega SÓ as regras de dentro de @media print do próprio <style> desta
-    // página (via CSSOM) e devolve como regras normais, sem a media query
-    // — aplicadas dentro do iframe, isso reproduz exatamente o que sai no
-    // papel, sem duplicar nenhuma regra de CSS numa segunda folha de estilo.
-    // Importante ficar só nas regras de print: a versão antiga também
-    // levava QUALQUER outra regra da página (`else if (regra.cssText)`),
-    // inclusive coisas de estado de tela como `.overlay-preview.aberto
-    // { display: flex; }` — isso fazia o próprio modal de preview,
-    // clonado junto por estar dentro do <body>, reaparecer VISÍVEL demtro
-    // do iframe sempre que ele já estivesse aberto (ver mostrarPreviewImpressao).
-    function extrairCssImpressaoSemMediaQuery() {
-      let css = '';
-      for (const folha of document.styleSheets) {
-        let regras;
-        try { regras = folha.cssRules; } catch (e) { continue; }
-        for (const regra of regras) {
-          if (regra.type === CSSRule.MEDIA_RULE && regra.media.mediaText.includes('print')) {
-            for (const sub of regra.cssRules) css += sub.cssText + '\n';
-          }
-        }
-      }
-      return css;
-    }
-
-    function mostrarPreviewImpressao(layout) {
-      montarImpressaoCorpoVt();
-      montarImpressaoCabeca();
-      document.body.classList.toggle('impressao-uma-coluna', layout === 'uma-coluna');
-      document.body.classList.toggle('imprimir-cabeca', document.getElementById('chk-imprimir-cabeca').checked);
-
-      // Clone "morto": sem os <script> da própria página (que ficam dentro
-      // do <body>, ver materia.html) — se fossem junto, reexecutariam
-      // dentro do iframe e apagariam o conteúdo (o init() deles não acha
-      // pauta_id na URL do iframe e mostra a tela de erro por cima de tudo).
-      // Também remove o PRÓPRIO modal de preview do clone — sem isso, na
-      // 2ª vez que a pré-visualização abre (trocando o dropdown sem
-      // fechar antes), o body clonado já contém o modal marcado "aberto"
-      // com o iframe anterior ainda dentro dele, e esse aninhamento cresce
-      // a cada troca (texto indo se sobrepondo/duplicando visualmente).
-      const corpoClonado = document.body.cloneNode(true);
-      corpoClonado.querySelectorAll('script').forEach(el => el.remove());
-      corpoClonado.querySelector('#modal-preview-impressao')?.remove();
-      corpoClonado.querySelector('#horus-chat-bolha')?.remove();
-      corpoClonado.querySelector('#horus-chat-painel')?.remove();
-      corpoClonado.querySelector('#nr-modal-trocar-senha')?.remove();
-      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-        body { margin: 0; }
-        ${extrairCssImpressaoSemMediaQuery()}
-      </style></head>${corpoClonado.outerHTML}</html>`;
-
-      document.getElementById('titulo-preview-impressao').textContent =
-        'Pré-visualização — ' + (layout === 'uma-coluna' ? 'Uma coluna' : 'Padrão (2 colunas)');
-
-      const iframe = document.getElementById('iframe-preview-impressao');
-      iframe.style.height = '400px';
-      iframe.onload = () => {
-        const altura = iframe.contentDocument.documentElement.scrollHeight;
-        iframe.style.height = altura + 'px';
-      };
-      iframe.srcdoc = html;
-
-      document.getElementById('modal-preview-impressao').classList.add('aberto');
-    }
-
-    // Trocar o layout ou marcar/desmarcar a Cabeça só guarda a escolha —
-    // não abre nada sozinho (ver clique em #btn-imprimir acima).
-    document.getElementById('btn-fechar-preview').addEventListener('click', () => {
-      document.getElementById('modal-preview-impressao').classList.remove('aberto');
-    });
+    // "Imprimir Lauda" vai direto pro diálogo de impressão do navegador
+    // (que já tem sua própria prévia, paginada e exata) — trocar o layout
+    // ou marcar "Imprimir a Cabeça também" só guarda a escolha, aplicada
+    // na hora desse clique.
+    document.getElementById('btn-imprimir').addEventListener('click', executarImpressao);
 
     // GCs e Texto Adaptado começam recolhidos — clicar na barra revela
     document.querySelectorAll('.cabecalho-recolhivel').forEach(cabecalho => {
