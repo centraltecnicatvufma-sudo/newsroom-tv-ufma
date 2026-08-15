@@ -439,7 +439,10 @@
     <div class="janela-preview">
       <div class="cabecalho-preview">
         <span id="titulo-preview-impressao">Pré-visualização</span>
-        <button id="btn-fechar-preview">✕ Fechar</button>
+        <div style="display:flex; gap:8px;">
+          <button id="btn-imprimir-de-verdade">🖨️ Imprimir</button>
+          <button id="btn-fechar-preview">✕ Fechar</button>
+        </div>
       </div>
       <div class="area-folha-preview">
         <div class="folha-preview">
@@ -1128,7 +1131,14 @@
       document.body.classList.toggle('impressao-uma-coluna', layout === 'uma-coluna');
       window.print();
     }
-    document.getElementById('btn-imprimir').addEventListener('click', executarImpressao);
+    // "Imprimir Lauda" agora abre a pré-visualização em vez de imprimir
+    // direto — trocar o layout ou marcar "Imprimir a Cabeça também" só
+    // guarda a escolha, sem abrir nada sozinho; só esse clique mostra a
+    // prévia, e só o botão "🖨️ Imprimir" dentro dela imprime de verdade.
+    document.getElementById('btn-imprimir').addEventListener('click', () => {
+      mostrarPreviewImpressao(document.getElementById('layout-impressao').value);
+    });
+    document.getElementById('btn-imprimir-de-verdade').addEventListener('click', executarImpressao);
 
     // ---- Pré-visualização de impressão ----
     // Pega SÓ as regras de dentro de @media print do próprio <style> desta
@@ -1195,12 +1205,8 @@
       document.getElementById('modal-preview-impressao').classList.add('aberto');
     }
 
-    document.getElementById('layout-impressao').addEventListener('change', (ev) => {
-      mostrarPreviewImpressao(ev.target.value);
-    });
-    document.getElementById('chk-imprimir-cabeca').addEventListener('change', () => {
-      mostrarPreviewImpressao(document.getElementById('layout-impressao').value);
-    });
+    // Trocar o layout ou marcar/desmarcar a Cabeça só guarda a escolha —
+    // não abre nada sozinho (ver clique em #btn-imprimir acima).
     document.getElementById('btn-fechar-preview').addEventListener('click', () => {
       document.getElementById('modal-preview-impressao').classList.remove('aberto');
     });
