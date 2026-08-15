@@ -111,9 +111,12 @@
     .impressao-vt p:last-child { margin-bottom: 0; }
 
     /* Cabeça do Apresentador impressa é opcional (checkbox na barra de
-       impressão) — some por padrão mesmo dentro de .somente-impressao;
-       só aparece quando o body ganha .imprimir-cabeca. */
-    #impressao-cabeca { display: none !important; text-align: justify; font-size: 12px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #ccc; }
+       impressão) — a regra que ESCONDE por padrão (display:none) mora
+       dentro do @media print mais abaixo, de propósito: a pré-visualização
+       (extrairCssImpressaoSemMediaQuery) só reaproveita regras de DENTRO
+       de @media print, então uma regra de esconder aqui fora nunca
+       chegaria lá — a Cabeça apareceria sempre na prévia, checkbox ou não. */
+    #impressao-cabeca { text-align: justify; font-size: 12px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #ccc; }
     #impressao-cabeca strong { display: block; font-size: 11px; margin-bottom: 4px; }
     #impressao-cabeca p { margin: 0 0 4px; }
     #impressao-cabeca p:last-child { margin-bottom: 0; }
@@ -255,8 +258,12 @@
       body:not(.impressao-uma-coluna) #impressao-vt-padrao { display: block; }
       body.impressao-uma-coluna #impressao-vt-uma-coluna { display: block; }
 
-      /* Cabeça impressa é opcional — só aparece com o checkbox marcado
-         (ver #chk-imprimir-cabeca), independente do layout escolhido. */
+      /* Cabeça impressa é opcional — some por padrão mesmo sendo
+         .somente-impressao (regra acima manda mostrar todo .somente-impressao;
+         essa aqui, mais específica por ID, sobrescreve de volta pra
+         escondido), só aparece com o checkbox marcado (#chk-imprimir-cabeca),
+         independente do layout escolhido. */
+      #impressao-cabeca { display: none !important; }
       body.imprimir-cabeca #impressao-cabeca { display: block !important; }
 
       /* Padrão: Indicações (25%) e Texto (75%) do MESMO item, lado a lado,
@@ -1163,6 +1170,7 @@
       corpoClonado.querySelector('#modal-preview-impressao')?.remove();
       corpoClonado.querySelector('#horus-chat-bolha')?.remove();
       corpoClonado.querySelector('#horus-chat-painel')?.remove();
+      corpoClonado.querySelector('#nr-modal-trocar-senha')?.remove();
       const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
         body { margin: 0; }
         ${extrairCssImpressaoSemMediaQuery()}
