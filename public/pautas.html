@@ -140,7 +140,12 @@
     /* Dropdown do botão de impressão da Pauta (mesmo padrão do dropdown
        de impressão da Lauda em reportagens.html) */
     .grupo-imprimir { position: relative; display: inline-block; }
-    .menu-imprimir-pauta { display: none; position: absolute; top: 100%; right: 0; margin-top: 4px; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.18); z-index: 20; min-width: 190px; overflow: hidden; }
+    /* position:fixed (calculado por JS na hora de abrir, ver
+       posicionarMenuImprimir) em vez de absolute+top/right relativo ao
+       .grupo-imprimir — numa lista longa, um menu perto do fim da tabela
+       ficava cortado pelo scroll de .conteudo (overflow-y:auto), sobrando
+       só a borda visível. Fixed não é cortado por overflow de ancestral. */
+    .menu-imprimir-pauta { display: none; position: fixed; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.18); z-index: 1000; min-width: 190px; overflow: hidden; }
     .menu-imprimir-pauta.aberto { display: block; }
     /* Especificidade reforçada (.grupo-imprimir + .menu-imprimir-pauta)
        de propósito — esse dropdown também é usado dentro de
@@ -829,7 +834,7 @@
           const menu = conteudo.querySelector(`.menu-imprimir-pauta[data-id="${btn.dataset.id}"]`);
           const jaAberto = menu.classList.contains('aberto');
           fecharMenusImprimirPauta();
-          if (!jaAberto) menu.classList.add('aberto');
+          if (!jaAberto) { posicionarMenuImprimir(btn, menu); menu.classList.add('aberto'); }
         });
       });
       conteudo.querySelectorAll('.menu-imprimir-pauta button').forEach(btn => {
@@ -848,6 +853,32 @@
           carregarPautas();
         });
       });
+    }
+
+    // Calcula a posição do menu (position:fixed) a partir do botão que
+    // abriu, alinhando a borda direita do menu com a borda direita do
+    // botão — mesmo efeito visual do antigo top:100%;right:0, só que em
+    // coordenadas de viewport, imunes a overflow de ancestral. Abre pra
+    // baixo por padrão; se o botão estiver perto do fim da janela e o
+    // menu não couber embaixo, abre pra cima em vez de vazar pra fora.
+    function posicionarMenuImprimir(botao, menu) {
+      const rect = botao.getBoundingClientRect();
+      menu.style.right = (window.innerWidth - rect.right) + 'px';
+      menu.style.left = 'auto';
+
+      menu.style.visibility = 'hidden';
+      menu.style.display = 'block';
+      const alturaMenu = menu.offsetHeight;
+      menu.style.display = '';
+      menu.style.visibility = '';
+
+      if (rect.bottom + 4 + alturaMenu <= window.innerHeight) {
+        menu.style.top = (rect.bottom + 4) + 'px';
+        menu.style.bottom = 'auto';
+      } else {
+        menu.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+        menu.style.top = 'auto';
+      }
     }
 
     function fecharMenusImprimirPauta() {
@@ -1667,7 +1698,7 @@
         e.stopPropagation();
         const jaAberto = menuImprimirForm.classList.contains('aberto');
         fecharMenusImprimirPauta();
-        if (!jaAberto) menuImprimirForm.classList.add('aberto');
+        if (!jaAberto) { posicionarMenuImprimir(e.currentTarget, menuImprimirForm); menuImprimirForm.classList.add('aberto'); }
       });
       menuImprimirForm.querySelectorAll('button').forEach(btn => {
         btn.addEventListener('click', () => {
