@@ -141,12 +141,14 @@
     /* Cabeçalho em duas tabelas, mesmo padrão já usado na impressão da
        Pauta (pautas.html) — Retranca/Data/Hora/Tipo numa linha,
        Repórter/Cinegrafista/Produtor na outra. */
-    /* border direto na <table>, além da borda de cada th/td: com
-       border-collapse:collapse, a linha mais externa (topo da 1ª linha,
-       base da última) pode se perder por arredondamento na hora de
-       rasterizar a impressão — reforçar aqui evita isso mesmo quando a
-       regra de th/td sozinha não é suficiente. */
-    .info-impressao table.tabela-impressao-cabecalho { width: 100%; border-collapse: collapse; margin-bottom: 8px; border: 1px solid #000; }
+    /* A borda externa (topo da 1ª tabela, base da 2ª) some na impressão
+       real em alguns navegadores/impressoras mesmo com border-collapse +
+       border no th/td certos — sub-pixel perdido ao rasterizar. Em vez de
+       depender só da borda da própria <table>, cada uma fica dentro de um
+       <div class="moldura-tabela-cabecalho"> com borda própria, que não
+       participa do border-collapse da tabela e por isso não some junto. */
+    .moldura-tabela-cabecalho { border: 1px solid #000; margin-bottom: 8px; }
+    .info-impressao table.tabela-impressao-cabecalho { width: 100%; border-collapse: collapse; }
     .info-impressao table.tabela-impressao-cabecalho th, .info-impressao table.tabela-impressao-cabecalho td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
     .info-impressao table.tabela-impressao-cabecalho th { background: #eee; text-transform: uppercase; }
 
@@ -670,27 +672,31 @@
     // Roteiro e Fontes continuam de fora, como já era antes.
     function montarInfoImpressao(p) {
       document.getElementById('info-impressao').innerHTML = `
-        <table class="tabela-impressao-cabecalho">
-          <thead><tr><th>Retranca</th><th>Data</th><th>Hora</th><th>Tipo</th></tr></thead>
-          <tbody>
-            <tr>
-              <td>${escaparHtml(p.titulo) || '—'}</td>
-              <td>${formatarData(p.data_fato)}</td>
-              <td>${escaparHtml(p.hora_fato) || '—'}</td>
-              <td>${escaparHtml(p.tipo) || '—'}</td>
-            </tr>
-          </tbody>
-        </table>
-        <table class="tabela-impressao-cabecalho">
-          <thead><tr><th>Repórter</th><th>Cinegrafista</th><th>Produtor</th></tr></thead>
-          <tbody>
-            <tr>
-              <td>${escaparHtml(p.reporter) || '—'}</td>
-              <td>${escaparHtml(p.cinegrafista) || '—'}</td>
-              <td>${escaparHtml(p.produtor) || '—'}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="moldura-tabela-cabecalho">
+          <table class="tabela-impressao-cabecalho">
+            <thead><tr><th>Retranca</th><th>Data</th><th>Hora</th><th>Tipo</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>${escaparHtml(p.titulo) || '—'}</td>
+                <td>${formatarData(p.data_fato)}</td>
+                <td>${escaparHtml(p.hora_fato) || '—'}</td>
+                <td>${escaparHtml(p.tipo) || '—'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="moldura-tabela-cabecalho">
+          <table class="tabela-impressao-cabecalho">
+            <thead><tr><th>Repórter</th><th>Cinegrafista</th><th>Produtor</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>${escaparHtml(p.reporter) || '—'}</td>
+                <td>${escaparHtml(p.cinegrafista) || '—'}</td>
+                <td>${escaparHtml(p.produtor) || '—'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       `;
     }
 
