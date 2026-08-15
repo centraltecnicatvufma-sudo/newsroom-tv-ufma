@@ -64,6 +64,8 @@
     .tipo-PASSAGEM { background: #2e8b57; }
     .tipo-ARTE { background: #075B91; }
     .tipo-SOBE_SOM { background: #8D0333; }
+    .tipo-CAMERA_ABERTA { background: #0891b2; }
+    .tipo-CAMERA_FECHADA { background: #52525b; }
 
     .controles-item { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
     .controles-item button { font-size: 11px; padding: 3px 7px; line-height: 1; border-radius: 6px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
@@ -353,6 +355,8 @@
           <button data-tipo="PASSAGEM">+ PASSAGEM</button>
           <button data-tipo="ARTE">+ ARTE</button>
           <button data-tipo="SOBE_SOM">+ SOBE SOM</button>
+          <button data-tipo="CAMERA_ABERTA">+ CÂMERA ABERTA</button>
+          <button data-tipo="CAMERA_FECHADA">+ CÂMERA FECHADA</button>
         </div>
         <div class="total-vt">⏱️ Total (Cabeça + VT): <strong id="total-vt">00:00</strong></div>
       </div>
@@ -498,13 +502,13 @@
 
     let gcsCache = [];
 
-    const labelTipo = { OFF: 'OFF', SONORA: 'SONORA', PASSAGEM: 'PASSAGEM', ARTE: 'ARTE', SOBE_SOM: 'SOBE SOM' };
+    const labelTipo = { OFF: 'OFF', SONORA: 'SONORA', PASSAGEM: 'PASSAGEM', ARTE: 'ARTE', SOBE_SOM: 'SOBE SOM', CAMERA_ABERTA: 'CÂMERA ABERTA', CAMERA_FECHADA: 'CÂMERA FECHADA' };
 
     // Rótulos da impressão, no padrão "[Off 1 - Indicações]" / "[Off 1]" —
     // cada tipo numerado à parte (1º Off, 2º Off... 1ª Sonora, 2ª Sonora...),
     // não pela posição geral na lista
-    const rotuloTipoImpressao = { OFF: 'Off', SONORA: 'Sonora', PASSAGEM: 'Passagem', ARTE: 'Arte', SOBE_SOM: 'Sobe Som' };
-    const sublabelIndicacoesImpressao = { OFF: 'Indicações', SONORA: 'Entrevistado', PASSAGEM: 'Local', ARTE: 'Indicações', SOBE_SOM: 'Indicações' };
+    const rotuloTipoImpressao = { OFF: 'Off', SONORA: 'Sonora', PASSAGEM: 'Passagem', ARTE: 'Arte', SOBE_SOM: 'Sobe Som', CAMERA_ABERTA: 'Câmera Aberta', CAMERA_FECHADA: 'Câmera Fechada' };
+    const sublabelIndicacoesImpressao = { OFF: 'Indicações', SONORA: 'Entrevistado', PASSAGEM: 'Local', ARTE: 'Indicações', SOBE_SOM: 'Indicações', CAMERA_ABERTA: 'Indicações', CAMERA_FECHADA: 'Indicações' };
     // Lado do texto nunca leva sufixo — é sempre só "[Off 1]", "[Sonora 1]",
     // "[Passagem 1]"...
     const sublabelTextoImpressao = {};
