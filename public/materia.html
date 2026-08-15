@@ -145,13 +145,18 @@
        cada layout (Padrão/Uma coluna), reaproveitando o próprio CSS de
        @media print da página (extraído via CSSOM, sem duplicar regra
        nenhuma) aplicado sem a media query dentro do iframe. */
-    .overlay-preview { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); align-items: center; justify-content: center; z-index: 20; }
-    .overlay-preview.aberto { display: flex; }
-    .janela-preview { background: #3d4552; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; max-height: 92vh; max-width: 94vw; }
-    .cabecalho-preview { display: flex; justify-content: space-between; align-items: center; color: #fff; font-size: 13px; padding: 0 4px; }
+    /* A prévia inteira rola pela barra de rolagem NATIVA do navegador (não
+       um scroll aninhado dentro de um modal com altura travada) — assim
+       dá pra ver a página impressa inteira, do início ao fim, do jeito
+       óbvio que todo mundo já sabe rolar, sem depender de um scrollbar
+       escondido dentro de uma área pequena que ninguém percebe que existe. */
+    .overlay-preview { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 20; overflow-y: auto; padding: 24px 0; }
+    .overlay-preview.aberto { display: block; }
+    .janela-preview { background: #3d4552; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; max-width: 94vw; margin: 0 auto; width: fit-content; }
+    .cabecalho-preview { display: flex; justify-content: space-between; align-items: center; color: #fff; font-size: 13px; padding: 0 4px; position: sticky; top: 0; background: #3d4552; }
     .cabecalho-preview button { background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 6px; padding: 7px 14px; cursor: pointer; font-size: 13px; }
     .cabecalho-preview button:hover { background: rgba(255,255,255,0.3); }
-    .area-folha-preview { overflow: auto; border-radius: 4px; }
+    .area-folha-preview { border-radius: 4px; }
     .folha-preview { background: #fff; width: 210mm; box-shadow: 0 4px 24px rgba(0,0,0,0.4); margin: 0 auto; }
     .folha-preview iframe { width: 100%; border: none; display: block; }
 
