@@ -420,6 +420,25 @@ router.patch('/:id', (req, res) => {
     }
   }
 
+  // Não deixa marcar como 🟣 Gravado/Em Edição sem a Lauda já ter algum
+  // conteúdo escrito (OFF/Sonora/Passagem/etc. ou Cabeça com duração) —
+  // mesmo critério que decide quem aparece na fila de Edição de Vídeo
+  // (ver carregarPautas() em edicao-video.html). Verificado direto no
+  // banco, vale pra qualquer caminho que chegue nesse PATCH (badge de
+  // Reportagens, Kanban, formulário de Pautas etc.).
+  if (atualizado.status === 'em_edicao') {
+    const temItensMateria = db.prepare(
+      'SELECT COUNT(*) AS c FROM materia_itens WHERE pauta_id = ?'
+    ).get(id).c > 0;
+    const temCabeca = (atualizado.cabeca_duracao_segundos || 0) > 0;
+
+    if (!temItensMateria && !temCabeca) {
+      return res.status(400).json({
+        erro: 'A Lauda precisa ter algum conteúdo (OFF, Sonora, Cabeça com duração etc.) antes de marcar como Gravado/Em Edição'
+      });
+    }
+  }
+
   db.prepare(`
     UPDATE pautas SET
       sugestao_id=?, agenda_id=?, titulo=?, programa_id=?,
