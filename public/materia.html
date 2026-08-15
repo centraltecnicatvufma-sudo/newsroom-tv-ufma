@@ -110,6 +110,14 @@
     .impressao-vt p { margin: 0 0 4px; }
     .impressao-vt p:last-child { margin-bottom: 0; }
 
+    /* Cabeça do Apresentador impressa é opcional (checkbox na barra de
+       impressão) — some por padrão mesmo dentro de .somente-impressao;
+       só aparece quando o body ganha .imprimir-cabeca. */
+    #impressao-cabeca { display: none !important; text-align: justify; font-size: 12px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #ccc; }
+    #impressao-cabeca strong { display: block; font-size: 11px; margin-bottom: 4px; }
+    #impressao-cabeca p { margin: 0 0 4px; }
+    #impressao-cabeca p:last-child { margin-bottom: 0; }
+
     /* GCs e Texto Adaptado ficam recolhidos por padrão — só uma barra com
        seta; clicar revela o conteúdo */
     .cabecalho-recolhivel { cursor: pointer; user-select: none; }
@@ -247,6 +255,10 @@
       body:not(.impressao-uma-coluna) #impressao-vt-padrao { display: block; }
       body.impressao-uma-coluna #impressao-vt-uma-coluna { display: block; }
 
+      /* Cabeça impressa é opcional — só aparece com o checkbox marcado
+         (ver #chk-imprimir-cabeca), independente do layout escolhido. */
+      body.imprimir-cabeca #impressao-cabeca { display: block !important; }
+
       /* Padrão: Indicações (25%) e Texto (75%) do MESMO item, lado a lado,
          na mesma linha — uma tabela HTML de verdade, que é o único jeito
          testado que continua em duas colunas em todas as páginas (grid e
@@ -331,6 +343,7 @@
 
   <div class="info-pauta" id="info-pauta"></div>
   <div class="info-impressao somente-impressao" id="info-impressao"></div>
+  <div id="impressao-cabeca" class="somente-impressao"></div>
 
   <div class="conteudo">
     <div class="bloco" id="bloco-cabeca">
@@ -398,6 +411,10 @@
 
   <div class="barra-acoes">
     <span class="status-salvo" id="status-salvo"></span>
+    <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:#5b6472; white-space:nowrap;">
+      <input type="checkbox" id="chk-imprimir-cabeca">
+      Imprimir a Cabeça também
+    </label>
     <select id="layout-impressao" title="Layout da impressão">
       <option value="padrao">🖨️ Impressão: Padrão (2 colunas)</option>
       <option value="uma-coluna">🖨️ Impressão: Uma coluna</option>
@@ -1080,8 +1097,21 @@
         itensNumerados.map(item => entradaTexto(item) + entradaIndicacoes(item)).join('');
     }
 
+    // Cabeça impressa é opcional (checkbox #chk-imprimir-cabeca) — tem
+    // pauta que precisa do texto do apresentador junto no papel (ex. pra
+    // conferência ou pro estúdio) e tem pauta que não, então em vez de
+    // sempre imprimir ou nunca, fica a critério de quem imprime.
+    function montarImpressaoCabeca() {
+      document.getElementById('impressao-cabeca').innerHTML = `
+        <strong>[Cabeça do Apresentador]</strong>
+        <div>${quillCabeca.root.innerHTML}</div>
+      `;
+    }
+
     function executarImpressao() {
       montarImpressaoCorpoVt();
+      montarImpressaoCabeca();
+      document.body.classList.toggle('imprimir-cabeca', document.getElementById('chk-imprimir-cabeca').checked);
       const layout = document.getElementById('layout-impressao').value;
       document.body.classList.toggle('impressao-uma-coluna', layout === 'uma-coluna');
       window.print();
@@ -1115,7 +1145,9 @@
 
     function mostrarPreviewImpressao(layout) {
       montarImpressaoCorpoVt();
+      montarImpressaoCabeca();
       document.body.classList.toggle('impressao-uma-coluna', layout === 'uma-coluna');
+      document.body.classList.toggle('imprimir-cabeca', document.getElementById('chk-imprimir-cabeca').checked);
 
       // Clone "morto": sem os <script> da própria página (que ficam dentro
       // do <body>, ver materia.html) — se fossem junto, reexecutariam
@@ -1152,6 +1184,9 @@
 
     document.getElementById('layout-impressao').addEventListener('change', (ev) => {
       mostrarPreviewImpressao(ev.target.value);
+    });
+    document.getElementById('chk-imprimir-cabeca').addEventListener('change', () => {
+      mostrarPreviewImpressao(document.getElementById('layout-impressao').value);
     });
     document.getElementById('btn-fechar-preview').addEventListener('click', () => {
       document.getElementById('modal-preview-impressao').classList.remove('aberto');
