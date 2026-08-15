@@ -22,6 +22,11 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.css" rel="stylesheet">
   <style>
     * { box-sizing: border-box; }
+    /* Tamanho de fonte do conteúdo (Cabeça, OFFs/Sonoras/etc.) é
+       configurável (ver #tamanho-fonte-lauda) e vale tanto na tela quanto
+       na impressão — uma variável só, referenciada nos dois lugares, pra
+       nunca dessincronizar. Escolha é lembrada por navegador (localStorage). */
+    :root { --fonte-lauda: 14px; }
     body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; }
 
     .topo { background: #336699; color: #fff; padding: 14px 20px; position: relative; }
@@ -104,8 +109,10 @@
        testados antes ou não quebravam página, ou paravam de funcionar
        depois da 1ª. "Uma coluna" empilha, por item, o texto primeiro e as
        indicações logo abaixo. Só aparece no papel, nunca na tela. */
+    .ql-editor { font-size: var(--fonte-lauda); }
+
     .impressao-vt { text-align: justify; }
-    .impressao-vt .entrada-impressao { margin-bottom: 6px; font-size: 12px; }
+    .impressao-vt .entrada-impressao { margin-bottom: 6px; font-size: var(--fonte-lauda); }
     .impressao-vt .entrada-impressao strong { display: block; font-size: 11px; margin-bottom: 2px; }
     .impressao-vt p { margin: 0 0 4px; }
     .impressao-vt p:last-child { margin-bottom: 0; }
@@ -114,7 +121,7 @@
        impressão) — a regra que esconde por padrão fica dentro do
        @media print mais abaixo, junto da regra que mostra com o
        checkbox marcado. */
-    #impressao-cabeca { text-align: justify; font-size: 12px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #ccc; }
+    #impressao-cabeca { text-align: justify; font-size: var(--fonte-lauda); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #ccc; }
     #impressao-cabeca strong { display: block; font-size: 11px; margin-bottom: 4px; }
     #impressao-cabeca p { margin: 0 0 4px; }
     #impressao-cabeca p:last-child { margin-bottom: 0; }
@@ -406,6 +413,13 @@
       <input type="checkbox" id="chk-imprimir-cabeca">
       Imprimir a Cabeça também
     </label>
+    <select id="tamanho-fonte-lauda" title="Tamanho da fonte">
+      <option value="12">Fonte: 12px</option>
+      <option value="14">Fonte: 14px</option>
+      <option value="16">Fonte: 16px</option>
+      <option value="18">Fonte: 18px</option>
+      <option value="20">Fonte: 20px</option>
+    </select>
     <select id="layout-impressao" title="Layout da impressão">
       <option value="padrao">🖨️ Impressão: Padrão (2 colunas)</option>
       <option value="uma-coluna">🖨️ Impressão: Uma coluna</option>
@@ -418,6 +432,23 @@
   <script src="chat-painel.js"></script>
   <script src="bloqueio.js"></script>
   <script>
+    // Tamanho de fonte do conteúdo (Cabeça/OFFs/Sonoras/etc.) — lembrado
+    // por navegador, aplicado via variável CSS (--fonte-lauda) que a tela
+    // e a impressão referenciam igual, então nunca dessincronizam.
+    (function () {
+      const CHAVE = 'horus-fonte-lauda';
+      const salvo = localStorage.getItem(CHAVE);
+      if (salvo) document.documentElement.style.setProperty('--fonte-lauda', salvo + 'px');
+      document.addEventListener('DOMContentLoaded', () => {
+        const select = document.getElementById('tamanho-fonte-lauda');
+        select.value = salvo || '14';
+        select.addEventListener('change', () => {
+          document.documentElement.style.setProperty('--fonte-lauda', select.value + 'px');
+          localStorage.setItem(CHAVE, select.value);
+        });
+      });
+    })();
+
     // ---- Faixa de Breaking News (mesmo alerta em todas as telas) ----
     // Disparado a partir do Mapa de Produções; aqui só exibe e permite
     // encerrar, propagado na hora via WebSocket (tempo_real.js).

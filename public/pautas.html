@@ -22,6 +22,11 @@
   </script>
   <style>
     * { box-sizing: border-box; }
+    /* Tamanho de fonte do conteúdo (Objetivo/Abordagem/Informações/Sugestão
+       de Imagens/Orientação/Roteiro/Anexos/textos extras) é configurável
+       (ver .tamanho-fonte-pauta) e vale tanto na tela quanto na impressão
+       — uma variável só, pra nunca dessincronizar. Lembrado por navegador. */
+    :root { --fonte-pauta: 14px; }
     body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
 
     .topo { background: #336699; color: #fff; padding: 14px 20px; }
@@ -95,7 +100,7 @@
        10/11/13px que existia antes. Herdada por tudo dentro de
        .impressao-pauta; as regras abaixo não redeclaram font-size a
        menos que precisem ficar menor de propósito (nenhuma precisa mais). */
-    .impressao-pauta { text-align: justify; font-size: 12px; }
+    .impressao-pauta { text-align: justify; font-size: var(--fonte-pauta); }
     /* Tabela de cabeçalho impressa — mesma estrutura da tabela em tela
        (.tabela-cabecalho-pauta), mas com bordas sólidas pra ficar igual à
        lauda de pauta impressa em papel que a redação já usa hoje. */
@@ -230,7 +235,7 @@
     .form-pauta-corpo select, .form-pauta-corpo textarea {
       width: 100%; padding: 9px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; background: #fff;
     }
-    .form-pauta-corpo textarea { min-height: 100px; resize: vertical; }
+    .form-pauta-corpo textarea { min-height: 100px; resize: vertical; font-size: var(--fonte-pauta); }
     .linha-checkboxes { display: flex; gap: 10px 20px; flex-wrap: wrap; align-items: center; font-size: 13px; margin-top: 6px; }
     /* .form-pauta-corpo label:first-child (acima) zera a margem só do 1º
        campo de cada seção — sem essa regra mais específica, ela também
@@ -262,7 +267,7 @@
     .texto-extra-item { border: 1px solid #eee; border-radius: 6px; padding: 10px; margin-top: 12px; position: relative; background: #fff; }
     .texto-extra-item .remover-texto-extra { position: absolute; top: 8px; right: 8px; background: none; border: none; color: #8D0333; cursor: pointer; font-size: 13px; }
     .texto-extra-item .campo-titulo-extra { width: calc(100% - 30px); padding: 7px 9px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-weight: bold; margin-bottom: 8px; }
-    .texto-extra-item textarea { width: 100%; min-height: 100px; padding: 9px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; resize: vertical; }
+    .texto-extra-item textarea { width: 100%; min-height: 100px; padding: 9px; border: 1px solid #ddd; border-radius: 6px; font-size: var(--fonte-pauta); font-family: inherit; resize: vertical; }
     .btn-add-texto-extra { background: #eef1f5; color: #336699; border: none; border-radius: 6px; padding: 8px 12px; font-size: 12px; cursor: pointer; margin-top: 12px; }
 
     /* Faixa de Breaking News — mesmo alerta visível em toda tela do
@@ -439,6 +444,14 @@
   <script src="chat-painel.js"></script>
   <script src="bloqueio.js"></script>
   <script>
+    // Aplica o tamanho de fonte salvo assim que a página carrega, antes de
+    // qualquer aba de pauta abrir — sem isso, a primeira pauta aberta
+    // ainda mostraria o tamanho padrão até o usuário mexer no seletor.
+    (function () {
+      const salvo = localStorage.getItem('horus-fonte-pauta');
+      if (salvo) document.documentElement.style.setProperty('--fonte-pauta', salvo + 'px');
+    })();
+
     // Libera todos os bloqueios das abas de pauta abertas quando a tela é
     // fechada/recarregada — mais rápido que esperar a conexão WebSocket
     // cair sozinha (que é a rede de segurança real, ver bloqueio.js).
@@ -875,6 +888,13 @@
             <button class="btn-agenda" data-acao="ver-agenda">📅 Ver na Agenda</button>
             <button class="btn-lauda-modal" data-acao="criar-lauda">📝 Criar Texto / Lauda</button>
             <button class="btn-chat-form" data-acao="abrir-chat">💬 Chat</button>
+            <select class="tamanho-fonte-pauta" title="Tamanho da fonte">
+              <option value="12">Fonte: 12px</option>
+              <option value="14">Fonte: 14px</option>
+              <option value="16">Fonte: 16px</option>
+              <option value="18">Fonte: 18px</option>
+              <option value="20">Fonte: 20px</option>
+            </select>
             <span class="grupo-imprimir">
               <button type="button" class="btn-imprimir-form" data-acao="abrir-menu-imprimir">🖨️ Imprimir ▾</button>
               <div class="menu-imprimir-pauta" data-menu="form">
@@ -1585,6 +1605,17 @@
     }
 
     function ligarEventosPainel(idAba, container) {
+      // Tamanho de fonte do conteúdo (Objetivo/Abordagem/Informações/etc.)
+      // — lembrado por navegador, aplicado via variável CSS (--fonte-pauta)
+      // que a tela e a impressão referenciam igual.
+      const selectFonte = container.querySelector('.tamanho-fonte-pauta');
+      const fonteSalva = localStorage.getItem('horus-fonte-pauta') || '14';
+      selectFonte.value = fonteSalva;
+      selectFonte.addEventListener('change', () => {
+        document.documentElement.style.setProperty('--fonte-pauta', selectFonte.value + 'px');
+        localStorage.setItem('horus-fonte-pauta', selectFonte.value);
+      });
+
       container.querySelector('[data-acao="toggle-cabecalho"]').addEventListener('click', (e) => {
         const corpo = container.querySelector('.form-pauta-cabecalho-corpo');
         const seta = e.currentTarget.querySelector('.seta-recolher');
