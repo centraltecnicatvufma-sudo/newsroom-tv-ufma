@@ -164,7 +164,7 @@
   <div class="somente-impressao" id="impressao-grade">
     <div class="titulo-grade" id="titulo-impressao-grade">Edição de Vídeo</div>
     <table class="tabela-grade">
-      <thead><tr><th>Data</th><th>Retranca</th><th>Programa</th><th>Produtor</th></tr></thead>
+      <thead><tr><th>Data</th><th>Retranca</th><th>Programa</th><th>Produtor</th><th>Status</th></tr></thead>
       <tbody id="corpo-impressao-grade"></tbody>
     </table>
     <div class="rodape-grade">
@@ -220,6 +220,15 @@
       em_producao: '🟡 Em Produção', em_gravacao: '🔵 Em Gravação',
       em_edicao: '🟣 Gravado / Em Edição', aguardando_revisao: '🟠 Aguardando Revisão',
       concluida: '🟢 Concluída'
+    };
+
+    // Rótulos específicos pra impressão da Grade — sem emoji, e
+    // "Gravado / Em Edição" fica só "Em Edição" (Concluída permanece
+    // igual ao rótulo de tela).
+    const rotulosStatusImpressao = {
+      em_producao: 'Em Produção', em_gravacao: 'Em Gravação',
+      em_edicao: 'Em Edição', aguardando_revisao: 'Aguardando Revisão',
+      concluida: 'Concluída'
     };
 
     // Esta tela é a ÚNICA que deixa escolher "Aguardando Revisão" — o
@@ -452,7 +461,10 @@
     function executarImpressaoGrade() {
       const lista = listaParaImprimirGrade();
       const modo = document.getElementById('modo-impressao-grade').value;
-      const sufixoTitulo = modo === 'todos' ? ' — Todos' : modo === 'concluidos' ? ' — Concluídos' : '';
+      const statusFiltrado = document.getElementById('filtro-status').value;
+      const sufixoTitulo = modo === 'todos' ? ' — Todos'
+        : modo === 'concluidos' ? ' — Concluídos'
+        : (statusFiltrado ? ' — ' + rotulosStatusImpressao[statusFiltrado] : '');
 
       document.getElementById('titulo-impressao-grade').textContent = 'Edição de Vídeo' + sufixoTitulo;
 
@@ -463,9 +475,10 @@
               <td>${escaparHtml(p.titulo) || '—'}</td>
               <td>${escaparHtml(nomePrograma(p.programa_id))}</td>
               <td>${escaparHtml(p.produtor) || '—'}</td>
+              <td>${rotulosStatusImpressao[p.status] || p.status}</td>
             </tr>
           `).join('')
-        : '<tr><td colspan="4" style="text-align:center; color:#666;">Nenhum item encontrado com os filtros atuais.</td></tr>';
+        : '<tr><td colspan="5" style="text-align:center; color:#666;">Nenhum item encontrado com os filtros atuais.</td></tr>';
 
       const agora = new Date();
       document.getElementById('data-impressao-grade').textContent = 'Data de Impressão: ' +
