@@ -42,8 +42,17 @@ function exigirNivelMinimo(nivelMinimo) {
 // project_perfil_equipe_permissoes.
 const NIVEIS_RESTRITOS_POR_SETOR = [3, 4, 5];
 
+// Setores "Técnica", "Mídias Sociais" e "Programação" são transversais de
+// propósito — enxergam Jornalismo, Produção e Mídias Sociais ao mesmo
+// tempo, mesmo em nível 3/4/5 que normalmente seria restrito ao próprio
+// Setor. Só Jornalismo e Produção continuam de fato restritos um ao
+// outro. Pedido do usuário.
+const SETORES_SEM_FILTRO = ['Técnica', 'Mídias Sociais', 'Programação'];
+
 function precisaFiltrarPorSetor(usuario) {
-  return NIVEIS_RESTRITOS_POR_SETOR.includes(nivelDoUsuario(usuario));
+  if (!NIVEIS_RESTRITOS_POR_SETOR.includes(nivelDoUsuario(usuario))) return false;
+  const id = typeof usuario === 'object' ? usuario?.id : null;
+  return id ? !SETORES_SEM_FILTRO.includes(setorDoUsuario(id)) : true;
 }
 
 // Busca fresca no banco (não confia em nada guardado no JWT/sessão) — o

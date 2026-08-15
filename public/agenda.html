@@ -183,20 +183,20 @@
     </a>
     <a href="sugestoes.html">📋 Sugestões de Pauta</a>
     <a href="pautas.html">📝 Pautas</a>
-    <a href="mapa-producao.html">🗺 Mapa de Produções</a>
+    <a href="mapa-producao.html">🗺️ Mapa de Produções</a>
     <a href="reportagens.html">🎬 Reportagens</a>
     <a href="edicao-video.html">🎞️ Edição de Vídeo</a>
     <a href="espelhos.html">📽️ Espelhos</a>
     <a href="busca.html">🔍 Busca Geral</a>
     <a href="calendario.html">📅 Calendário</a>
-    <a href="agenda.html" class="nr-ativo">🗓 Agenda</a>
+    <a href="agenda.html" class="nr-ativo">🗓️ Agenda</a>
     <a href="escala.html">👥 Escala de Equipes</a>
-    <a href="teleprompter.html">🎙 Teleprompter</a>
+    <a href="teleprompter.html">🎙️ Teleprompter</a>
     <div class="nr-item-desabilitado">📺 Programação <span class="nr-badge">em breve</span></div>
     <div class="nr-item-desabilitado">📱 Mídias <span class="nr-badge">em breve</span></div>
     <a href="graficos.html">📊 Gráficos Gerenciais</a>
     <a href="relatorios.html">📄 Relatórios</a>
-    <a href="lixeira.html">🗑 Lixeira</a>
+    <a href="lixeira.html">🗑️ Lixeira</a>
     <a href="ajuda.html">❓ Ajuda</a>
   </div>
   <script>
@@ -258,6 +258,8 @@
         <option value="Jornalismo">Jornalismo</option>
         <option value="Produção">Produção</option>
         <option value="Mídias Sociais">Mídias Sociais</option>
+        <option value="Técnica">Técnica</option>
+        <option value="Programação">Programação</option>
       </select>
       <div class="botoes-modal">
         <button class="btn-cancelar" id="cancelar-programa">Cancelar</button>
@@ -288,6 +290,8 @@
         <option value="Jornalismo">Jornalismo</option>
         <option value="Produção">Produção</option>
         <option value="Mídias Sociais">Mídias Sociais</option>
+        <option value="Técnica">Técnica</option>
+        <option value="Programação">Programação</option>
       </select>
       <label>E-mail</label>
       <input type="email" id="input-email-membro" placeholder="nome@ufma.br">
@@ -495,19 +499,25 @@
 
     async function renderEquipe() {
       const conteudo = document.getElementById('conteudo');
+      // Aguarda o auth-guard já ter buscado /auth/me antes de decidir se
+      // mostra as ações de gestão — evita esconder o botão à toa numa
+      // corrida rara entre os dois fetches.
+      if (!window.usuarioLogado) await fetch('/auth/me').then(r => r.json()).then(u => { window.usuarioLogado = u; }).catch(() => {});
+      const podeGerir = (window.usuarioLogado?.nivel || 0) >= 5;
+
       conteudo.innerHTML = `
         <div class="cabecalho-secao">
           <h1>Equipe</h1>
           <div style="display:flex; gap:10px; align-items:center;">
             <input type="text" id="busca-equipe" placeholder="🔍 Buscar por nome, função, setor..." style="padding:7px 10px; border-radius:6px; border:1px solid #ddd; font-size:13px; min-width:220px;">
-            <button class="btn-adicionar" id="btn-add-membro">+ Novo Membro</button>
+            ${podeGerir ? '<button class="btn-adicionar" id="btn-add-membro">+ Novo Membro</button>' : ''}
           </div>
         </div>
         <div id="corpo-equipe"><p>Carregando...</p></div>
       `;
 
       document.getElementById('busca-equipe').addEventListener('input', renderTabelaEquipe);
-      document.getElementById('btn-add-membro').addEventListener('click', () => {
+      document.getElementById('btn-add-membro')?.addEventListener('click', () => {
         idEmEdicaoEquipe = null;
         document.getElementById('input-nome-membro').value = '';
         document.getElementById('input-funcao-membro').value = '';
@@ -527,6 +537,7 @@
     function renderTabelaEquipe() {
       const corpo = document.getElementById('corpo-equipe');
       const lista = equipeFiltrada();
+      const podeGerir = (window.usuarioLogado?.nivel || 0) >= 5;
 
       const corpoTabela = lista.map(m => `
         <tr>
@@ -536,17 +547,17 @@
           <td>${m.setor || '—'}</td>
           <td>${m.email || '—'}</td>
           <td>${m.tem_senha ? '🔒 Definida' : '⚠️ Sem senha'}</td>
-          <td class="acoes-lista">
+          ${podeGerir ? `<td class="acoes-lista">
             <button class="btn-ver btn-editar-membro" data-id="${m.id}" data-nome="${m.nome}" data-funcao="${m.funcao}" data-perfil="${m.perfil || ''}" data-setor="${m.setor || ''}" data-email="${m.email || ''}" data-tem-senha="${m.tem_senha ? '1' : ''}" title="Editar">✏️</button>
             <button class="btn-excluir btn-excluir-membro" data-id="${m.id}" data-nome="${m.nome}" title="Excluir">🗑️</button>
-          </td>
+          </td>` : ''}
         </tr>
       `).join('');
 
       corpo.innerHTML = lista.length === 0
         ? '<div class="estado-vazio">Nenhum membro encontrado.</div>'
         : `<table class="tabela-simples">
-            <thead><tr><th>Nome</th><th>Função</th><th>Perfil</th><th>Setor</th><th>E-mail</th><th>Senha</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Nome</th><th>Função</th><th>Perfil</th><th>Setor</th><th>E-mail</th><th>Senha</th>${podeGerir ? '<th>Ações</th>' : ''}</tr></thead>
             <tbody>${corpoTabela}</tbody>
           </table>`;
 

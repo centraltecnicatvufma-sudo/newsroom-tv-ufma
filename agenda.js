@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const db = require('./banco');
+const { exigirNivelMinimo } = require('./permissoes');
+
+// Cadastrar/editar/excluir gente na Equipe exige nível 5+ (Editor-Chefe/
+// Chefe de Redação pra cima) — antes não tinha restrição nenhuma, qualquer
+// pessoa logada conseguia criar login pra outra pessoa. Pedido do usuário.
+const exigirGestaoEquipe = exigirNivelMinimo(5);
 
 // GET /agenda?data=2026-08-28 -> lista agendamentos de um dia específico
 router.get('/', (req, res) => {
@@ -192,14 +198,14 @@ router.get('/equipe/lixeira', (req, res) => {
   res.json(lista.map(omitirSenha));
 });
 
-router.post('/equipe', (req, res) => {
+router.post('/equipe', exigirGestaoEquipe, (req, res) => {
   const { nome, funcao, perfil, email, senha, setor } = req.body;
   const senhaHash = senha ? bcrypt.hashSync(senha, 10) : null;
   const resultado = db.prepare('INSERT INTO equipe_agenda (nome, funcao, perfil, email, senha_hash, setor) VALUES (?, ?, ?, ?, ?, ?)').run(nome, funcao, perfil || '', email || '', senhaHash, setor || '');
   const novo = db.prepare('SELECT * FROM equipe_agenda WHERE id = ?').get(resultado.lastInsertRowid);
   res.status(201).json(omitirSenha(novo));
 });
-router.patch('/equipe/:id', (req, res) => {
+router.patch('/equipe/:id', exigirGestaoEquipe, (req, res) => {
   const id = Number(req.params.id);
   const item = db.prepare('SELECT * FROM equipe_agenda WHERE id = ?').get(id);
 
@@ -222,7 +228,7 @@ router.patch('/equipe/:id', (req, res) => {
   res.json(omitirSenha(atualizado));
 });
 
-router.delete('/equipe/:id', (req, res) => {
+router.delete('/equipe/:id', exigirGestaoEquipe, (req, res) => {
   const id = Number(req.params.id);
   const resultado = db.prepare('UPDATE equipe_agenda SET excluido_em = ? WHERE id = ? AND excluido_em IS NULL')
     .run(new Date().toISOString(), id);
@@ -234,14 +240,14 @@ router.delete('/equipe/:id', (req, res) => {
   res.status(204).send();
 });
 
-router.patch('/equipe/:id/restaurar', (req, res) => {
+router.patch('/equipe/:id/restaurar', exigirGestaoEquipe, (req, res) => {
   const id = Number(req.params.id);
   const resultado = db.prepare('UPDATE equipe_agenda SET excluido_em = NULL WHERE id = ?').run(id);
   if (resultado.changes === 0) return res.status(404).json({ erro: "Membro não encontrado" });
   res.json(db.prepare('SELECT * FROM equipe_agenda WHERE id = ?').get(id));
 });
 
-router.delete('/equipe/:id/definitivo', (req, res) => {
+router.delete('/equipe/:id/definitivo', exigirGestaoEquipe, (req, res) => {
   const id = Number(req.params.id);
   const resultado = db.prepare('DELETE FROM equipe_agenda WHERE id = ?').run(id);
   if (resultado.changes === 0) return res.status(404).json({ erro: "Membro não encontrado" });
