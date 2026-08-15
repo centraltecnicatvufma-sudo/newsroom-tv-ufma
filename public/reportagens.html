@@ -57,7 +57,12 @@
        precisar abrir materia.html pra escolher o layout — clique em
        qualquer parte dele abre o menu com os dois modos já configurados lá */
     .grupo-imprimir { position: relative; display: inline-block; }
-    .menu-imprimir-lauda { display: none; position: absolute; top: 100%; right: 0; margin-top: 4px; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.18); z-index: 20; min-width: 190px; overflow: hidden; }
+    /* position:fixed (calculado por JS, ver posicionarMenuImprimir) em vez
+       de absolute+top/right relativo ao .grupo-imprimir — numa lista
+       longa, um item perto do fim da tabela tinha o menu cortado pelo
+       overflow do container, sobrando só a borda. Fixed não é cortado
+       por overflow de ancestral. */
+    .menu-imprimir-lauda { display: none; position: fixed; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.18); z-index: 1000; min-width: 190px; overflow: hidden; }
     .menu-imprimir-lauda.aberto { display: block; }
     .menu-imprimir-lauda button { display: block; width: 100%; text-align: left; padding: 9px 12px; background: #fff; color: #1b2430; border: none; border-bottom: 1px solid #f0f0f0; font-size: 12px; cursor: pointer; white-space: nowrap; margin-right: 0; border-radius: 0; }
     .menu-imprimir-lauda button:last-child { border-bottom: none; }
@@ -392,6 +397,30 @@
       window.open('materia.html?' + params.toString(), '_blank');
     }
 
+    // Calcula a posição do menu (position:fixed) a partir do botão que
+    // abriu, alinhando a borda direita do menu com a do botão — abre pra
+    // baixo por padrão, vira pra cima se não couber (botão perto do fim
+    // da janela).
+    function posicionarMenuImprimir(botao, menu) {
+      const rect = botao.getBoundingClientRect();
+      menu.style.right = (window.innerWidth - rect.right) + 'px';
+      menu.style.left = 'auto';
+
+      menu.style.visibility = 'hidden';
+      menu.style.display = 'block';
+      const alturaMenu = menu.offsetHeight;
+      menu.style.display = '';
+      menu.style.visibility = '';
+
+      if (rect.bottom + 4 + alturaMenu <= window.innerHeight) {
+        menu.style.top = (rect.bottom + 4) + 'px';
+        menu.style.bottom = 'auto';
+      } else {
+        menu.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+        menu.style.top = 'auto';
+      }
+    }
+
     function fecharMenusImprimirLauda() {
       document.querySelectorAll('.menu-imprimir-lauda.aberto').forEach(m => m.classList.remove('aberto'));
     }
@@ -501,7 +530,7 @@
             const menu = area.querySelector(`.menu-imprimir-lauda[data-id="${btn.dataset.id}"]`);
             const jaAberto = menu.classList.contains('aberto');
             fecharMenusImprimirLauda();
-            if (!jaAberto) menu.classList.add('aberto');
+            if (!jaAberto) { posicionarMenuImprimir(btn, menu); menu.classList.add('aberto'); }
           });
         });
         area.querySelectorAll('.menu-imprimir-lauda button').forEach(btn => {

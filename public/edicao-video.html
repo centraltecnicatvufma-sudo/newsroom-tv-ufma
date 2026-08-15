@@ -74,6 +74,25 @@
     .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
     .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
     .nr-app { flex: 1; min-width: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+
+    /* ---- Grade impressa (mesmo padrão de pautas.html/reportagens.html) —
+       só existe visualmente durante a impressão, com os itens que
+       estiverem filtrados na tela no momento (status e busca). */
+    .somente-impressao { display: none; }
+    .titulo-grade { font-size: 16px; font-weight: bold; margin: 0 0 2em; }
+    .tabela-grade { width: 100%; border-collapse: collapse; }
+    .tabela-grade th, .tabela-grade td { padding: 6px 10px; font-size: 12px; text-align: left; border: 1px solid #000; }
+    .tabela-grade th { background: #e0e0e0; text-transform: uppercase; }
+    .tabela-grade tbody tr:nth-child(even) { background: #f6f6f6; }
+    .rodape-grade { display: flex; justify-content: space-between; font-size: 10px; color: #333; margin-top: 6px; }
+
+    @media print {
+      @page { size: A4; margin: 15mm; }
+      .nr-sidebar, .faixa-breaking, .filtros, .topo, .conteudo { display: none !important; }
+      body { background: #fff; }
+      .nr-app { height: auto !important; overflow: visible !important; }
+      .somente-impressao { display: block !important; }
+    }
   </style>
 </head>
 <body>
@@ -130,10 +149,29 @@
       <input type="text" id="filtro-busca" placeholder="🔍 Buscar por retranca...">
     </div>
     <span class="contador-pendentes" id="contador-pendentes"></span>
+    <select id="modo-impressao-grade" title="O que imprimir na Grade">
+      <option value="filtro">Imprimir: conforme filtro da tela</option>
+      <option value="todos">Imprimir: Todos</option>
+      <option value="concluidos">Imprimir: Concluídos</option>
+    </select>
+    <button id="btn-imprimir-grade" title="Imprime a grade conforme a opção escolhida ao lado" style="padding:8px 14px; border-radius:6px; border:none; background:#5b6472; color:#fff; font-size:13px; cursor:pointer; white-space:nowrap;">🖨️ Imprimir Grade</button>
   </div>
 
   <div class="conteudo">
     <div id="area-tabela">Carregando...</div>
+  </div>
+
+  <div class="somente-impressao" id="impressao-grade">
+    <div class="titulo-grade" id="titulo-impressao-grade">Edição de Vídeo</div>
+    <table class="tabela-grade">
+      <thead><tr><th>Data</th><th>Retranca</th><th>Programa</th><th>Produtor</th></tr></thead>
+      <tbody id="corpo-impressao-grade"></tbody>
+    </table>
+    <div class="rodape-grade">
+      <span id="data-impressao-grade"></span>
+      <span>HORUS Newsroom</span>
+      <span id="total-impressao-grade"></span>
+    </div>
   </div>
 
   <script src="chat-painel.js"></script>
@@ -399,6 +437,45 @@
       clearTimeout(window._buscaTimeout);
       window._buscaTimeout = setTimeout(renderTabela, 300);
     });
+
+    // Grade impressa — por padrão, os mesmos itens filtrados na tela
+    // (status e busca), mesmo layout usado em Pautas/Reportagens. O
+    // seletor #modo-impressao-grade permite dois atalhos que ignoram o
+    // filtro da tela: Todos, ou só os Concluídos.
+    function listaParaImprimirGrade() {
+      const modo = document.getElementById('modo-impressao-grade').value;
+      if (modo === 'todos') return [...pautasCache].sort(compararPautas);
+      if (modo === 'concluidos') return pautasCache.filter(p => p.status === 'concluida').sort(compararPautas);
+      return pautasFiltradas();
+    }
+
+    function executarImpressaoGrade() {
+      const lista = listaParaImprimirGrade();
+      const modo = document.getElementById('modo-impressao-grade').value;
+      const sufixoTitulo = modo === 'todos' ? ' — Todos' : modo === 'concluidos' ? ' — Concluídos' : '';
+
+      document.getElementById('titulo-impressao-grade').textContent = 'Edição de Vídeo' + sufixoTitulo;
+
+      document.getElementById('corpo-impressao-grade').innerHTML = lista.length
+        ? lista.map(p => `
+            <tr>
+              <td>${formatarData(p.data_fato)}</td>
+              <td>${escaparHtml(p.titulo) || '—'}</td>
+              <td>${escaparHtml(nomePrograma(p.programa_id))}</td>
+              <td>${escaparHtml(p.produtor) || '—'}</td>
+            </tr>
+          `).join('')
+        : '<tr><td colspan="4" style="text-align:center; color:#666;">Nenhum item encontrado com os filtros atuais.</td></tr>';
+
+      const agora = new Date();
+      document.getElementById('data-impressao-grade').textContent = 'Data de Impressão: ' +
+        agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('total-impressao-grade').textContent =
+        lista.length + ' ite' + (lista.length === 1 ? 'm' : 'ns');
+
+      window.print();
+    }
+    document.getElementById('btn-imprimir-grade').addEventListener('click', executarImpressaoGrade);
 
     (async function init() {
       await Promise.all([carregarProgramas(), carregarPautas()]);
