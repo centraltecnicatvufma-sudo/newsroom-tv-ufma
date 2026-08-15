@@ -122,6 +122,26 @@
     .nr-sidebar .nr-item-desabilitado { color: #a8c2db; cursor: default; justify-content: space-between; }
     .nr-sidebar .nr-item-desabilitado .nr-badge { font-size: 10px; background: #4d7fb3; color: #fff; padding: 2px 6px; border-radius: 4px; }
     .nr-app { flex: 1; min-width: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+
+    /* ---- Grade impressa (mesmo padrão de pautas.html) — só existe
+       visualmente durante a impressão, com as reportagens que estiverem
+       filtradas na tela no momento (data inicial/final, status e busca). */
+    .somente-impressao { display: none; }
+    .titulo-grade { font-size: 16px; font-weight: bold; margin: 0 0 2em; }
+    .tabela-grade { width: 100%; border-collapse: collapse; }
+    .tabela-grade th, .tabela-grade td { padding: 6px 10px; font-size: 12px; text-align: left; border: 1px solid #000; }
+    .tabela-grade th { background: #e0e0e0; text-transform: uppercase; }
+    .tabela-grade tbody tr:nth-child(even) { background: #f6f6f6; }
+    .rodape-grade { display: flex; justify-content: space-between; font-size: 10px; color: #333; margin-top: 6px; }
+
+    @media print {
+      @page { size: A4; margin: 15mm; }
+      .nr-sidebar, .faixa-breaking, .filtros, .paginacao, .topo { display: none !important; }
+      body { background: #fff; }
+      .nr-app { height: auto !important; overflow: visible !important; }
+      .somente-impressao { display: block !important; }
+      #area-tabela, .quadro-kanban { display: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -189,12 +209,26 @@
         <button class="ativo" id="btn-visao-lista">🗂️ Lista</button>
         <button id="btn-visao-quadro">▦ Quadro</button>
       </div>
+      <button id="btn-imprimir-grade" title="Imprime a grade com as reportagens que estiverem filtradas na tela" style="padding:8px 14px; border-radius:6px; border:none; background:#5b6472; color:#fff; font-size:13px; cursor:pointer; white-space:nowrap;">🖨️ Imprimir Grade</button>
     </div>
   </div>
 
   <div class="conteudo">
     <div id="area-tabela">Carregando...</div>
     <div class="quadro-kanban" id="quadro-kanban"></div>
+  </div>
+
+  <div class="somente-impressao" id="impressao-grade">
+    <div class="titulo-grade" id="titulo-impressao-grade">Reportagens</div>
+    <table class="tabela-grade">
+      <thead><tr><th>Data</th><th>Retranca</th><th>Programa</th><th>Produtor</th></tr></thead>
+      <tbody id="corpo-impressao-grade"></tbody>
+    </table>
+    <div class="rodape-grade">
+      <span id="data-impressao-grade"></span>
+      <span>HORUS Newsroom</span>
+      <span id="total-impressao-grade"></span>
+    </div>
   </div>
 
   <div class="paginacao" id="paginacao">
@@ -608,6 +642,39 @@
       clearTimeout(window._buscaTimeout);
       window._buscaTimeout = setTimeout(atualizar, 300);
     });
+
+    // Grade impressa — mesmas reportagens que estão filtradas na tela no
+    // momento (data inicial/final, status e busca), mesmo layout usado em
+    // Pautas. Data inicial define o título quando preenchida; sem ela,
+    // imprime tudo que estiver filtrado sem menção a uma data específica.
+    function executarImpressaoGrade() {
+      const dataIni = document.getElementById('filtro-data-inicial').value;
+      const lista = pautasFiltradas();
+
+      document.getElementById('titulo-impressao-grade').textContent = dataIni
+        ? 'Reportagens ' + formatarData(dataIni)
+        : 'Reportagens';
+
+      document.getElementById('corpo-impressao-grade').innerHTML = lista.length
+        ? lista.map(p => `
+            <tr>
+              <td>${formatarData(p.data_fato)}</td>
+              <td>${escaparHtml(p.titulo) || '—'}</td>
+              <td>${nomePrograma(p.programa_id)}</td>
+              <td>${escaparHtml(p.produtor) || '—'}</td>
+            </tr>
+          `).join('')
+        : '<tr><td colspan="4" style="text-align:center; color:#666;">Nenhuma reportagem encontrada com os filtros atuais.</td></tr>';
+
+      const agora = new Date();
+      document.getElementById('data-impressao-grade').textContent = 'Data de Impressão: ' +
+        agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('total-impressao-grade').textContent =
+        lista.length + ' reportage' + (lista.length === 1 ? 'm' : 'ns');
+
+      window.print();
+    }
+    document.getElementById('btn-imprimir-grade').addEventListener('click', executarImpressaoGrade);
 
     document.getElementById('btn-pagina-anterior').addEventListener('click', () => {
       if (paginaAtual > 1) { paginaAtual--; renderTabela(); }

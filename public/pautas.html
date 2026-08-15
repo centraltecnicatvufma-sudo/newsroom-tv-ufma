@@ -412,7 +412,7 @@
       <div class="grupo-busca-acoes">
         <input type="text" id="busca-pauta" placeholder="🔍 Buscar pauta...">
         <button id="btn-nova-pauta">+ Nova Pauta</button>
-        <button id="btn-imprimir-grade" title="Imprime a grade do dia selecionado no filtro de data">🖨️ Imprimir Grade</button>
+        <button id="btn-imprimir-grade" title="Imprime a grade com as pautas que estiverem filtradas na tela">🖨️ Imprimir Grade</button>
       </div>
     </div>
 
@@ -1472,29 +1472,25 @@
       window.print();
     }
 
-    // Grade do dia — folha em formato de relatório com as pautas do dia
-    // selecionado no filtro de data, respeitando também Programa e Status
-    // se estiverem selecionados na tela (busca por texto continua de fora
-    // — filtro livre demais pra fazer sentido numa grade impressa).
+    // Grade do dia — folha em formato de relatório com as pautas que
+    // estiverem na tela no momento, ou seja, com todos os filtros ativos
+    // (Programa, Status, Data e busca por texto) já aplicados — pautasCache
+    // é sempre o resultado do último fetch feito com esses mesmos filtros
+    // (ver carregarPautas), então basta reaproveitar. Data no filtro
+    // continua opcional: com ela, o título mostra o dia; sem ela, imprime
+    // tudo que estiver filtrado, sem menção a uma data específica.
     // Layout inspirado num modelo de grade impressa que a redação já usa
     // em outro sistema, com DATA/RETRANCA/PROGRAMA/PRODUTOR.
     async function executarImpressaoGrade() {
       const dataFiltro = document.getElementById('filtro-data').value;
-      if (!dataFiltro) { alert('Selecione uma data no filtro antes de imprimir a grade.'); return; }
+      const lista = [...pautasCache].sort(compararPautas);
 
-      const params = new URLSearchParams({ data_fato: dataFiltro });
-      const programaFiltro = document.getElementById('filtro-programa').value;
-      const statusFiltro = document.getElementById('filtro-status').value;
-      if (programaFiltro) params.set('programa_id', programaFiltro);
-      if (statusFiltro) params.set('status', statusFiltro);
+      document.getElementById('titulo-impressao-grade').textContent = dataFiltro
+        ? 'Pautas ' + formatarDataImpressao(dataFiltro)
+        : 'Pautas';
 
-      const resp = await fetch('/pautas?' + params.toString());
-      const pautasDoDia = (await resp.json()).sort(compararPautas);
-
-      document.getElementById('titulo-impressao-grade').textContent = 'Pautas ' + formatarDataImpressao(dataFiltro);
-
-      document.getElementById('corpo-impressao-grade').innerHTML = pautasDoDia.length
-        ? pautasDoDia.map(p => `
+      document.getElementById('corpo-impressao-grade').innerHTML = lista.length
+        ? lista.map(p => `
             <tr>
               <td>${formatarDataImpressao(p.data_fato)}</td>
               <td>${p.titulo || '—'}</td>
@@ -1502,13 +1498,13 @@
               <td>${p.produtor || '—'}</td>
             </tr>
           `).join('')
-        : '<tr><td colspan="4" style="text-align:center; color:#666;">Nenhuma pauta para este dia.</td></tr>';
+        : '<tr><td colspan="4" style="text-align:center; color:#666;">Nenhuma pauta encontrada com os filtros atuais.</td></tr>';
 
       const agora = new Date();
       document.getElementById('data-impressao-grade').textContent = 'Data de Impressão: ' +
         agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       document.getElementById('total-impressao-grade').textContent =
-        pautasDoDia.length + ' pauta' + (pautasDoDia.length === 1 ? '' : 's');
+        lista.length + ' pauta' + (lista.length === 1 ? '' : 's');
 
       document.body.classList.add('imprimindo-grade');
       window.print();
