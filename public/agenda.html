@@ -427,7 +427,7 @@
       const resposta = await fetch('/agenda/programas');
       const lista = await resposta.json();
 
-      const rotuloTipo = { programa: 'Programa', 'inter-programa': 'Inter-programa', quadro: 'Quadro', jornal: 'Jornal' };
+      const rotuloTipo = { programa: 'Programa', 'inter-programa': 'Inter-programa', quadro: 'Quadro', jornal: 'Jornal', evento: 'Evento' };
 
       let corpoTabela = lista.map(p => `
         <tr>
@@ -827,7 +827,7 @@
         <button class="btn-voltar" id="btn-voltar-agenda">← Voltar</button>
         <h1>${agendamentoEmEdicao ? 'Editar Agendamento' : 'Novo Agendamento'}</h1>
         <div class="formulario-agendamento">
-          <label>Programa/Quadro</label>
+          <label>Programa / Quadro / Evento</label>
           <select id="form-programa">${opcoesPrograma}</select>
 
           <div class="linha-dupla">
