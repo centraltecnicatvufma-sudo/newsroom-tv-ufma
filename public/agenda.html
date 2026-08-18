@@ -50,6 +50,9 @@
     .cartao-agendamento { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); padding: 14px 16px; border-left: 4px solid #336699; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .cartao-agendamento .info-cartao { flex: 1; min-width: 0; }
     .cartao-agendamento .data-hora { font-size: 12px; font-weight: bold; color: #336699; }
+    .cartao-agendamento .acoes-cartao { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+    .cartao-agendamento .botoes-cartao { display: flex; gap: 6px; }
+    .cartao-agendamento .botoes-cartao button { background: transparent; border: none; cursor: pointer; font-size: 13px; padding: 2px; }
     .cartao-agendamento .programa { font-size: 15px; font-weight: bold; margin-top: 3px; }
     .cartao-agendamento .local { font-size: 12px; color: #5b6472; margin-top: 3px; }
 
@@ -75,6 +78,8 @@
     .card-agendamento .linha-acoes { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
     .card-agendamento select { padding: 5px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; }
     .card-agendamento .btn-editar-agendamento { background: transparent; border: none; cursor: pointer; font-size: 12px; color: #336699; padding: 0; }
+    .card-agendamento .botoes-card { display: flex; gap: 12px; align-items: center; }
+    .card-agendamento .btn-excluir-agendamento { background: transparent; border: none; cursor: pointer; font-size: 12px; color: #8D0333; padding: 0; }
 
     /* Listas simples (Programas/Quadros e Equipe) — tabela igual ao
        padrão de Pautas/Reportagens, com botões de ação por ícone */
@@ -376,7 +381,13 @@
             <div class="programa">${item.programa_nome || ''}</div>
             <div class="local">📍 ${item.local || ''}</div>
           </div>
-          <span class="status-badge status-${item.status || 'agendado'}">${rotulosStatusRelatorio[item.status] || item.status || 'Agendado'}</span>
+          <div class="acoes-cartao">
+            <span class="status-badge status-${item.status || 'agendado'}">${rotulosStatusRelatorio[item.status] || item.status || 'Agendado'}</span>
+            <div class="botoes-cartao">
+              <button class="btn-editar-cartao" data-id="${item.id}" title="Editar">✏️</button>
+              <button class="btn-excluir-cartao" data-id="${item.id}" title="Excluir">🗑️</button>
+            </div>
+          </div>
         </div>
       `).join('');
 
@@ -386,6 +397,27 @@
           ? '<div class="estado-vazio">Nenhum agendamento cadastrado ainda.</div>'
           : `<div class="grid-agendamentos">${cartoes}</div>`}
       `;
+
+      document.querySelectorAll('.btn-editar-cartao').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const item = todos.find(a => a.id === Number(btn.dataset.id));
+          abrirFormularioAgendamento(item, 'semanal');
+        });
+      });
+
+      document.querySelectorAll('.btn-excluir-cartao').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const item = todos.find(a => a.id === Number(btn.dataset.id));
+          if (!confirm('Excluir este agendamento?')) return;
+          await fetch(`/agenda/${btn.dataset.id}`, { method: 'DELETE' });
+          window.HorusUndo?.registrar({
+            tipo: 'Agendamento',
+            titulo: (item?.programa_nome || 'Agendamento') + (item?.data ? ' - ' + item.data : ''),
+            urlBase: '/agenda/' + btn.dataset.id
+          });
+          renderRelatorio();
+        });
+      });
     }
 
     async function renderProgramas() {
@@ -675,7 +707,10 @@
           <div class="titulo-card">${a.hora} - ${a.programa_nome || ''}</div>
           <div class="detalhe-card">📍 ${a.local || ''} ${a.equipe ? '· 👤 ' + a.equipe : ''}</div>
           <div class="linha-acoes">
-            <button class="btn-editar-agendamento" data-id="${a.id}">✏️ Editar</button>
+            <div class="botoes-card">
+              <button class="btn-editar-agendamento" data-id="${a.id}">✏️ Editar</button>
+              <button class="btn-excluir-agendamento" data-id="${a.id}">🗑️ Excluir</button>
+            </div>
             <select class="select-status" data-id="${a.id}">
               <option value="agendado" ${a.status === 'agendado' ? 'selected' : ''}>Agendado</option>
               <option value="gravando" ${a.status === 'gravando' ? 'selected' : ''}>Gravando</option>
@@ -723,7 +758,22 @@
         btn.addEventListener('click', async () => {
           const id = Number(btn.dataset.id);
           const item = agendamentos.find(a => a.id === id);
-          abrirFormularioAgendamento(item);
+          abrirFormularioAgendamento(item, 'dia');
+        });
+      });
+
+      document.querySelectorAll('.btn-excluir-agendamento').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = Number(btn.dataset.id);
+          const item = agendamentos.find(a => a.id === id);
+          if (!confirm('Excluir este agendamento?')) return;
+          await fetch(`/agenda/${id}`, { method: 'DELETE' });
+          window.HorusUndo?.registrar({
+            tipo: 'Agendamento',
+            titulo: (item?.programa_nome || 'Agendamento') + (item?.data ? ' - ' + item.data : ''),
+            urlBase: '/agenda/' + id
+          });
+          renderAgendaDia();
         });
       });
     }
@@ -746,8 +796,12 @@
 
     let agendamentoEmEdicao = null; // guarda o objeto do agendamento, se estiver editando
 
-    async function abrirFormularioAgendamento(agendamento) {
+    async function abrirFormularioAgendamento(agendamento, origem) {
       agendamentoEmEdicao = agendamento || null;
+      // "Voltar" e o pós-salvar precisam lembrar se veio da Semanal ou do
+      // Por Dia, pra não jogar sempre pro Por Dia independente de onde a
+      // edição começou.
+      const voltarParaOrigem = origem === 'semanal' ? renderRelatorio : renderAgendaDia;
 
       const conteudo = document.getElementById('conteudo');
       conteudo.innerHTML = '<p>Carregando...</p>';
@@ -801,7 +855,7 @@
       `;
 
       document.getElementById('btn-voltar-agenda').addEventListener('click', () => {
-        renderAgendaDia();
+        voltarParaOrigem();
       });
 
       document.getElementById('btn-salvar-agendamento').addEventListener('click', async () => {
@@ -831,7 +885,7 @@
         }
 
         diaSelecionado = new Date(data + 'T12:00:00');
-        renderAgendaDia();
+        voltarParaOrigem();
       });
     }
   </script>
