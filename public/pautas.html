@@ -599,10 +599,20 @@
       return String(txt || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
     }
 
+    // Rótulo impresso do campo Repórter/Apresentador — mostra "Apresentador"
+    // só quando a função de quem foi selecionado é apresentador e NÃO
+    // repórter ao mesmo tempo; qualquer outro caso (repórter, ambíguo,
+    // vazio, fora da lista) imprime "Repórter", o rótulo original.
+    function rotuloReporterImpressao(nomeReporter) {
+      const membro = equipeCache.find(m => m.nome === nomeReporter);
+      const f = normalizarTexto(membro ? membro.funcao : '');
+      return (f.includes('apresentador') && !f.includes('reporter')) ? 'Apresentador' : 'Repórter';
+    }
+
     function funcaoCorresponde(funcao, papel) {
       const f = normalizarTexto(funcao);
       if (papel === 'produtor') return f.includes('produt') || f.includes('producao');
-      if (papel === 'reporter') return f.includes('reporter');
+      if (papel === 'reporter') return f.includes('reporter') || f.includes('apresentador');
       if (papel === 'cinegrafista') return f.includes('cinegrafista');
       if (papel === 'editor-imagens') return f.includes('imagens') && (f.includes('edit') || f.includes('edic'));
       return false;
@@ -964,13 +974,14 @@
                       <option value="Sonora">Sonora</option>
                       <option value="Ao Vivo">Ao Vivo</option>
                       <option value="Nota Coberta">Nota Coberta</option>
+                      <option value="Entrevista">Entrevista</option>
                     </select>
                   </td>
                 </tr>
               </tbody>
             </table>
             <table class="tabela-cabecalho-pauta">
-              <thead><tr><th>Repórter</th><th>Cinegrafista</th><th>Produtor</th></tr></thead>
+              <thead><tr><th>Repórter / Apresentador</th><th>Cinegrafista</th><th>Produtor</th></tr></thead>
               <tbody>
                 <tr>
                   <td><select data-campo="reporter"></select></td>
@@ -1495,7 +1506,7 @@
         </div>
         <div class="moldura-tabela-cabecalho">
           <table class="tabela-impressao-cabecalho">
-            <thead><tr><th>Repórter</th><th>Cinegrafista</th><th>Produtor</th></tr></thead>
+            <thead><tr><th>${rotuloReporterImpressao(p.reporter)}</th><th>Cinegrafista</th><th>Produtor</th></tr></thead>
             <tbody>
               <tr>
                 <td>${p.reporter || '—'}</td>
