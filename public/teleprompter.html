@@ -46,6 +46,7 @@
   .indicador-camera-op.cam-fechada { background: #444; }
   .indicador-camera-op.cam-aberta { background: #1f8a3b; }
   .indicador-camera-op.virada-cam-aberta { background: #c0392b; }
+  .indicador-camera-op.virada-cam-fechada { background: #c9791f; }
   .area-rolagem-op { position: relative; flex: 1; min-height: 0; overflow: hidden; }
   /* .escala-rolagem tem largura fixa (a resolução de referência) e é escalada
      via transform pra caber neste painel — assim o texto SEMPRE quebra do
@@ -282,12 +283,14 @@
     const CAMERA_CLASSE = {
       'CAM FECHADA': 'cam-fechada',
       'CAM ABERTA': 'cam-aberta',
-      'VIRADA CAM ABERTA': 'virada-cam-aberta'
+      'VIRADA CAM ABERTA': 'virada-cam-aberta',
+      'VIRADA CAM FECHADA': 'virada-cam-fechada'
     };
     const CAMERA_TEXTO = {
       'CAM FECHADA': '📷 CÂMERA FECHADA',
       'CAM ABERTA': '📷 CÂMERA ABERTA',
-      'VIRADA CAM ABERTA': '🔁 VIRAR PARA CÂMERA ABERTA'
+      'VIRADA CAM ABERTA': '🔁 VIRAR PARA CÂMERA ABERTA',
+      'VIRADA CAM FECHADA': '🔁 VIRAR PARA CÂMERA FECHADA'
     };
     function atualizarIndicadorCameraOperador() {
       const el = document.getElementById('indicador-camera-op');
@@ -789,6 +792,7 @@
             #indicador-camera.cam-fechada { background:#444; }
             #indicador-camera.cam-aberta { background:#1f8a3b; }
             #indicador-camera.virada-cam-aberta { background:#c0392b; }
+            #indicador-camera.virada-cam-fechada { background:#c9791f; }
           </style>
         </head>
         <body>
@@ -807,12 +811,14 @@
             const CAMERA_CLASSE = {
               'CAM FECHADA': 'cam-fechada',
               'CAM ABERTA': 'cam-aberta',
-              'VIRADA CAM ABERTA': 'virada-cam-aberta'
+              'VIRADA CAM ABERTA': 'virada-cam-aberta',
+              'VIRADA CAM FECHADA': 'virada-cam-fechada'
             };
             const CAMERA_TEXTO = {
               'CAM FECHADA': '📷 CÂMERA FECHADA',
               'CAM ABERTA': '📷 CÂMERA ABERTA',
-              'VIRADA CAM ABERTA': '🔁 VIRAR PARA CÂMERA ABERTA'
+              'VIRADA CAM ABERTA': '🔁 VIRAR PARA CÂMERA ABERTA',
+              'VIRADA CAM FECHADA': '🔁 VIRAR PARA CÂMERA FECHADA'
             };
 
             // Mesma largura de referência recebida do operador — garante que
