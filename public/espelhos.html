@@ -9,9 +9,9 @@
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
 
-    .topo { background: linear-gradient(135deg, #062B4A 0%, #062845 50%, #031D35 100%); color: #fff; padding: 14px 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+    .topo { background: linear-gradient(135deg, #062B4A 0%, #062845 50%, #031D35 100%); color: #fff; padding: 14px 20px; text-align: center; position: relative; }
     .topo h1 { font-size: 26px; margin: 0; }
-    .topo button { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 9px 16px; cursor: pointer; font-size: 13px; }
+    .topo button { background: #8D0333; color: #fff; border: none; border-radius: 6px; padding: 9px 16px; cursor: pointer; font-size: 13px; position: absolute; right: 20px; top: 50%; transform: translateY(-50%); }
     .topo button:hover { background: #a10440; }
 
     .conteudo { flex: 1; overflow-y: auto; padding: 24px; }
