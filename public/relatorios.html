@@ -9,8 +9,8 @@
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
 
-    .topo { background: linear-gradient(135deg, #062B4A 0%, #062845 50%, #031D35 100%); color: #fff; padding: 14px 20px; }
-    .topo h1 { font-size: 18px; margin: 0 0 4px; }
+    .topo { background: linear-gradient(135deg, #062B4A 0%, #062845 50%, #031D35 100%); color: #fff; padding: 14px 20px; text-align: center; }
+    .topo h1 { font-size: 26px; margin: 0 0 4px; }
     .topo .sub { font-size: 12px; opacity: 0.9; }
 
     .abas-relatorio { display: flex; background: #fff; border-bottom: 1px solid #eee; }
@@ -140,7 +140,7 @@
   <div class="nr-app">
 
   <div class="topo">
-    <h1 id="titulo-relatorio">HORUS NEWSROOM — Relatório de Produtividade</h1>
+    <h1 id="titulo-relatorio">Relatório de Produtividade</h1>
     <div class="sub" id="subtitulo-relatorio">Quantas pautas cada pessoa produziu, por papel e por período</div>
   </div>
 
@@ -360,11 +360,11 @@
 
     // ───────────────────── Abas ─────────────────────
     const TITULOS_ABA = {
-      produtividade: { titulo: 'HORUS NEWSROOM — Relatório de Produtividade', sub: 'Quantas pautas cada pessoa produziu, por papel e por período' },
-      funil: { titulo: 'HORUS NEWSROOM — Funil de Sugestões', sub: 'Do envio à decisão: quantas sugestões avançam, quem envia, quanto tempo leva' },
-      pontualidade: { titulo: 'HORUS NEWSROOM — Pontualidade do Espelho', sub: 'Quantas edições fecharam no tempo, estouraram ou sobrou buraco' },
-      cobertura: { titulo: 'HORUS NEWSROOM — Cobertura por Editoria', sub: 'Quantas pautas cada editoria produziu, com recorte de período' },
-      exclusoes: { titulo: 'HORUS NEWSROOM — Exclusões', sub: 'O que está na Lixeira hoje, por tipo e por quando foi excluído' },
+      produtividade: { titulo: 'Relatório de Produtividade', sub: 'Quantas pautas cada pessoa produziu, por papel e por período' },
+      funil: { titulo: 'Funil de Sugestões', sub: 'Do envio à decisão: quantas sugestões avançam, quem envia, quanto tempo leva' },
+      pontualidade: { titulo: 'Pontualidade do Espelho', sub: 'Quantas edições fecharam no tempo, estouraram ou sobrou buraco' },
+      cobertura: { titulo: 'Cobertura por Editoria', sub: 'Quantas pautas cada editoria produziu, com recorte de período' },
+      exclusoes: { titulo: 'Exclusões', sub: 'O que está na Lixeira hoje, por tipo e por quando foi excluído' },
     };
 
     const ABAS = ['produtividade', 'funil', 'pontualidade', 'cobertura', 'exclusoes'];
