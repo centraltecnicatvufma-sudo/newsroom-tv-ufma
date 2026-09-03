@@ -9,9 +9,9 @@
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; flex-direction: column; }
 
-    .topo { background: linear-gradient(135deg, #062B4A 0%, #062845 50%, #031D35 100%); color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 24px; }
-    .topo h1 { font-size: 26px; margin: 0; white-space: nowrap; }
-    .caixa-busca { position: relative; flex: 1; max-width: 520px; }
+    .topo { background: linear-gradient(135deg, #062B4A 0%, #062845 50%, #031D35 100%); color: #fff; padding: 14px 20px; text-align: center; position: relative; }
+    .topo h1 { font-size: 26px; margin: 0; }
+    .caixa-busca { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); width: 340px; text-align: left; }
     .caixa-busca input {
       width: 100%; padding: 12px 16px 12px 40px; border-radius: 8px; border: none;
       font-size: 15px; font-family: inherit;
