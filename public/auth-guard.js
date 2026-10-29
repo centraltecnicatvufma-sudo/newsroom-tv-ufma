@@ -16,6 +16,8 @@
     .nr-usuario-logado .nr-usuario-botoes { display: flex; gap: 6px; }
     .nr-usuario-logado button { flex: 1; background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 6px; padding: 6px 8px; font-size: 12px; cursor: pointer; }
     .nr-usuario-logado button:hover { background: rgba(255,255,255,0.28); }
+    .nr-link-notificacoes { position: relative; }
+    .nr-notificacoes-contador { margin-left: auto; min-width: 18px; text-align: center; padding: 1px 5px; border-radius: 10px; background: #8D0333; color: #fff; font-size: 10px; font-weight: bold; }
 
     .nr-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
     .nr-modal-overlay.aberto { display: flex; }
@@ -117,6 +119,36 @@
     bloco.querySelector('.nr-usuario-nome').textContent = usuario.nome;
     bloco.querySelector('.nr-usuario-perfil').textContent = usuario.perfil || 'Perfil não definido';
     sidebar.appendChild(bloco);
+
+    const linkNotificacoes = sidebar.querySelector('a[href="notificacoes.html"]') || document.createElement('a');
+    if (!linkNotificacoes.parentElement) {
+      linkNotificacoes.href = 'notificacoes.html';
+      linkNotificacoes.className = 'nr-link-notificacoes';
+      linkNotificacoes.innerHTML = '🔔 Notificações <span class="nr-notificacoes-contador" hidden></span>';
+      sidebar.insertBefore(linkNotificacoes, bloco);
+    } else if (!linkNotificacoes.querySelector('.nr-notificacoes-contador')) {
+      const contador = document.createElement('span');
+      contador.className = 'nr-notificacoes-contador';
+      contador.hidden = true;
+      linkNotificacoes.appendChild(contador);
+    }
+    if (location.pathname.endsWith('notificacoes.html')) linkNotificacoes.classList.add('nr-ativo');
+
+    const contadorNotificacoes = linkNotificacoes.querySelector('.nr-notificacoes-contador');
+    const atualizarContadorNotificacoes = async () => {
+      try {
+        const resposta = await fetch('/notificacoes');
+        if (!resposta.ok) throw new Error('Não foi possível carregar as notificações');
+        const lista = await resposta.json();
+        const naoLidas = lista.filter(n => !n.lida_em).length;
+        contadorNotificacoes.textContent = naoLidas > 99 ? '99+' : String(naoLidas);
+        contadorNotificacoes.hidden = naoLidas === 0;
+      } catch (erro) {
+        console.error('Erro ao atualizar o contador de notificações:', erro);
+      }
+    };
+    atualizarContadorNotificacoes();
+    window.setInterval(atualizarContadorNotificacoes, 60000);
 
     // Link de Histórico só aparece na sidebar pra quem é Administrador/TI
     // — não é a proteção de verdade (essa é a checagem de perfil dentro

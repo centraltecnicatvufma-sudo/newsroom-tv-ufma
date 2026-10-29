@@ -2,6 +2,51 @@ const express = require('express');
 const router = express.Router();
 const db = require('./banco');
 const { nivelDoUsuario, exigirNivelMinimo, precisaFiltrarPorSetor, setorDoUsuario } = require('./permissoes');
+const { notificarEnvolvidos } = require('./notificacoes');
+
+function normalizarEditorias(valor) {
+  const recebidas = Array.isArray(valor) ? valor : (typeof valor === 'string' ? [valor] : []);
+  return [...new Set(recebidas.filter(e => typeof e === 'string').map(e => e.trim()).filter(Boolean))];
+}
+
+function salvarEditorias(pautaId, editorias) {
+  const substituir = db.transaction(() => {
+    db.prepare('DELETE FROM pauta_editorias WHERE pauta_id = ?').run(pautaId);
+    const inserir = db.prepare('INSERT INTO pauta_editorias (pauta_id, editoria) VALUES (?, ?)');
+    editorias.forEach(editoria => inserir.run(pautaId, editoria));
+    db.prepare('UPDATE pautas SET editoria = ? WHERE id = ?').run(editorias[0] || '', pautaId);
+  });
+  substituir();
+}
+
+function anexarEditorias(pautas) {
+  const lista = Array.isArray(pautas) ? pautas : [pautas];
+  if (!lista.length) return pautas;
+  const ids = lista.map(p => p.id);
+  const placeholders = ids.map(() => '?').join(', ');
+  const editorias = db.prepare(`
+    SELECT pauta_id, editoria FROM pauta_editorias
+    WHERE pauta_id IN (${placeholders})
+    ORDER BY rowid
+  `).all(...ids);
+  const porPauta = new Map();
+  editorias.forEach(e => {
+    if (!porPauta.has(e.pauta_id)) porPauta.set(e.pauta_id, []);
+    porPauta.get(e.pauta_id).push(e.editoria);
+  });
+  lista.forEach(p => {
+    p.editorias = porPauta.get(p.id) || normalizarEditorias(p.editoria);
+  });
+  return pautas;
+}
+
+const CAMPOS_BUSCA = [
+  'pautas.titulo', 'pautas.orientacao', 'pautas.roteiro', 'pautas.texto_livre',
+  'pautas.local', 'pautas.anexos', 'pautas.cabeca_texto', 'pautas.texto_web',
+  'pautas.produtor', 'pautas.reporter', 'pautas.editor_imagens',
+  'pautas.cinegrafista', 'pautas.motorista', 'pautas.equipe_extra',
+  'pautas.editoria'
+];
 
 function buscarFontes(pautaId) {
   return db.prepare('SELECT * FROM pauta_fontes WHERE pauta_id = ?').all(pautaId);
@@ -45,7 +90,21 @@ const SELECT_PAUTAS = `
     ), 0)) AS duracao_estimada_segundos,
     (SELECT COUNT(*) FROM materia_itens WHERE materia_itens.pauta_id = pautas.id) AS materia_itens_qtd,
     (SELECT usuario_nome FROM pautas_bloqueios WHERE pauta_id = pautas.id LIMIT 1) AS bloqueado_por,
-    (SELECT setor FROM programas_quadros WHERE id = pautas.programa_id) AS setor
+    (SELECT setor FROM programas_quadros WHERE id = pautas.programa_id) AS setor,
+    TRIM(
+      COALESCE(pautas.titulo, '') || ' ' || COALESCE(pautas.orientacao, '') || ' ' ||
+      COALESCE(pautas.roteiro, '') || ' ' || COALESCE(pautas.texto_livre, '') || ' ' ||
+      COALESCE(pautas.local, '') || ' ' || COALESCE(pautas.anexos, '') || ' ' ||
+      COALESCE(pautas.cabeca_texto, '') || ' ' || COALESCE(pautas.texto_web, '') || ' ' ||
+      COALESCE(pautas.produtor, '') || ' ' || COALESCE(pautas.reporter, '') || ' ' ||
+      COALESCE(pautas.editor_imagens, '') || ' ' || COALESCE(pautas.cinegrafista, '') || ' ' ||
+      COALESCE(pautas.motorista, '') || ' ' || COALESCE(pautas.equipe_extra, '') || ' ' ||
+      COALESCE((SELECT group_concat(editoria) FROM pauta_editorias WHERE pauta_id = pautas.id), '') || ' ' ||
+      COALESCE((SELECT group_concat(nome || ' ' || cargo || ' ' || contato || ' ' || observacao)
+        FROM pauta_fontes WHERE pauta_id = pautas.id), '') || ' ' ||
+      COALESCE((SELECT group_concat(titulo || ' ' || texto)
+        FROM pauta_textos_extra WHERE pauta_id = pautas.id), '')
+    ) AS busca_conteudo
   FROM pautas
 `;
 
@@ -97,7 +156,10 @@ function registrarHistoricoStatus(pautaId, statusAnterior, statusNovo) {
 const ROTULOS_STATUS_NOTIFICACAO = {
   em_edicao: '🟣 Gravado / Em Edição',
   aguardando_revisao: '🟠 Aguardando Revisão',
-  concluida: '🟢 Concluída / Pronta'
+  falta_imagem: '🟡 Falta imagem',
+  falta_sonora: '🟡 Falta sonora',
+  falta_off: '🟡 Falta OFF',
+  concluida: '🟢 Editado / Pronto'
 };
 
 function normalizarFuncao(txt) {
@@ -179,7 +241,14 @@ function destinatariosPorStatus(pauta, statusNovo) {
 // sistema em vez de bolha de conversa (ver chat-painel.js).
 function notificarMudancaStatus(req, pauta, statusNovo) {
   const rotulo = ROTULOS_STATUS_NOTIFICACAO[statusNovo];
-  if (!rotulo) return;
+  if (!rotulo) {
+    const nomeStatus = {
+      em_producao: 'Em Produção',
+      em_gravacao: 'Em Gravação'
+    }[statusNovo] || statusNovo;
+    notificarEnvolvidos(req, pauta.id, req.usuario.id, 'status', `A pauta "${pauta.titulo}" mudou para ${nomeStatus}.`);
+    return;
+  }
 
   const nomes = [...new Set(destinatariosPorStatus(pauta, statusNovo))];
   const mencoes = nomes.map(n => '@' + n).join(' ');
@@ -192,7 +261,79 @@ function notificarMudancaStatus(req, pauta, statusNovo) {
 
   const mensagem = db.prepare('SELECT * FROM chat_mensagens WHERE id = ?').get(resultado.lastInsertRowid);
   req.app.get('tempoReal')?.broadcast({ tipo: 'chat', pauta_id: pauta.id, mensagem });
+  notificarEnvolvidos(req, pauta.id, req.usuario.id, 'status', `A pauta "${pauta.titulo}" mudou para ${rotulo.replace(/^[^ ]+ /, '')}.`);
 }
+
+function adicionarFiltroBusca(query, params, busca) {
+  const termos = String(busca || '').trim().split(/\s+/).filter(Boolean).slice(0, 10);
+  const campos = CAMPOS_BUSCA.map(campo => `LOWER(COALESCE(${campo}, '')) LIKE ? ESCAPE '\\'`);
+  termos.forEach(termo => {
+    const padrao = '%' + termo.toLocaleLowerCase('pt-BR').replace(/[\\%_]/g, '\\$&') + '%';
+    const correspondencias = [
+      ...campos,
+      `EXISTS (
+        SELECT 1 FROM pauta_fontes pf WHERE pf.pauta_id = pautas.id AND (
+          LOWER(COALESCE(pf.nome, '')) LIKE ? ESCAPE '\\' OR
+          LOWER(COALESCE(pf.cargo, '')) LIKE ? ESCAPE '\\' OR
+          LOWER(COALESCE(pf.contato, '')) LIKE ? ESCAPE '\\' OR
+          LOWER(COALESCE(pf.endereco, '')) LIKE ? ESCAPE '\\' OR
+          LOWER(COALESCE(pf.observacao, '')) LIKE ? ESCAPE '\\'
+        )
+      )`,
+      `EXISTS (
+        SELECT 1 FROM pauta_textos_extra pe WHERE pe.pauta_id = pautas.id AND (
+          LOWER(COALESCE(pe.titulo, '')) LIKE ? ESCAPE '\\' OR
+          LOWER(COALESCE(pe.texto, '')) LIKE ? ESCAPE '\\'
+        )
+      )`,
+      `EXISTS (
+        SELECT 1 FROM pauta_editorias pe WHERE pe.pauta_id = pautas.id
+        AND LOWER(pe.editoria) LIKE ? ESCAPE '\\'
+      )`
+    ];
+    query += ' AND (' + correspondencias.join(' OR ') + ')';
+    params.push(...campos.map(() => padrao), ...Array(8).fill(padrao));
+  });
+  return query;
+}
+
+function filtrarPautasDoSetor(query, params, setor) {
+  query += ` AND (SELECT setor FROM programas_quadros WHERE id = pautas.programa_id) = ?`;
+  params.push(setor);
+  return query;
+}
+
+router.get('/producao', (req, res) => {
+  const setorUsuario = setorDoUsuario(req.usuario.id);
+  if (nivelDoUsuario(req.usuario) < 3 || setorUsuario !== 'Jornalismo') {
+    return res.status(403).json({ erro: 'Somente usuários do setor Jornalismo podem visualizar a Produção' });
+  }
+
+  const { programa_id, status, data_fato, busca } = req.query;
+  let query = SELECT_PAUTAS + ' WHERE pautas.excluido_em IS NULL';
+  const params = [];
+  query = filtrarPautasDoSetor(query, params, 'Produção');
+  if (programa_id) { query += ' AND pautas.programa_id = ?'; params.push(programa_id); }
+  if (status) { query += ' AND pautas.status = ?'; params.push(status); }
+  if (data_fato) { query += ' AND pautas.data_fato = ?'; params.push(data_fato); }
+  if (busca) query = adicionarFiltroBusca(query, params, busca);
+  query += ' ORDER BY pautas.id DESC';
+  res.json(anexarEditorias(db.prepare(query).all(...params)));
+});
+
+router.get('/producao/:id', (req, res) => {
+  if (nivelDoUsuario(req.usuario) < 3 || setorDoUsuario(req.usuario.id) !== 'Jornalismo') {
+    return res.status(403).json({ erro: 'Somente usuários do setor Jornalismo podem visualizar a Produção' });
+  }
+  const id = Number(req.params.id);
+  const pauta = db.prepare(SELECT_PAUTAS + ` WHERE pautas.id = ? AND pautas.excluido_em IS NULL
+    AND (SELECT setor FROM programas_quadros WHERE id = pautas.programa_id) = 'Produção'`).get(id);
+  if (!pauta) return res.status(404).json({ erro: 'Pauta de Produção não encontrada' });
+  pauta.fontes = buscarFontes(id);
+  pauta.textos_extra = buscarTextosExtra(id);
+  anexarEditorias(pauta);
+  res.json(pauta);
+});
 
 // GET /pautas/historico-status -> histórico completo de transições (pros
 // Gráficos Gerenciais). Precisa vir ANTES de /:id pra não ser engolida por
@@ -219,7 +360,7 @@ router.get('/', (req, res) => {
   if (programa_id) { query += ' AND programa_id = ?'; params.push(programa_id); }
   if (status) { query += ' AND status = ?'; params.push(status); }
   if (data_fato) { query += ' AND data_fato = ?'; params.push(data_fato); }
-  if (busca) { query += ' AND titulo LIKE ?'; params.push('%' + busca + '%'); }
+  if (busca) query = adicionarFiltroBusca(query, params, busca);
 
   // Repórter/Produtor/Editor-Chefe só veem pautas do próprio Setor
   // (Setor vem do Programa vinculado — pauta sem Programa fica visível
@@ -236,7 +377,7 @@ router.get('/', (req, res) => {
 
   query += ' ORDER BY id DESC';
 
-  const lista = db.prepare(query).all(...params);
+  const lista = anexarEditorias(db.prepare(query).all(...params));
   res.json(lista);
 });
 
@@ -250,6 +391,7 @@ router.get('/:id', (req, res) => {
   }
   pauta.fontes = buscarFontes(id);
   pauta.textos_extra = buscarTextosExtra(id);
+  anexarEditorias(pauta);
   res.json(pauta);
 });
 
@@ -263,6 +405,11 @@ router.post('/', exigirNivelMinimo(3), (req, res) => {
     equip_lapela, equip_iluminacao, equip_mochilink,
     data_fato, hora_fato, status, editoria, deadline, fontes, textos_extra
   } = req.body;
+  if ((req.body.editorias !== undefined && (!Array.isArray(req.body.editorias) || req.body.editorias.some(e => typeof e !== 'string'))) ||
+      (req.body.editoria !== undefined && typeof req.body.editoria !== 'string')) {
+    return res.status(400).json({ erro: 'Editorias deve ser uma lista' });
+  }
+  const editorias = normalizarEditorias(req.body.editorias !== undefined ? req.body.editorias : editoria);
 
   if (!titulo) return res.status(400).json({ erro: 'Retranca é obrigatória' });
   if (!programa_id) return res.status(400).json({ erro: 'Programa é obrigatório', campo: 'programa_id' });
@@ -295,11 +442,12 @@ router.post('/', exigirNivelMinimo(3), (req, res) => {
     Array.isArray(equipe_extra) ? equipe_extra.join(', ') : (equipe_extra || ''),
     produtor || '', reporter || '', cinegrafista || '', motorista || '', editor_imagens || '',
     equip_lapela ? 1 : 0, equip_iluminacao ? 1 : 0, equip_mochilink ? 1 : 0,
-    data_fato || '', hora_fato || '', status || 'em_producao', editoria || '', deadline || '',
+    data_fato || '', hora_fato || '', status || 'em_producao', editorias[0] || '', deadline || '',
     ...valoresAtivos
   );
 
   const novaId = resultado.lastInsertRowid;
+  salvarEditorias(novaId, editorias);
 
   if (Array.isArray(fontes)) {
     const inserirFonte = db.prepare(`
@@ -319,9 +467,11 @@ router.post('/', exigirNivelMinimo(3), (req, res) => {
     notificarEquipamentoEspecial(req, { id: novaId, titulo }, camposEquipamentoMarcados);
   }
 
-  const nova = db.prepare('SELECT * FROM pautas WHERE id = ?').get(novaId);
+  const nova = db.prepare(SELECT_PAUTAS + ' WHERE pautas.id = ?').get(novaId);
   nova.fontes = buscarFontes(novaId);
   nova.textos_extra = buscarTextosExtra(novaId);
+  anexarEditorias(nova);
+  notificarEnvolvidos(req, novaId, req.usuario.id, 'pauta_criada', `Você foi associado à pauta "${nova.titulo}".`);
   avisarMudanca(req);
   res.status(201).json(nova);
 });
@@ -331,6 +481,13 @@ router.patch('/:id', (req, res) => {
   const id = Number(req.params.id);
   const item = db.prepare('SELECT * FROM pautas WHERE id = ?').get(id);
   if (!item) return res.status(404).json({ erro: 'Pauta não encontrada' });
+  const fontesAntes = buscarFontes(id).map(f => ({
+    nome: f.nome || '', cargo: f.cargo || '', contato: f.contato || '',
+    horario_confirmado: f.horario_confirmado || '', endereco: f.endereco || '', observacao: f.observacao || ''
+  }));
+  const textosExtraAntes = buscarTextosExtra(id).map(t => ({ titulo: t.titulo || '', texto: t.texto || '' }));
+  const editoriasAntes = db.prepare('SELECT editoria FROM pauta_editorias WHERE pauta_id = ? ORDER BY rowid')
+    .all(id).map(e => e.editoria);
 
   const campos = [
     'sugestao_id', 'agenda_id', 'titulo', 'programa_id',
@@ -338,7 +495,7 @@ router.patch('/:id', (req, res) => {
     'orientacao', 'roteiro', 'local', 'anexos', 'tipo', 'texto_livre', 'equipe_extra',
     'produtor', 'reporter', 'cinegrafista', 'motorista', 'editor_imagens',
     'equip_lapela', 'equip_iluminacao', 'equip_mochilink',
-    'data_fato', 'hora_fato', 'status', 'editoria', 'deadline',
+    'data_fato', 'hora_fato', 'status', 'editoria', 'deadline', 'edicao_status',
     'cabeca_texto', 'texto_web',
     'cabeca_duracao_segundos', 'cabeca_duracao_automatica', 'tempo_video_segundos',
     ...camposAtivos()
@@ -348,6 +505,17 @@ router.patch('/:id', (req, res) => {
   campos.forEach(c => {
     atualizado[c] = req.body[c] !== undefined ? req.body[c] : item[c];
   });
+  if (req.body.status_unificado === true && req.body.edicao_status === undefined) {
+    atualizado.edicao_status = '';
+  }
+  if ((req.body.editorias !== undefined && (!Array.isArray(req.body.editorias) || req.body.editorias.some(e => typeof e !== 'string'))) ||
+      (req.body.editoria !== undefined && typeof req.body.editoria !== 'string')) {
+    return res.status(400).json({ erro: 'Editorias deve ser uma lista' });
+  }
+  const editoriasEnviadas = req.body.editorias !== undefined
+    ? normalizarEditorias(req.body.editorias)
+    : (req.body.editoria !== undefined ? normalizarEditorias(req.body.editoria) : null);
+  if (editoriasEnviadas) atualizado.editoria = editoriasEnviadas[0] || '';
   // equipe_extra chega da tela como array (seleção múltipla) — guarda como
   // texto simples com nomes separados por vírgula, mesmo padrão do POST.
   if (Array.isArray(atualizado.equipe_extra)) atualizado.equipe_extra = atualizado.equipe_extra.join(', ');
@@ -361,14 +529,40 @@ router.patch('/:id', (req, res) => {
   // Edição de Vídeo é essa uma transição específica de status — nada
   // mais, nenhum outro campo junto na mesma chamada.
   const nivel = nivelDoUsuario(req.usuario);
+  const STATUS_EDITORIAL = ['falta_imagem', 'falta_sonora', 'falta_off'];
+  const editorDesignado = String(item.editor_imagens || '').trim().toLocaleLowerCase('pt-BR') ===
+    String(req.usuario.nome || '').trim().toLocaleLowerCase('pt-BR');
+  if (STATUS_EDITORIAL.includes(req.body.status) &&
+      req.body.status !== item.status && !(nivel >= 5 || (nivel >= 2 && editorDesignado))) {
+    return res.status(403).json({ erro: 'Somente o editor de imagens designado ou um Editor-Chefe pode alterar o status editorial' });
+  }
+  if (req.body.edicao_status !== undefined) {
+    const statusEdicao = req.body.edicao_status;
+    const statusEdicaoPermitidos = ['', 'falta_imagem', 'falta_sonora', 'editado', 'falta_off'];
+    if (!statusEdicaoPermitidos.includes(statusEdicao)) {
+      return res.status(400).json({ erro: 'Status de edição inválido' });
+    }
+    if (statusEdicao !== item.edicao_status && !(nivel >= 5 || (nivel >= 2 && editorDesignado))) {
+      return res.status(403).json({ erro: 'Somente o editor de imagens designado ou um Editor-Chefe pode alterar o status da edição' });
+    }
+  }
   if (nivel < 3) {
     const camposEnviados = campos.filter(c => req.body[c] !== undefined);
     const ehTransicaoPermitidaDoTecnico =
       nivel === 2 &&
-      camposEnviados.length === 1 &&
-      camposEnviados[0] === 'status' &&
-      item.status === 'em_edicao' &&
-      req.body.status === 'aguardando_revisao';
+      ((camposEnviados.length === 1 &&
+        camposEnviados[0] === 'status' &&
+      ((item.status === 'em_edicao' && req.body.status === 'aguardando_revisao') ||
+       ((STATUS_EDITORIAL.includes(req.body.status) || req.body.status === 'concluida') && editorDesignado))) ||
+       (camposEnviados.length === 2 &&
+      camposEnviados.includes('status') &&
+      camposEnviados.includes('tempo_video_segundos') &&
+      req.body.status === 'concluida' &&
+      editorDesignado) ||
+       (camposEnviados.length === 1 &&
+      camposEnviados[0] === 'edicao_status' &&
+        String(item.editor_imagens || '').trim().toLocaleLowerCase('pt-BR') ===
+          String(req.usuario.nome || '').trim().toLocaleLowerCase('pt-BR')));
 
     if (!ehTransicaoPermitidaDoTecnico) {
       return res.status(403).json({
@@ -447,6 +641,7 @@ router.patch('/:id', (req, res) => {
       produtor=?, reporter=?, cinegrafista=?, motorista=?, editor_imagens=?,
       equip_lapela=?, equip_iluminacao=?, equip_mochilink=?,
       data_fato=?, hora_fato=?, status=?, editoria=?, deadline=?,
+      edicao_status=?,
       cabeca_texto=?, texto_web=?,
       cabeca_duracao_segundos=?, cabeca_duracao_automatica=?, tempo_video_segundos=?,
       ${camposAtivos().map(c => c + '=?').join(', ')}
@@ -459,11 +654,14 @@ router.patch('/:id', (req, res) => {
     atualizado.produtor, atualizado.reporter, atualizado.cinegrafista, atualizado.motorista, atualizado.editor_imagens,
     atualizado.equip_lapela ? 1 : 0, atualizado.equip_iluminacao ? 1 : 0, atualizado.equip_mochilink ? 1 : 0,
     atualizado.data_fato, atualizado.hora_fato, atualizado.status, atualizado.editoria, atualizado.deadline,
+    atualizado.edicao_status || '',
     atualizado.cabeca_texto, atualizado.texto_web,
     atualizado.cabeca_duracao_segundos || 0, atualizado.cabeca_duracao_automatica ? 1 : 0, atualizado.tempo_video_segundos || null,
     ...camposAtivos().map(c => atualizado[c] ? 1 : 0),
     id
   );
+
+  if (editoriasEnviadas) salvarEditorias(id, editoriasEnviadas);
 
   if (atualizado.status !== item.status) {
     registrarHistoricoStatus(id, item.status, atualizado.status);
@@ -504,6 +702,30 @@ router.patch('/:id', (req, res) => {
   const item_atualizado = db.prepare(SELECT_PAUTAS + ' WHERE pautas.id = ?').get(id);
   item_atualizado.fontes = buscarFontes(id);
   item_atualizado.textos_extra = buscarTextosExtra(id);
+  anexarEditorias(item_atualizado);
+  const camposConteudoAtualizados = [
+    'titulo', 'orientacao', 'roteiro', 'texto_livre', 'cabeca_texto', 'texto_web',
+    'local', 'anexos', 'edicao_status', 'deadline'
+  ];
+  const mudouCampoConteudo = camposConteudoAtualizados.some(c =>
+    req.body[c] !== undefined && String(req.body[c] ?? '') !== String(item[c] ?? '')
+  );
+  const editoriasDepois = editoriasEnviadas && editoriasEnviadas.slice().sort();
+  const mudouEditorias = !!editoriasEnviadas &&
+    JSON.stringify(editoriasDepois) !== JSON.stringify(editoriasAntes.slice().sort());
+  const fontesDepois = Array.isArray(req.body.fontes) ? req.body.fontes.map(f => ({
+    nome: f.nome || '', cargo: f.cargo || '', contato: f.contato || '',
+    horario_confirmado: f.horario_confirmado || '', endereco: f.endereco || '', observacao: f.observacao || ''
+  })) : null;
+  const textosExtraDepois = Array.isArray(req.body.textos_extra)
+    ? req.body.textos_extra.map(t => ({ titulo: t.titulo || '', texto: t.texto || '' }))
+    : null;
+  const houveAtualizacaoRelevante = mudouCampoConteudo || mudouEditorias ||
+    (fontesDepois && JSON.stringify(fontesDepois) !== JSON.stringify(fontesAntes)) ||
+    (textosExtraDepois && JSON.stringify(textosExtraDepois) !== JSON.stringify(textosExtraAntes));
+  if (houveAtualizacaoRelevante && atualizado.status === item.status) {
+    notificarEnvolvidos(req, id, req.usuario.id, 'atualizacao', `A pauta "${item_atualizado.titulo}" foi atualizada.`);
+  }
   avisarMudanca(req);
   res.json(item_atualizado);
 });

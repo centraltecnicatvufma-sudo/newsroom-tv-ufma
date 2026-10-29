@@ -20,6 +20,7 @@ const { exigirLogin } = authRouter;
 const historicoRouter = require('./historico');
 const { registrarAcoes } = historicoRouter;
 const { criarServidorTempoReal } = require('./tempo_real');
+const notificacoesRouter = require('./notificacoes');
 
 app.use(express.json());
 app.use(cookieParser());
@@ -67,6 +68,7 @@ app.use('/alertas', alertasRouter);
 app.use('/calendario', calendarioRouter);
 app.use('/escala', escalaRouter);
 app.use('/chat', chatRouter);
+app.use('/notificacoes', notificacoesRouter);
 
 app.get('/', (req, res) => {
   res.send('HORUS Newsroom está no ar!');

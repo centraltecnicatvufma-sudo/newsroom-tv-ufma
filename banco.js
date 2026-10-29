@@ -50,6 +50,23 @@ try { db.exec(`ALTER TABLE pautas ADD COLUMN equipe_extra TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE pautas ADD COLUMN cabeca_texto TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE pautas ADD COLUMN texto_web TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE pautas ADD COLUMN editoria TEXT`); } catch (e) {}
+try { db.exec(`ALTER TABLE pautas ADD COLUMN edicao_status TEXT`); } catch (e) {}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS pauta_editorias (
+    pauta_id INTEGER NOT NULL,
+    editoria TEXT NOT NULL,
+    PRIMARY KEY (pauta_id, editoria),
+    FOREIGN KEY (pauta_id) REFERENCES pautas(id)
+  )
+`);
+db.exec(`
+  INSERT OR IGNORE INTO pauta_editorias (pauta_id, editoria)
+  SELECT id, TRIM(editoria)
+  FROM pautas
+  WHERE editoria IS NOT NULL AND TRIM(editoria) <> ''
+`);
+db.exec('CREATE INDEX IF NOT EXISTS idx_pauta_editorias_editoria ON pauta_editorias(editoria)');
 
 // Duração da Cabeça do Apresentador — mesmo padrão automático/manual que
 // cada item do Corpo do VT já tem (materia_itens.duracao_segundos/
@@ -145,6 +162,44 @@ db.exec(`
     FOREIGN KEY (pauta_id) REFERENCES pautas(id)
   )
 `);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS notificacoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER NOT NULL,
+    pauta_id INTEGER NOT NULL,
+    tipo TEXT NOT NULL,
+    titulo TEXT NOT NULL DEFAULT '',
+    mensagem TEXT NOT NULL,
+    criado_em TEXT NOT NULL,
+    lida_em TEXT,
+    FOREIGN KEY (usuario_id) REFERENCES equipe_agenda(id),
+    FOREIGN KEY (pauta_id) REFERENCES pautas(id)
+  )
+`);
+const colunasNotificacoes = new Set(
+  db.prepare('PRAGMA table_info(notificacoes)').all().map(coluna => coluna.name)
+);
+if (!colunasNotificacoes.has('tipo')) {
+  db.exec("ALTER TABLE notificacoes ADD COLUMN tipo TEXT NOT NULL DEFAULT 'atualizacao'");
+}
+if (!colunasNotificacoes.has('titulo')) {
+  db.exec("ALTER TABLE notificacoes ADD COLUMN titulo TEXT NOT NULL DEFAULT ''");
+  if (colunasNotificacoes.has('mensagem')) {
+    db.exec("UPDATE notificacoes SET titulo = mensagem WHERE titulo = ''");
+  }
+}
+if (!colunasNotificacoes.has('lida_em')) {
+  db.exec('ALTER TABLE notificacoes ADD COLUMN lida_em TEXT');
+  if (colunasNotificacoes.has('lida')) {
+    db.exec(`
+      UPDATE notificacoes
+      SET lida_em = COALESCE(criado_em, CURRENT_TIMESTAMP)
+      WHERE lida = 1 AND lida_em IS NULL
+    `);
+  }
+}
+db.exec('CREATE INDEX IF NOT EXISTS idx_notificacoes_usuario_lida ON notificacoes(usuario_id, lida_em, id DESC)');
 
 // Canal geral (#redacao-geral) — v2 do HORUS Chat. Tabela separada da de
 // chat por pauta de propósito (sem tocar em chat_mensagens, que já está

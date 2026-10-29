@@ -58,6 +58,7 @@
     .status-em_edicao { background: #6b3fa0; }
     .status-aguardando_revisao { background: #B85C38; }
     .status-concluida { background: #2e8b57; }
+    .status-falta_imagem, .status-falta_sonora, .status-falta_off { background: #8D0333; }
 
     /* Cronômetro de deadline — mesmo critério de cor usado no Mapa de
        Produções (>2h neutro, 30min-2h amarelo, <30min vermelho, atrasado
@@ -249,6 +250,8 @@
     }
     .form-pauta-corpo textarea { min-height: 100px; resize: vertical; font-size: var(--fonte-pauta); }
     .linha-checkboxes { display: flex; gap: 10px 20px; flex-wrap: wrap; align-items: center; font-size: 13px; margin-top: 6px; }
+    .editorias-checkboxes { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 6px 12px; margin-top: 6px; }
+    .editorias-checkboxes label { display: flex; align-items: center; gap: 6px; font-size: 12px; }
     /* .form-pauta-corpo label:first-child (acima) zera a margem só do 1º
        campo de cada seção — sem essa regra mais específica, ela também
        pegava o 1º checkbox de cada linha e o desalinhava dos outros */
@@ -425,12 +428,16 @@
         <option value="em_producao">🟡 Em Produção</option>
         <option value="em_gravacao">🔵 Em Gravação</option>
         <option value="em_edicao">🟣 Gravado / Em Edição</option>
-        <option value="concluida">🟢 Concluída / Pronta</option>
+        <option value="concluida">🟢 Editado / Pronto</option>
+        <option value="falta_imagem">🖼️ Falta imagem</option>
+        <option value="falta_sonora">🔊 Falta sonora</option>
+        <option value="falta_off">📝 Falta OFF</option>
       </select>
       <input type="date" id="filtro-data">
       <div class="grupo-busca-acoes">
-        <input type="text" id="busca-pauta" placeholder="🔍 Buscar pauta...">
+        <input type="text" id="busca-pauta" placeholder="🔍 Buscar palavras no conteúdo...">
         <button id="btn-nova-pauta">+ Nova Pauta</button>
+        <button id="btn-ver-producao" type="button" style="display:none;background:#336699;">👁️ Ver pautas da Produção (somente leitura)</button>
         <button id="btn-imprimir-grade" title="Imprime a grade com as pautas que estiverem filtradas na tela">🖨️ Imprimir Grade</button>
       </div>
     </div>
@@ -518,6 +525,7 @@
     let programasCache = [];
     let equipeCache = [];
     let pautasCache = [];
+    const somenteLeituraProducao = new URLSearchParams(location.search).get('producao') === '1';
 
     // Operador(1) e Técnico(2) só têm leitura de Pauta — sem criar,
     // editar nem excluir (a ÚNICA exceção do Técnico, mudar status pra
@@ -540,11 +548,19 @@
     // todo campo e some com Salvar/Excluir/Adicionar — a garantia real é
     // o backend (pautas.js), isso aqui só evita a pessoa digitar algo
     // que vai falhar ao salvar.
-    function aplicarPermissaoPauta(container) {
-      if (nivelUsuarioAtual >= 3) return;
+    function aplicarPermissaoPauta(container, forcarLeitura = false) {
+      if (nivelUsuarioAtual >= 3 && !forcarLeitura) return;
       container.querySelectorAll('input, textarea, select').forEach(el => { el.disabled = true; });
       container.querySelector('[data-acao="salvar"]')?.remove();
       container.querySelectorAll('.btn-add-fonte, .btn-add-texto-extra').forEach(el => el.remove());
+      if (forcarLeitura) {
+        container.querySelectorAll('button').forEach(botao => {
+          if (!['fechar', 'abrir-menu-imprimir'].includes(botao.dataset.acao) &&
+              !botao.closest('.menu-imprimir-pauta') && !botao.closest('.form-pauta-subabas')) {
+            botao.style.display = 'none';
+          }
+        });
+      }
     }
 
     // Cada pauta aberta vira uma aba independente, com seu próprio painel no
@@ -559,7 +575,10 @@
       em_producao: '🟡 Em Produção',
       em_gravacao: '🔵 Em Gravação',
       em_edicao: '🟣 Gravado / Em Edição',
-      concluida: '🟢 Concluída / Pronta'
+      concluida: '🟢 Editado / Pronto',
+      falta_imagem: '🖼️ Falta imagem',
+      falta_sonora: '🔊 Falta sonora',
+      falta_off: '📝 Falta OFF'
     };
 
     // Checklist de ativos multimídia — mesmos 5 tipos usados no backend
@@ -575,6 +594,22 @@
 
     function elCampo(container, nome) {
       return container.querySelector(`[data-campo="${nome}"]`);
+    }
+
+    function escaparHtml(texto) {
+      return String(texto == null ? '' : texto)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function definirEditorias(container, editorias) {
+      const selecionadas = new Set(Array.isArray(editorias) ? editorias : (editorias ? [editorias] : []));
+      elCampo(container, 'editorias').querySelectorAll('input[type="checkbox"]').forEach(campo => {
+        campo.checked = selecionadas.has(campo.value);
+      });
+    }
+
+    function coletarEditorias(container) {
+      return [...elCampo(container, 'editorias').querySelectorAll('input[type="checkbox"]:checked')].map(campo => campo.value);
     }
 
     async function carregarProgramas() {
@@ -662,7 +697,7 @@
     // próprio Setor — evita levar a pauta pra um 403 na hora de salvar.
     // Administrador e Operador/Técnico continuam vendo todos os Programas.
     function programasVisiveisParaMim() {
-      if (![3, 4, 5].includes(nivelUsuarioAtual)) return programasCache;
+      if (somenteLeituraProducao || ![3, 4, 5].includes(nivelUsuarioAtual)) return programasCache;
       return programasCache.filter(p => !p.setor || p.setor === setorUsuarioAtual);
     }
 
@@ -751,6 +786,7 @@
 
     async function carregarPautas() {
       const conteudo = document.getElementById('conteudo');
+      if (somenteLeituraProducao) document.querySelector('.topo h1').textContent = 'Pautas da Produção — somente leitura';
       conteudo.innerHTML = '<p>Carregando...</p>';
 
       const params = new URLSearchParams();
@@ -764,8 +800,12 @@
       if (dataFiltro) params.set('data_fato', dataFiltro);
       if (buscaFiltro) params.set('busca', buscaFiltro);
 
-      const resposta = await fetch('/pautas?' + params.toString());
+      const resposta = await fetch((somenteLeituraProducao ? '/pautas/producao?' : '/pautas?') + params.toString());
       pautasCache = await resposta.json();
+      if (!resposta.ok) {
+        conteudo.innerHTML = `<p style="color:#8D0333;">${escaparHtml(pautasCache.erro || 'Não foi possível carregar as pautas.')}</p>`;
+        return;
+      }
       pautasCache.sort(compararPautas);
 
       if (pautasCache.length === 0) {
@@ -785,7 +825,7 @@
             ${pautasCache.map(p => `
               <tr>
                 <td>#P-${p.id}</td>
-                <td>${p.titulo}${p.bloqueado_por ? `<span class="selo-bloqueio" title="Sendo editada agora">🔒 ${p.bloqueado_por}</span>` : ''}</td>
+                <td>${p.titulo}${p.editorias?.length ? `<div>${p.editorias.map(e => `<span class="tag-equipe">${escaparHtml(e)}</span>`).join('')}</div>` : ''}${p.bloqueado_por ? `<span class="selo-bloqueio" title="Sendo editada agora">🔒 ${p.bloqueado_por}</span>` : ''}</td>
                 <td>${nomePrograma(p.programa_id)}</td>
                 <td>${p.data_fato ? p.data_fato.split('-').reverse().join('/') : '—'} ${p.hora_fato ? '· ' + p.hora_fato : ''}</td>
                 <td data-deadline-de="${p.id}">${htmlContadorDeadline(p.deadline, p.status)}</td>
@@ -798,9 +838,10 @@
                 </td>
                 <td><span class="status-badge status-${p.status}">${rotulosStatus[p.status] || p.status}</span></td>
                 <td class="acoes-lista">
-                  <button class="btn-ver" data-id="${p.id}" title="Ver/Editar">👁️</button>
-                  <button class="btn-lauda" data-id="${p.id}" title="Lauda">📝</button>
-                  <button class="btn-chat-lista" data-id="${p.id}" data-titulo="${(p.titulo || '').replace(/"/g, '&quot;')}" title="Chat desta pauta">💬</button>
+                  <button class="btn-ver" data-id="${p.id}" title="${somenteLeituraProducao ? 'Visualizar pauta' : 'Ver/Editar'}">👁️</button>
+                  ${somenteLeituraProducao ? '' : `<button class="btn-lauda" data-id="${p.id}" title="Lauda">📝</button>
+                  <button class="btn-chat-lista" data-id="${p.id}" data-titulo="${(p.titulo || '').replace(/"/g, '&quot;')}" title="Chat desta pauta">💬</button>`}
+                  ${somenteLeituraProducao ? '' : `
                   <span class="grupo-imprimir">
                     <button class="btn-imprimir-pauta" data-id="${p.id}" title="Imprimir Pauta">🖨️ ▾</button>
                     <div class="menu-imprimir-pauta" data-id="${p.id}">
@@ -811,7 +852,7 @@
                   ${nivelUsuarioAtual >= 3 ? `<button class="btn-excluir" data-id="${p.id}" title="Excluir">🗑️</button>` : ''}
                   ${p.bloqueado_por && window.usuarioLogado?.perfil === 'Administrador / TI'
                     ? `<button class="btn-forcar-destravamento" data-id="${p.id}" title="Forçar destravamento (só Administrador)">🔓</button>`
-                    : ''}
+                    : ''}`}
                 </td>
               </tr>
             `).join('')}
@@ -1000,25 +1041,24 @@
               <select data-campo="programa"></select>
             </div>
             <div class="campo">
-              <label>Editoria</label>
-              <select data-campo="editoria">
-                <option value="">Selecione...</option>
-                <option value="Arte e Cultura">Arte e Cultura</option>
-                <option value="Cidade">Cidade</option>
-                <option value="Ciência e Tecnologia">Ciência e Tecnologia</option>
-                <option value="Comportamento e Sociedade">Comportamento e Sociedade</option>
-                <option value="Direitos Humanos e Inclusão">Direitos Humanos e Inclusão</option>
-                <option value="Economia e Trabalho">Economia e Trabalho</option>
-                <option value="Esporte e Lazer">Esporte e Lazer</option>
-                <option value="Educação">Educação</option>
-                <option value="Meio Ambiente">Meio Ambiente</option>
-                <option value="Política">Política</option>
-                <option value="Saúde">Saúde</option>
-                <option value="Segurança e Justiça">Segurança e Justiça</option>
-                <option value="Especial">Especial</option>
-                <option value="UFMA">UFMA</option>
-                <option value="Outra">Outra</option>
-              </select>
+              <label>Editorias (selecione uma ou mais)</label>
+              <div class="editorias-checkboxes" data-campo="editorias">
+                <label><input type="checkbox" value="Arte e Cultura"> Arte e Cultura</label>
+                <label><input type="checkbox" value="Cidade"> Cidade</label>
+                <label><input type="checkbox" value="Ciência e Tecnologia"> Ciência e Tecnologia</label>
+                <label><input type="checkbox" value="Comportamento e Sociedade"> Comportamento e Sociedade</label>
+                <label><input type="checkbox" value="Direitos Humanos e Inclusão"> Direitos Humanos e Inclusão</label>
+                <label><input type="checkbox" value="Economia e Trabalho"> Economia e Trabalho</label>
+                <label><input type="checkbox" value="Esporte e Lazer"> Esporte e Lazer</label>
+                <label><input type="checkbox" value="Educação"> Educação</label>
+                <label><input type="checkbox" value="Meio Ambiente"> Meio Ambiente</label>
+                <label><input type="checkbox" value="Política"> Política</label>
+                <label><input type="checkbox" value="Saúde"> Saúde</label>
+                <label><input type="checkbox" value="Segurança e Justiça"> Segurança e Justiça</label>
+                <label><input type="checkbox" value="Especial"> Especial</label>
+                <label><input type="checkbox" value="UFMA"> UFMA</label>
+                <label><input type="checkbox" value="Outra"> Outra</label>
+              </div>
             </div>
             <div class="campo">
               <label>Hora do Fato</label>
@@ -1035,7 +1075,10 @@
                 <option value="em_gravacao">🔵 Em Gravação</option>
                 <option value="em_edicao">🟣 Gravado / Em Edição</option>
                 <option value="aguardando_revisao">🟠 Aguardando Revisão</option>
-                <option value="concluida">🟢 Concluída / Pronta</option>
+                <option value="concluida">🟢 Editado / Pronto</option>
+                <option value="falta_imagem">🖼️ Falta imagem</option>
+                <option value="falta_sonora">🔊 Falta sonora</option>
+                <option value="falta_off">📝 Falta OFF</option>
               </select>
             </div>
           </div>
@@ -1240,7 +1283,7 @@
       elCampo(container, 'titulo-painel').textContent = '+ Nova Pauta';
       elCampo(container, 'titulo').value = '';
       elCampo(container, 'programa').value = '';
-      elCampo(container, 'editoria').value = '';
+      definirEditorias(container, []);
       elCampo(container, 'tv').checked = false;
       elCampo(container, 'insta').checked = false;
       elCampo(container, 'site').checked = false;
@@ -1273,7 +1316,7 @@
       elCampo(container, 'titulo-painel').textContent = 'Editar Pauta #P-' + p.id;
       elCampo(container, 'titulo').value = p.titulo || '';
       elCampo(container, 'programa').value = p.programa_id || '';
-      elCampo(container, 'editoria').value = p.editoria || '';
+      definirEditorias(container, p.editorias || p.editoria);
       elCampo(container, 'tv').checked = !!p.destino_tv;
       elCampo(container, 'insta').checked = !!p.destino_instagram;
       elCampo(container, 'site').checked = !!p.destino_site;
@@ -1317,7 +1360,7 @@
       return {
         titulo: elCampo(container, 'titulo').value.trim(),
         programa_id: elCampo(container, 'programa').value ? Number(elCampo(container, 'programa').value) : null,
-        editoria: elCampo(container, 'editoria').value,
+        editorias: coletarEditorias(container),
         destino_tv: elCampo(container, 'tv').checked,
         destino_instagram: elCampo(container, 'insta').checked,
         destino_site: elCampo(container, 'site').checked,
@@ -1600,7 +1643,7 @@
         // leitura (Operador/Técnico) não reivindica o bloqueio — não vai
         // editar nada, travar a pauta pra quem precisa editar de verdade
         // seria um efeito colateral indevido.
-        if (nivelUsuarioAtual >= 3) {
+        if (nivelUsuarioAtual >= 3 && !somenteLeituraProducao) {
           const resultadoBloqueio = await Bloqueio.tentarBloquear(pautaId);
           if (!resultadoBloqueio.ok) {
             alert(`🔒 Esta pauta está sendo editada por ${resultadoBloqueio.bloqueadoPor} agora. Tente novamente quando ela for fechada.`);
@@ -1612,10 +1655,10 @@
       const idAba = 'aba' + (++contadorAbas);
       let dadosPauta = null;
       if (pautaId !== null) {
-        const resp = await fetch('/pautas/' + pautaId);
+        const resp = await fetch(somenteLeituraProducao ? '/pautas/producao/' + pautaId : '/pautas/' + pautaId);
         dadosPauta = await resp.json();
         if (!resp.ok) {
-          if (nivelUsuarioAtual >= 3) Bloqueio.liberar(pautaId);
+          if (nivelUsuarioAtual >= 3 && !somenteLeituraProducao) Bloqueio.liberar(pautaId);
           alert(dadosPauta.erro || 'Não foi possível abrir esta pauta.');
           return;
         }
@@ -1654,7 +1697,7 @@
       renderTextosExtra(idAba);
       renderEquipeExtra(idAba);
       ligarEventosPainel(idAba, container);
-      aplicarPermissaoPauta(container);
+      aplicarPermissaoPauta(container, somenteLeituraProducao);
 
       mudarAbaAtiva(idAba);
     }
@@ -1753,6 +1796,7 @@
     }
 
     async function salvarPauta(idAba) {
+      if (somenteLeituraProducao) return;
       const dados = coletarDadosFormulario(idAba);
       if (!dados.titulo) { alert('Preencha ao menos a retranca da pauta.'); return; }
       if (!dados.programa_id) { alert('Escolha um Programa antes de salvar — é obrigatório.'); return; }
@@ -1799,7 +1843,9 @@
 
     function fecharAba(idAba) {
       const aba = abas[idAba];
-      if (aba && aba.pautaId !== null) Bloqueio.liberar(aba.pautaId);
+      if (aba && aba.pautaId !== null && nivelUsuarioAtual >= 3 && !somenteLeituraProducao) {
+        Bloqueio.liberar(aba.pautaId);
+      }
       document.getElementById('painel-' + idAba)?.remove();
       delete abas[idAba];
       if (abaAtivaId === idAba) {
@@ -1856,9 +1902,18 @@
     }
 
     document.getElementById('btn-nova-pauta').addEventListener('click', () => abrirAbaPauta(null));
+    document.getElementById('btn-ver-producao').addEventListener('click', () => {
+      location.href = somenteLeituraProducao ? 'pautas.html' : 'pautas.html?producao=1';
+    });
 
     (async function init() {
       await carregarNivelUsuario();
+      const botaoProducao = document.getElementById('btn-ver-producao');
+      if (nivelUsuarioAtual >= 3 && setorUsuarioAtual === 'Jornalismo') {
+        botaoProducao.style.display = '';
+        botaoProducao.textContent = somenteLeituraProducao ? '↩ Voltar para minhas pautas' : '👁️ Ver pautas da Produção (somente leitura)';
+      }
+      if (somenteLeituraProducao) document.getElementById('btn-nova-pauta')?.remove();
       if (nivelUsuarioAtual < 3) document.getElementById('btn-nova-pauta')?.remove();
       await carregarProgramas();
       await carregarEquipe();

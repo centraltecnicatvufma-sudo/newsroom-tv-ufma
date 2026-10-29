@@ -41,6 +41,7 @@
     .status-em_edicao { background: #6b3fa0; }
     .status-aguardando_revisao { background: #B85C38; }
     .status-concluida { background: #2e8b57; }
+    .status-falta_imagem, .status-falta_sonora, .status-falta_off { background: #8D0333; }
 
     .btn-lauda { background: #336699; color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
     .btn-chat-lista { background: #2e8b57; color: #fff; }
@@ -203,7 +204,11 @@
         <option value="em_producao">🟡 Em Produção</option>
         <option value="em_gravacao">🔵 Em Gravação</option>
         <option value="em_edicao">🟣 Gravado / Em Edição</option>
-        <option value="concluida">🟢 Concluída / Pronta</option>
+        <option value="aguardando_revisao">🟠 Aguardando Revisão</option>
+        <option value="falta_imagem">🖼️ Falta imagem</option>
+        <option value="falta_sonora">🔊 Falta sonora</option>
+        <option value="falta_off">📝 Falta OFF</option>
+        <option value="concluida">🟢 Editado / Pronto</option>
       </select>
     </div>
     <div class="grupo-busca-visao">
@@ -297,9 +302,12 @@
       em_gravacao: '🔵 Em Gravação',
       em_edicao: '🟣 Gravado / Em Edição',
       aguardando_revisao: '🟠 Aguardando Revisão',
-      concluida: '🟢 Concluída / Pronta'
+      falta_imagem: '🖼️ Falta imagem',
+      falta_sonora: '🔊 Falta sonora',
+      falta_off: '📝 Falta OFF',
+      concluida: '🟢 Editado / Pronto'
     };
-    const ordemStatusQuadro = ['em_producao', 'em_gravacao', 'em_edicao', 'aguardando_revisao', 'concluida'];
+    const ordemStatusQuadro = ['em_producao', 'em_gravacao', 'em_edicao', 'aguardando_revisao', 'falta_imagem', 'falta_sonora', 'falta_off', 'concluida'];
     // Coluna que não aceita soltar card dentro — Aguardando Revisão só é
     // selecionável em Edição de Vídeo (ver ligarEventosQuadro)
     const COLUNAS_SOMENTE_LEITURA = ['aguardando_revisao'];

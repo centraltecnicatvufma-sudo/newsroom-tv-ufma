@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Notificações — HORUS Newsroom</title>
+  <script src="auth-guard.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f5f7; color: #1b2430; margin: 0; height: 100vh; display: flex; overflow: hidden; }
+    .nr-sidebar { width: 220px; flex-shrink: 0; background: linear-gradient(135deg, #062B4A, #031D35); color: #fff; padding: 20px 0; display: flex; flex-direction: column; overflow-y: auto; }
+    .nr-logo { padding: 0 20px 20px; border-bottom: 1px solid rgba(255,255,255,.15); margin-bottom: 12px; text-align: center; text-decoration: none; }
+    .nr-logo div { color: #fff; font-size: 20px; font-weight: bold; letter-spacing: 1px; }
+    .nr-sidebar a { display: flex; gap: 10px; padding: 10px 20px; color: #e8f0f7; text-decoration: none; font-size: 14px; }
+    .nr-sidebar a:hover, .nr-sidebar a.nr-ativo { background: rgba(255,255,255,.16); color: #fff; }
+    .nr-app { flex: 1; min-width: 0; overflow-y: auto; }
+    header { background: linear-gradient(135deg, #062B4A, #031D35); color: #fff; padding: 18px 24px; }
+    header h1 { margin: 0; font-size: 24px; }
+    main { max-width: 1000px; margin: auto; padding: 22px; }
+    .acoes { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+    button { border: 0; border-radius: 6px; padding: 9px 13px; cursor: pointer; background: #336699; color: #fff; }
+    button:disabled { opacity: .5; cursor: default; }
+    .item { background: #fff; border-left: 4px solid #336699; border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; box-shadow: 0 1px 4px #00000012; }
+    .item.lida { border-left-color: #cbd2da; opacity: .72; }
+    .item p { margin: 6px 0 10px; }
+    .meta { color: #687385; font-size: 12px; }
+    .item a { color: #336699; font-size: 13px; }
+    .vazio { text-align: center; color: #687385; padding: 50px 20px; background: #fff; border-radius: 8px; }
+    @media (max-width: 768px) { body { flex-direction: column; } .nr-sidebar { display: none; } main { padding: 14px; } }
+  </style>
+</head>
+<body>
+  <nav class="nr-sidebar">
+    <a href="index.html" class="nr-logo"><div>HORUS</div><div>NEWSROOM</div></a>
+    <a href="pautas.html">📝 Pautas</a>
+    <a href="notificacoes.html" class="nr-ativo">🔔 Notificações</a>
+  </nav>
+  <div class="nr-app">
+    <header><h1>Notificações</h1></header>
+    <main>
+      <div class="acoes"><button id="marcar-todas" type="button">Marcar todas como lidas</button></div>
+      <div id="lista-notificacoes">Carregando notificações...</div>
+    </main>
+  </div>
+  <script>
+    const listaNotificacoes = document.getElementById('lista-notificacoes');
+    const escapeHtml = texto => String(texto || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const formatarData = data => data ? new Date(data).toLocaleString('pt-BR') : '';
+
+    async function carregarNotificacoes() {
+      const resposta = await fetch('/notificacoes');
+      if (!resposta.ok) throw new Error('Não foi possível carregar as notificações.');
+      const notificacoes = await resposta.json();
+      listaNotificacoes.innerHTML = notificacoes.length ? notificacoes.map(n => `
+        <article class="item ${n.lida_em ? 'lida' : ''}">
+          <div class="meta">${escapeHtml(formatarData(n.criado_em))}${n.lida_em ? ' · Lida' : ' · Não lida'}</div>
+          <p>${escapeHtml(n.mensagem)}</p>
+          <a href="pautas.html?abrir=${Number(n.pauta_id)}">Pauta #P-${Number(n.pauta_id)} — ${escapeHtml(n.pauta_titulo || 'Abrir pauta')}</a>
+          ${n.lida_em ? '' : `<button type="button" data-id="${Number(n.id)}" style="float:right">Marcar como lida</button>`}
+        </article>
+      `).join('') : '<div class="vazio">Você não tem notificações.</div>';
+      listaNotificacoes.querySelectorAll('button[data-id]').forEach(botao => {
+        botao.addEventListener('click', async () => {
+          const resposta = await fetch('/notificacoes/' + botao.dataset.id + '/lida', { method: 'PATCH' });
+          if (!resposta.ok) throw new Error('Não foi possível marcar a notificação como lida.');
+          await carregarNotificacoes();
+          window.dispatchEvent(new Event('horus-notificacoes-atualizadas'));
+        });
+      });
+    }
+
+    document.getElementById('marcar-todas').addEventListener('click', async () => {
+      const resposta = await fetch('/notificacoes/lidas', { method: 'PATCH' });
+      if (!resposta.ok) throw new Error('Não foi possível marcar as notificações como lidas.');
+      await carregarNotificacoes();
+      window.dispatchEvent(new Event('horus-notificacoes-atualizadas'));
+    });
+
+    carregarNotificacoes().catch(erro => {
+      listaNotificacoes.textContent = erro.message;
+      console.error(erro);
+    });
+
+    const protocolo = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocolo}//${location.host}/ws/tempo-real`);
+    ws.addEventListener('message', async evento => {
+      const mensagem = JSON.parse(evento.data);
+      if (mensagem.tipo !== 'notificacoes') return;
+      const usuario = window.usuarioLogado || await fetch('/auth/me').then(resp => resp.json());
+      if (mensagem.usuario_id === usuario.id) await carregarNotificacoes();
+    });
+  </script>
+</body>
+</html>

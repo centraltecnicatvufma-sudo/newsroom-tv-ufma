@@ -372,7 +372,7 @@
     let sugestoesCache = [];
     let aprovandoContexto = null; // { tipo: 'aba', idAba } ou { tipo: 'card', sugestaoId }
 
-    // Aprovar/Arquivar/Em Análise é restrito a nível 4+ (ver sugestoes.js) —
+    // Aprovar é exclusivo do nível 5; Em Análise/Arquivar continuam em nível 4+ (ver sugestoes.js) —
     // buscado direto aqui (não via window.usuarioLogado) porque não há
     // garantia de que auth-guard.js já resolveu a sessão no momento em que
     // a lista renderiza pela primeira vez.
@@ -551,7 +551,7 @@
       const botoes = [];
       const podeDecidir = nivelUsuarioAtual >= 4;
       if (podeDecidir && s.status !== 'em_analise') botoes.push('<button class="btn-agenda" data-acao="em-analise">🔎 Em Análise</button>');
-      if (podeDecidir && s.status !== 'aprovada') botoes.push('<button class="btn-lauda-modal" data-acao="aprovar">✅ Aprovar e Gerar Pauta</button>');
+      if (nivelUsuarioAtual === 5 && s.status !== 'aprovada') botoes.push('<button class="btn-lauda-modal" data-acao="aprovar">✅ Aprovar e Gerar Pauta</button>');
       if (podeDecidir && s.status !== 'arquivada') botoes.push('<button class="btn-cancelar" data-acao="arquivar">❌ Arquivar</button>');
       botoes.push('<button class="btn-excluir-sugestao" data-acao="excluir">🗑️ Excluir</button>');
       botoes.push('<button class="btn-confirmar" data-acao="salvar">💾 Salvar</button>');
@@ -818,7 +818,7 @@
       if (salva) {
         const podeDecidir = nivelUsuarioAtual >= 4;
         if (podeDecidir && aba.status !== 'em_analise') botoes.push('<button class="btn-agenda" data-acao="em-analise">🔎 Marcar Em Análise</button>');
-        if (podeDecidir && aba.status !== 'aprovada') botoes.push('<button class="btn-lauda-modal" data-acao="aprovar">✅ Aprovar e Gerar Pauta</button>');
+        if (nivelUsuarioAtual === 5 && aba.status !== 'aprovada') botoes.push('<button class="btn-lauda-modal" data-acao="aprovar">✅ Aprovar e Gerar Pauta</button>');
         if (podeDecidir && aba.status !== 'arquivada') botoes.push('<button class="btn-cancelar" data-acao="arquivar">❌ Arquivar</button>');
         botoes.push('<button class="btn-excluir-sugestao" data-acao="excluir">🗑️ Excluir</button>');
       }

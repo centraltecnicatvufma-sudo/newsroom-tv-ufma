@@ -3,12 +3,14 @@ const router = express.Router();
 const db = require('./banco');
 const { nivelDoUsuario } = require('./permissoes');
 
-// Aprovar, arquivar ou colocar em análise é decisão editorial — só
-// Produtor(4)/Editor-Chefe(5)/Administrador(6). Qualquer perfil pode
-// CRIAR uma sugestão (POST, sem checagem) e continuar editando os
-// próprios dados dela; só a mudança de status pra essas 3 etapas é
-// restrita.
-const STATUS_RESTRITOS_A_NIVEL_4 = ['em_analise', 'aprovada', 'arquivada'];
+function nivelAtualDoUsuario(req) {
+  const membro = db.prepare('SELECT perfil FROM equipe_agenda WHERE id = ? AND excluido_em IS NULL').get(req.usuario.id);
+  return membro ? nivelDoUsuario(membro.perfil) : 0;
+}
+
+// Aprovação é exclusiva do Editor-Chefe (nível 5). Análise e arquivamento
+// continuam sendo decisões editoriais de nível 4 ou superior.
+const STATUS_RESTRITOS_A_NIVEL_4 = ['em_analise', 'arquivada'];
 
 // Avisa quem estiver com o Mapa de Produções aberto que uma sugestão mudou
 // (ver tempo_real.js)
@@ -85,11 +87,12 @@ router.patch('/:id', (req, res) => {
     atualizado[c] = req.body[c] !== undefined ? req.body[c] : item[c];
   });
 
-  if (
-    atualizado.status !== item.status &&
-    STATUS_RESTRITOS_A_NIVEL_4.includes(atualizado.status) &&
-    nivelDoUsuario(req.usuario) < 4
-  ) {
+  const nivelAtual = nivelAtualDoUsuario(req);
+  if (atualizado.status !== item.status && atualizado.status === 'aprovada' && nivelAtual !== 5) {
+    return res.status(403).json({ erro: 'Somente usuários de nível 5 podem aprovar uma sugestão' });
+  }
+
+  if (atualizado.status !== item.status && STATUS_RESTRITOS_A_NIVEL_4.includes(atualizado.status) && nivelAtual < 4) {
     return res.status(403).json({ erro: 'Seu perfil não pode aprovar, arquivar ou colocar em análise uma sugestão' });
   }
 

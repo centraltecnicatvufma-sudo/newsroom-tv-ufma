@@ -62,6 +62,8 @@
     .status-mini-em_edicao { background: #6b3fa0; }
     .status-mini-aguardando_revisao { background: #B85C38; }
     .status-mini-concluida, .status-mini-aprovada { background: #2e8b57; }
+    .status-mini-falta_imagem, .status-mini-falta_sonora, .status-mini-falta_off { background: #8D0333; }
+    .status-mini-nota_seca { background: #4a5568; }
     .status-mini-arquivada { background: #5A021F; }
 
     .status-tempo-badge { display: inline-block; font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 6px; white-space: nowrap; }
@@ -156,6 +158,7 @@
     <button id="aba-funil">🗂️ Funil de Sugestões</button>
     <button id="aba-pontualidade">⏱️ Pontualidade do Espelho</button>
     <button id="aba-cobertura">📂 Cobertura por Editoria</button>
+    <button id="aba-programas">📺 Programas, quadros e reportagens</button>
     <button id="aba-exclusoes">🗑️ Exclusões</button>
   </div>
 
@@ -278,6 +281,22 @@
     </div>
   </div>
 
+  <!-- ═══════════ PROGRAMAS, QUADROS E REPORTAGENS ═══════════ -->
+  <div id="painel-programas" style="display:none;">
+    <div class="filtros">
+      <div><label>Data — de</label><input type="date" id="metricas-data-de"></div>
+      <div><label>até</label><input type="date" id="metricas-data-ate"></div>
+      <button class="btn-limpar" id="btn-limpar-metricas">Limpar filtros</button>
+    </div>
+    <div class="conteudo">
+      <div class="largura-maxima">
+        <div class="aviso-dados">Programas realizados contam espelhos finalizados. Quadros contam itens do espelho identificados pelo nome; reportagens contam pautas vinculadas a itens de reportagem no período.</div>
+        <div class="cartoes-resumo" id="cartoes-metricas"></div>
+        <div id="tabela-metricas"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══════════ EXCLUSÕES ═══════════ -->
   <div id="painel-exclusoes" style="display:none;">
     <div class="filtros">
@@ -364,10 +383,11 @@
       funil: { titulo: 'Funil de Sugestões', sub: 'Do envio à decisão: quantas sugestões avançam, quem envia, quanto tempo leva' },
       pontualidade: { titulo: 'Pontualidade do Espelho', sub: 'Quantas edições fecharam no tempo, estouraram ou sobrou buraco' },
       cobertura: { titulo: 'Cobertura por Editoria', sub: 'Quantas pautas cada editoria produziu, com recorte de período' },
+      programas: { titulo: 'Programas, quadros e reportagens', sub: 'Realizações de JTV UFMA, Destaques, quadros e reportagens no período' },
       exclusoes: { titulo: 'Exclusões', sub: 'O que está na Lixeira hoje, por tipo e por quando foi excluído' },
     };
 
-    const ABAS = ['produtividade', 'funil', 'pontualidade', 'cobertura', 'exclusoes'];
+    const ABAS = ['produtividade', 'funil', 'pontualidade', 'cobertura', 'programas', 'exclusoes'];
 
     // Lista oficial de editorias — a mesma usada nos dropdowns de Pautas e
     // Sugestões (pautas.html, sugestoes.html) e no Calendário. Usada aqui
@@ -393,9 +413,10 @@
     const labelStatusPauta = {
       em_producao: 'Em Produção', em_gravacao: 'Em Gravação',
       em_edicao: 'Gravado / Em Edição', aguardando_revisao: 'Aguardando Revisão',
-      concluida: 'Concluída'
+      falta_imagem: 'Falta imagem', falta_sonora: 'Falta sonora',
+      falta_off: 'Falta OFF', concluida: 'Editado'
     };
-    const ordemStatusPauta = ['em_producao', 'em_gravacao', 'em_edicao', 'aguardando_revisao', 'concluida'];
+    const ordemStatusPauta = ['em_producao', 'em_gravacao', 'em_edicao', 'aguardando_revisao', 'falta_imagem', 'falta_sonora', 'falta_off', 'concluida'];
     const SEM_RESPONSAVEL = '— (sem responsável definido) —';
 
     let pautasCache = [];
@@ -431,7 +452,7 @@
       pautas.forEach(p => {
         const nome = (p[campoPapel] || '').trim() || SEM_RESPONSAVEL;
         if (!grupos[nome]) {
-          grupos[nome] = { nome, total: 0, porStatus: { em_producao: 0, em_gravacao: 0, em_edicao: 0, aguardando_revisao: 0, concluida: 0 }, itens: [] };
+          grupos[nome] = { nome, total: 0, porStatus: { em_producao: 0, em_gravacao: 0, em_edicao: 0, aguardando_revisao: 0, falta_imagem: 0, falta_sonora: 0, falta_off: 0, concluida: 0 }, itens: [] };
         }
         grupos[nome].total++;
         const status = ordemStatusPauta.includes(p.status) ? p.status : 'em_producao';
@@ -456,7 +477,7 @@
         </div>
         <div class="cartao-resumo destaque">
           <div class="valor">${concluidas}</div>
-          <div class="rotulo">Concluídas (${pct}%)</div>
+          <div class="rotulo">Editadas (${pct}%)</div>
         </div>
         <div class="cartao-resumo">
           <div class="valor">${pessoasAtivas}</div>
@@ -480,7 +501,7 @@
               <th>Nome</th>
               <th style="width:70px;">Total</th>
               <th style="width:220px;">Por status</th>
-              <th style="width:170px;">% Concluída</th>
+              <th style="width:170px;">% Editada</th>
             </tr>
           </thead>
           <tbody>
@@ -493,8 +514,8 @@
                 </td>
                 <td>
                   <div class="celula-progresso">
-                    <div class="barra-progresso"><div class="preenchimento" style="width:${g.total ? Math.round((g.porStatus.concluida / g.total) * 100) : 0}%"></div></div>
-                    <span class="porcentagem">${g.total ? Math.round((g.porStatus.concluida / g.total) * 100) : 0}%</span>
+                    <div class="barra-progresso"><div class="preenchimento" style="width:${g.pautas ? Math.round((g.porStatus.concluida / g.pautas) * 100) : 0}%"></div></div>
+                    <span class="porcentagem">${g.pautas ? Math.round((g.porStatus.concluida / g.pautas) * 100) : 0}%</span>
                   </div>
                 </td>
               </tr>
@@ -899,32 +920,24 @@
     });
 
     // ═══════════════════════ COBERTURA POR EDITORIA ═══════════════════════
-    // A pauta não tem campo de editoria próprio — só a Sugestão que a
-    // originou tem. Pra maioria das pautas isso funciona (rastreia via
-    // sugestao_id), mas pautas criadas direto, sem passar por uma Sugestão,
-    // ficam sem editoria conhecida — entram no bucket "sem editoria" em vez
-    // de sumir da contagem, mesmo padrão já usado no Funil.
     const SEM_EDITORIA_PAUTA = '— (sem editoria) —';
 
-    // A pauta agora tem campo de editoria próprio (herdado da Sugestão na
-    // aprovação, ou preenchido na mão quando é nativa). Pautas antigas,
-    // criadas antes desse campo existir, ainda podem ter esse dado só na
-    // Sugestão de origem — por isso o lookup via sugestao_id continua como
-    // retaguarda.
-    function editoriaDaPauta(p) {
-      if (p.editoria && p.editoria.trim()) return p.editoria.trim();
-      if (!p.sugestao_id) return null;
-      const sugestao = sugestoesCache.find(s => s.id === p.sugestao_id);
-      const editoria = sugestao ? (sugestao.editoria || '').trim() : '';
-      return editoria || null;
+    function editoriasDaPauta(p) {
+      if (Array.isArray(p.editorias) && p.editorias.length) return [...new Set(p.editorias.filter(Boolean))];
+      if (p.editoria && p.editoria.trim()) return [p.editoria.trim()];
+      const sugestao = p.sugestao_id ? sugestoesCache.find(s => s.id === p.sugestao_id) : null;
+      return sugestao?.editoria ? [sugestao.editoria.trim()] : [];
     }
 
     function pautasComEditoria() {
-      return pautasCache.map(p => ({ ...p, editoria: editoriaDaPauta(p) || SEM_EDITORIA_PAUTA }));
+      return pautasCache.map(p => {
+        const editorias = editoriasDaPauta(p);
+        return { ...p, editorias: editorias.length ? editorias : [SEM_EDITORIA_PAUTA] };
+      });
     }
 
     function preencherFiltroEditoriaCobertura() {
-      const daBase = pautasComEditoria().map(p => p.editoria).filter(e => e !== SEM_EDITORIA_PAUTA);
+      const daBase = pautasComEditoria().flatMap(p => p.editorias).filter(e => e !== SEM_EDITORIA_PAUTA);
       const editorias = [...new Set([...LISTA_EDITORIAS, ...daBase])];
       const select = document.getElementById('cobertura-editoria');
       select.innerHTML = '<option value="">Todas</option>' + editorias.map(e => `<option value="${escaparHtml(e)}">${escaparHtml(e)}</option>`).join('');
@@ -935,16 +948,38 @@
       const dataAte = document.getElementById('cobertura-data-ate').value;
       const editoria = document.getElementById('cobertura-editoria').value;
 
-      return pautasComEditoria().filter(p => {
+      const pautas = pautasComEditoria().filter(p => {
         if (dataDe && (!p.data_fato || p.data_fato < dataDe)) return false;
         if (dataAte && (!p.data_fato || p.data_fato > dataAte)) return false;
-        if (editoria && p.editoria !== editoria) return false;
+        if (editoria && !p.editorias.includes(editoria)) return false;
         return true;
       });
+      const notasSecas = espelhosCache.flatMap(espelho => (espelho.itens || [])
+        .filter(item => item.tipo === 'nota_seca')
+        .map(item => {
+          const editorias = Array.isArray(item.editorias) && item.editorias.length
+            ? item.editorias
+            : [SEM_EDITORIA_PAUTA];
+          return {
+            ...item,
+            isNotaSeca: true,
+            titulo: item.titulo || item.pauta_titulo || 'Nota Seca sem título',
+            data_fato: espelho.data,
+            status: 'nota_seca',
+            espelho_programa: espelho.programa,
+            editorias
+          };
+        })
+        .filter(item => {
+          if (dataDe && (!item.data_fato || item.data_fato < dataDe)) return false;
+          if (dataAte && (!item.data_fato || item.data_fato > dataAte)) return false;
+          return !editoria || item.editorias.includes(editoria);
+        }));
+      return [...pautas, ...notasSecas];
     }
 
-    function renderAvisoCobertura(pautas) {
-      const semEditoria = pautas.filter(p => p.editoria === SEM_EDITORIA_PAUTA).length;
+    function renderAvisoCobertura(conteudos) {
+      const semEditoria = conteudos.filter(p => p.editorias.includes(SEM_EDITORIA_PAUTA)).length;
       const aviso = document.getElementById('aviso-cobertura');
       if (semEditoria === 0) { aviso.innerHTML = ''; return; }
       aviso.innerHTML = `<div class="aviso-dados">⚠️ ${semEditoria} pauta${semEditoria > 1 ? 's' : ''} sem editoria identificada
@@ -952,15 +987,21 @@
         agrupada${semEditoria > 1 ? 's' : ''} em "sem editoria" em vez de sumir da contagem.</div>`;
     }
 
-    function renderResumoCobertura(pautas) {
-      const editoriasUnicas = new Set(pautas.map(p => p.editoria)).size;
+    function renderResumoCobertura(conteudos) {
+      const pautas = conteudos.filter(p => !p.isNotaSeca);
+      const notas = conteudos.filter(p => p.isNotaSeca);
+      const editoriasUnicas = new Set(conteudos.flatMap(p => p.editorias).filter(e => e !== SEM_EDITORIA_PAUTA)).size;
       const concluidas = pautas.filter(p => p.status === 'concluida').length;
       const pct = pautas.length ? Math.round((concluidas / pautas.length) * 100) : 0;
 
       document.getElementById('cartoes-cobertura').innerHTML = `
         <div class="cartao-resumo">
           <div class="valor">${pautas.length}</div>
-          <div class="rotulo">Pautas no período</div>
+          <div class="rotulo">Pautas/matérias</div>
+        </div>
+        <div class="cartao-resumo alerta">
+          <div class="valor">${notas.length}</div>
+          <div class="rotulo">Notas secas nos espelhos</div>
         </div>
         <div class="cartao-resumo destaque">
           <div class="valor">${editoriasUnicas}</div>
@@ -968,26 +1009,33 @@
         </div>
         <div class="cartao-resumo">
           <div class="valor">${pct}%</div>
-          <div class="rotulo">Concluídas (${concluidas})</div>
+          <div class="rotulo">Editadas (${concluidas})</div>
         </div>
       `;
     }
 
-    function agruparPautasPorEditoria(pautas, listaCompleta) {
+    function agruparPautasPorEditoria(conteudos, listaCompleta) {
       const grupos = {};
       if (listaCompleta) {
         listaCompleta.forEach(chave => {
-          grupos[chave] = { nome: chave, total: 0, porStatus: { em_producao: 0, em_gravacao: 0, em_edicao: 0, aguardando_revisao: 0, concluida: 0 }, itens: [] };
+          grupos[chave] = { nome: chave, total: 0, pautas: 0, notasSecas: 0, porStatus: { em_producao: 0, em_gravacao: 0, em_edicao: 0, aguardando_revisao: 0, falta_imagem: 0, falta_sonora: 0, falta_off: 0, concluida: 0 }, itens: [] };
         });
       }
-      pautas.forEach(p => {
-        if (!grupos[p.editoria]) {
-          grupos[p.editoria] = { nome: p.editoria, total: 0, porStatus: { em_producao: 0, em_gravacao: 0, em_edicao: 0, aguardando_revisao: 0, concluida: 0 }, itens: [] };
-        }
-        grupos[p.editoria].total++;
-        const status = ordemStatusPauta.includes(p.status) ? p.status : 'em_producao';
-        grupos[p.editoria].porStatus[status]++;
-        grupos[p.editoria].itens.push(p);
+      conteudos.forEach(p => {
+        p.editorias.forEach(editoria => {
+          if (!grupos[editoria]) {
+            grupos[editoria] = { nome: editoria, total: 0, pautas: 0, notasSecas: 0, porStatus: { em_producao: 0, em_gravacao: 0, em_edicao: 0, aguardando_revisao: 0, falta_imagem: 0, falta_sonora: 0, falta_off: 0, concluida: 0 }, itens: [] };
+          }
+          const grupo = grupos[editoria];
+          grupo.total++;
+          if (p.isNotaSeca) grupo.notasSecas++;
+          else {
+            grupo.pautas++;
+            const status = ordemStatusPauta.includes(p.status) ? p.status : 'em_producao';
+            grupo.porStatus[status]++;
+          }
+          grupo.itens.push(p);
+        });
       });
       return Object.values(grupos).sort((a, b) => b.total - a.total);
     }
@@ -1005,23 +1053,27 @@
           <thead>
             <tr>
               <th>Editoria</th>
+              <th style="width:80px;">Pautas</th>
+              <th style="width:90px;">Notas secas</th>
               <th style="width:70px;">Total</th>
               <th style="width:220px;">Por status</th>
-              <th style="width:170px;">% Concluída</th>
+              <th style="width:170px;">% Editada</th>
             </tr>
           </thead>
           <tbody>
             ${grupos.map((g, i) => `
               <tr class="clicavel" data-indice="${i}">
                 <td class="nome-linha">${escaparHtml(g.nome)}</td>
+                <td>${g.pautas}</td>
+                <td>${g.notasSecas}</td>
                 <td>${g.total}</td>
                 <td class="contagem-status">
                   ${ordemStatusPauta.map(s => g.porStatus[s] ? `${labelStatusPauta[s]}: ${g.porStatus[s]}` : null).filter(Boolean).join(' · ') || '—'}
                 </td>
                 <td>
                   <div class="celula-progresso">
-                    <div class="barra-progresso"><div class="preenchimento" style="width:${g.total ? Math.round((g.porStatus.concluida / g.total) * 100) : 0}%"></div></div>
-                    <span class="porcentagem">${g.total ? Math.round((g.porStatus.concluida / g.total) * 100) : 0}%</span>
+                    <div class="barra-progresso"><div class="preenchimento" style="width:${g.pautas ? Math.round((g.porStatus.concluida / g.pautas) * 100) : 0}%"></div></div>
+                    <span class="porcentagem">${g.pautas ? Math.round((g.porStatus.concluida / g.pautas) * 100) : 0}%</span>
                   </div>
                 </td>
               </tr>
@@ -1031,12 +1083,12 @@
       `;
 
       ligarExpansaoDetalhe(area, grupos, (item) => `
-        <span class="titulo-item-detalhe">#P-${item.id} — ${escaparHtml(item.titulo)}</span>
+        <span class="titulo-item-detalhe">${item.isNotaSeca ? 'Nota Seca' : '#P-' + item.id} — ${escaparHtml(item.titulo)}</span>
         <span>
           ${formatarData(item.data_fato)}
-          <span class="status-mini status-mini-${item.status}">${labelStatusPauta[item.status] || item.status}</span>
+          <span class="status-mini status-mini-${item.status}">${item.isNotaSeca ? 'Nota Seca' : labelStatusPauta[item.status] || item.status}</span>
         </span>
-      `, (item) => item.data_fato, 4);
+      `, (item) => item.data_fato, 6);
     }
 
     function atualizarCobertura() {
@@ -1054,6 +1106,114 @@
       document.getElementById('cobertura-data-ate').value = '';
       document.getElementById('cobertura-editoria').value = '';
       atualizarCobertura();
+    });
+
+    // ═══════════════════════ PROGRAMAS, QUADROS E REPORTAGENS ═══════════════════════
+    const QUADROS_REPORTE = [
+      { nome: 'Fala Comunidade', corresponde: texto => texto.includes('fala comunidade') },
+      { nome: 'ECC', corresponde: texto => texto.split(/\s+/).includes('ecc') || texto.includes('encontro com a comunidade') },
+      { nome: 'Sala de Entrevista', corresponde: texto => texto.includes('sala de entrevista') },
+      { nome: 'Sala Cultural', corresponde: texto => texto.includes('sala cultural') }
+    ];
+
+    function normalizarChave(texto) {
+      return String(texto || '').toLocaleLowerCase('pt-BR').normalize('NFD').replace(/\p{Diacritic}/gu, '');
+    }
+
+    function dentroDoPeriodo(data, dataDe, dataAte) {
+      if (dataDe && (!data || data < dataDe)) return false;
+      if (dataAte && (!data || data > dataAte)) return false;
+      return true;
+    }
+
+    function calcularMetricasProgramas() {
+      const dataDe = document.getElementById('metricas-data-de').value;
+      const dataAte = document.getElementById('metricas-data-ate').value;
+      const espelhosNoPeriodo = espelhosCache.filter(e => dentroDoPeriodo(e.data, dataDe, dataAte));
+      const finalizados = espelhosNoPeriodo.filter(e => normalizarChave(e.status_espelho) === 'finalizado');
+      const programasRealizados = {
+        'JTV UFMA': finalizados.filter(e => {
+          const programa = normalizarChave(e.programa);
+          return programa.includes('jtv') && programa.includes('ufma') && !programa.includes('destaques');
+        }),
+        'Destaques': finalizados.filter(e => normalizarChave(e.programa).includes('destaques'))
+      };
+
+      const contagemQuadros = QUADROS_REPORTE.map(quadro => {
+        const itens = espelhosNoPeriodo.flatMap(e => (e.itens || [])
+          .filter(item => quadro.corresponde(normalizarChave(`${item.titulo || ''} ${item.pauta_titulo || ''} ${item.tipo || ''}`)))
+          .map(item => ({ ...item, espelho_programa: e.programa, espelho_data: e.data })));
+        return { nome: quadro.nome, total: new Set(itens.map(i => i.id)).size, itens };
+      });
+
+      const reportagensPorPauta = new Map();
+      espelhosNoPeriodo.forEach(espelho => {
+        (espelho.itens || []).forEach(item => {
+          const tipoBloco = normalizarChave(item.tipo);
+          const tipoPauta = normalizarChave(item.pauta_tipo);
+          const ehReportagem = tipoBloco.includes('reportagem') || ['vt', 'st'].includes(tipoPauta);
+          if (!item.pauta_id || !ehReportagem || !dentroDoPeriodo(item.pauta_data_fato, dataDe, dataAte)) return;
+          if (!reportagensPorPauta.has(item.pauta_id)) {
+            reportagensPorPauta.set(item.pauta_id, {
+              id: item.pauta_id,
+              titulo: item.pauta_titulo || item.titulo || `Pauta #P-${item.pauta_id}`,
+              data_fato: item.pauta_data_fato,
+              programa: espelho.programa
+            });
+          }
+        });
+      });
+
+      return {
+        programasRealizados,
+        contagemQuadros,
+        reportagens: [...reportagensPorPauta.values()]
+      };
+    }
+
+    function atualizarMetricasProgramas() {
+      const metricas = calcularMetricasProgramas();
+      const cartoes = [
+        ...Object.entries(metricas.programasRealizados).map(([nome, espelhos]) => ({
+          rotulo: `Programas ${nome} realizados`, valor: espelhos.length
+        })),
+        ...metricas.contagemQuadros.map(quadro => ({ rotulo: `Quadro ${quadro.nome}`, valor: quadro.total })),
+        { rotulo: 'Reportagens vinculadas', valor: metricas.reportagens.length }
+      ];
+      document.getElementById('cartoes-metricas').innerHTML = cartoes.map((c, i) => `
+        <div class="cartao-resumo ${i === cartoes.length - 1 ? 'destaque' : ''}">
+          <div class="valor">${c.valor}</div>
+          <div class="rotulo">${escaparHtml(c.rotulo)}</div>
+        </div>
+      `).join('');
+
+      const linhasProgramas = Object.entries(metricas.programasRealizados).flatMap(([nome, espelhos]) =>
+        espelhos.map(e => ({ grupo: nome, data: e.data, titulo: e.programa }))
+      );
+      const linhasQuadros = metricas.contagemQuadros.flatMap(q =>
+        q.itens.map(item => ({ grupo: q.nome, data: item.espelho_data, titulo: item.titulo || item.pauta_titulo || item.tipo }))
+      );
+      const linhasReportagens = metricas.reportagens.map(p => ({
+        grupo: 'Reportagem', data: p.data_fato, titulo: p.titulo
+      }));
+      const linhas = [...linhasProgramas, ...linhasQuadros, ...linhasReportagens]
+        .sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+      document.getElementById('tabela-metricas').innerHTML = linhas.length ? `
+        <table class="tabela-relatorio">
+          <thead><tr><th>Tipo</th><th>Conteúdo</th><th>Data</th></tr></thead>
+          <tbody>${linhas.map(l => `
+            <tr><td>${escaparHtml(l.grupo)}</td><td>${escaparHtml(l.titulo)}</td><td>${formatarData(l.data)}</td></tr>
+          `).join('')}</tbody>
+        </table>
+      ` : '<div class="estado-vazio">Nenhum programa, quadro ou reportagem encontrado no período.</div>';
+    }
+
+    document.getElementById('metricas-data-de').addEventListener('change', atualizarMetricasProgramas);
+    document.getElementById('metricas-data-ate').addEventListener('change', atualizarMetricasProgramas);
+    document.getElementById('btn-limpar-metricas').addEventListener('click', () => {
+      document.getElementById('metricas-data-de').value = '';
+      document.getElementById('metricas-data-ate').value = '';
+      atualizarMetricasProgramas();
     });
 
     // ═══════════════════════ EXCLUSÕES ═══════════════════════
@@ -1174,6 +1334,7 @@
       atualizarFunil();
       atualizarPontualidade();
       atualizarCobertura();
+      atualizarMetricasProgramas();
       atualizarExclusoes();
     })();
   </script>

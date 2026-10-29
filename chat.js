@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('./banco');
+const { notificarEnvolvidos } = require('./notificacoes');
 
 function avisarMensagemNova(req, mensagem) {
   req.app.get('tempoReal')?.broadcast({ tipo: 'chat', pauta_id: mensagem.pauta_id, mensagem });
@@ -31,6 +32,8 @@ router.post('/pauta/:pautaId', (req, res) => {
   const autor = req.usuario.nome;
 
   if (!texto || !texto.trim()) return res.status(400).json({ erro: 'Mensagem vazia' });
+  const pauta = db.prepare('SELECT id, titulo FROM pautas WHERE id = ? AND excluido_em IS NULL').get(pautaId);
+  if (!pauta) return res.status(404).json({ erro: 'Pauta não encontrada' });
 
   const resultado = db.prepare(`
     INSERT INTO chat_mensagens (pauta_id, autor, texto, criado_em)
@@ -38,6 +41,7 @@ router.post('/pauta/:pautaId', (req, res) => {
   `).run(pautaId, autor, texto.trim(), new Date().toISOString());
 
   const nova = db.prepare('SELECT * FROM chat_mensagens WHERE id = ?').get(resultado.lastInsertRowid);
+  notificarEnvolvidos(req, pautaId, req.usuario.id, 'mensagem', `${autor} comentou na pauta "${pauta.titulo}".`);
   avisarMensagemNova(req, nova);
   res.status(201).json(nova);
 });

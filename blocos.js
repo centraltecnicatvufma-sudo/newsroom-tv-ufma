@@ -162,7 +162,10 @@ router.get('/', (req, res) => {
     // visível.
     if (b.pauta_id) {
       const pauta = db.prepare(`
-        SELECT pq.setor, p.cabeca_duracao_segundos, p.tempo_video_segundos
+        SELECT pq.setor, p.cabeca_duracao_segundos, p.tempo_video_segundos,
+          p.titulo AS pauta_titulo, p.data_fato AS pauta_data_fato,
+          p.tipo AS pauta_tipo, p.editoria AS pauta_editoria,
+          (SELECT group_concat(editoria, char(31)) FROM pauta_editorias WHERE pauta_id = p.id) AS pauta_editorias
         FROM pautas p
         LEFT JOIN programas_quadros pq ON pq.id = p.programa_id
         WHERE p.id = ?
@@ -170,10 +173,20 @@ router.get('/', (req, res) => {
       b.setor = pauta?.setor || null;
       b.pauta_cabeca_duracao_segundos = pauta?.cabeca_duracao_segundos || 0;
       b.pauta_tempo_video_segundos = pauta?.tempo_video_segundos || 0;
+      b.pauta_titulo = pauta?.pauta_titulo || '';
+      b.pauta_data_fato = pauta?.pauta_data_fato || '';
+      b.pauta_tipo = pauta?.pauta_tipo || '';
+      b.editorias = pauta?.pauta_editorias
+        ? pauta.pauta_editorias.split(String.fromCharCode(31))
+        : (pauta?.pauta_editoria ? [pauta.pauta_editoria] : []);
     } else {
       b.setor = null;
       b.pauta_cabeca_duracao_segundos = 0;
       b.pauta_tempo_video_segundos = 0;
+      b.pauta_titulo = '';
+      b.pauta_data_fato = '';
+      b.pauta_tipo = '';
+      b.editorias = [];
     }
   });
 

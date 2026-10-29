@@ -26,7 +26,20 @@
     table.lista-video td { padding: 10px 12px; font-size: 13px; border-top: 1px solid #f0f0f0; vertical-align: middle; }
     table.lista-video tr.linha-pendente { background: #fdf3e3; }
 
-    .status-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; color: #fff; font-weight: bold; white-space: nowrap; border: none; }
+    .status-badge { display: inline-flex; align-items: center; gap: 5px; font-family: inherit; font-size: 11px; padding: 3px 8px; border-radius: 4px; color: #fff; font-weight: bold; white-space: nowrap; border: none; }
+    .status-badge::before { content: ''; width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #fff; }
+    .status-em_producao::before { background: #ffd166; }
+    .status-em_gravacao::before { background: #8ecae6; }
+    .status-em_edicao::before { background: #d7b5ff; }
+    .status-aguardando_revisao::before { background: #ffc078; }
+    .status-falta_imagem::before,
+    .status-falta_sonora::before,
+    .status-falta_off::before {
+      background: #ff4040;
+      border: 1px solid #fff;
+      box-shadow: 0 0 0 1px #ff4040;
+    }
+    .status-concluida::before { background: #9be7ac; }
     .status-badge.clicavel { cursor: pointer; }
     .status-badge.clicavel:hover { filter: brightness(1.1); }
     .status-em_producao { background: #C98A1F; }
@@ -34,6 +47,7 @@
     .status-em_edicao { background: #6b3fa0; }
     .status-aguardando_revisao { background: #B85C38; }
     .status-concluida { background: #2e8b57; }
+    .status-falta_imagem, .status-falta_sonora, .status-falta_off { background: #5A021F; }
 
     .badge-pendente { font-size: 10px; background: #8D0333; color: #fff; padding: 2px 7px; border-radius: 4px; white-space: nowrap; margin-left: 6px; }
 
@@ -125,7 +139,7 @@
 
   <div class="topo">
     <h1>Edição de Vídeo</h1>
-    <div class="sub">Informe o tempo real do vídeo — salvar aqui já marca a pauta como Concluída. Clique no status pra alternar entre Aguardando Revisão e Concluída.</div>
+    <div class="sub">Atualize o status editorial e informe o tempo real do vídeo quando a edição estiver pronta.</div>
   </div>
 
   <div class="faixa-breaking" id="faixa-breaking">
@@ -143,18 +157,22 @@
         <option value="em_producao">🟡 Em Produção</option>
         <option value="em_gravacao">🔵 Em Gravação</option>
         <option value="em_edicao">🟣 Gravado / Em Edição</option>
-        <option value="concluida">🟢 Concluída</option>
+        <option value="aguardando_revisao">🟠 Aguardando Revisão</option>
+        <option value="falta_imagem">Falta imagem</option>
+        <option value="falta_sonora">Falta sonora</option>
+        <option value="falta_off">Falta OFF</option>
+        <option value="concluida">🟢 Editado</option>
       </select>
     </div>
     <div class="campo-busca">
       <label>Buscar</label>
-      <input type="text" id="filtro-busca" placeholder="🔍 Buscar por retranca...">
+      <input type="text" id="filtro-busca" placeholder="🔍 Buscar palavras no conteúdo...">
     </div>
     <span class="contador-pendentes" id="contador-pendentes"></span>
     <select id="modo-impressao-grade" title="O que imprimir na Grade">
       <option value="filtro">Imprimir: conforme filtro da tela</option>
       <option value="todos">Imprimir: Todos</option>
-      <option value="concluidos">Imprimir: Concluídos</option>
+      <option value="concluidos">Imprimir: Editados</option>
     </select>
     <button id="btn-imprimir-grade" title="Imprime a grade conforme a opção escolhida ao lado" style="padding:8px 14px; border-radius:6px; border:none; background:#5b6472; color:#fff; font-size:13px; cursor:pointer; white-space:nowrap;">🖨️ Imprimir Grade</button>
   </div>
@@ -219,33 +237,43 @@
 
     // ---- Edição de Vídeo ----
     const rotulosStatus = {
-      em_producao: '🟡 Em Produção', em_gravacao: '🔵 Em Gravação',
-      em_edicao: '🟣 Gravado / Em Edição', aguardando_revisao: '🟠 Aguardando Revisão',
-      concluida: '🟢 Concluída'
+      em_producao: 'Em Produção', em_gravacao: 'Em Gravação',
+      em_edicao: 'Gravado / Em Edição', aguardando_revisao: 'Aguardando Revisão',
+      falta_imagem: 'Falta imagem',
+      falta_sonora: 'Falta sonora',
+      falta_off: 'Falta OFF',
+      concluida: 'Editado'
     };
 
     // Rótulos específicos pra impressão da Grade — sem emoji, e
-    // "Gravado / Em Edição" fica só "Em Edição" (Concluída permanece
-    // igual ao rótulo de tela).
+    // "Gravado / Em Edição" fica só "Em Edição".
     const rotulosStatusImpressao = {
       em_producao: 'Em Produção', em_gravacao: 'Em Gravação',
       em_edicao: 'Em Edição', aguardando_revisao: 'Aguardando Revisão',
-      concluida: 'Concluída'
+      falta_imagem: 'Falta imagem', falta_sonora: 'Falta sonora',
+      falta_off: 'Falta OFF', concluida: 'Editado'
     };
-
-    // Esta tela é a ÚNICA que deixa escolher "Aguardando Revisão" — o
-    // clique no badge alterna entre Em Edição, Aguardando Revisão e
-    // Concluída (Em Edição entrou no ciclo por pedido do usuário: antes só
-    // dava pra sair de Em Edição salvando o Tempo do Vídeo, que já pula
-    // direto pra Concluída — agora também dá pra mandar só pra Aguardando
-    // Revisão, clicando no badge). Em Produção/Em Gravação não são
-    // controlados aqui (isso é papel de Reportagens); o badge fica só
-    // informativo nesses casos — clicável só quando já está num desses
-    // três status.
-    const CICLO_STATUS_BADGE = ['em_edicao', 'aguardando_revisao', 'concluida'];
+    const CICLO_STATUS_BADGE = ['em_edicao', 'falta_imagem', 'falta_sonora', 'falta_off', 'aguardando_revisao', 'concluida'];
 
     let pautasCache = [];
     let programasCache = [];
+    let usuarioAtual = null;
+    async function carregarUsuarioAtual() {
+      const resposta = await fetch('/auth/me');
+      if (!resposta.ok) throw new Error('Não foi possível verificar o usuário logado.');
+      usuarioAtual = await resposta.json();
+    }
+
+    function podeAlterarStatus(pauta) {
+      const designado = String(pauta.editor_imagens || '').trim().toLocaleLowerCase('pt-BR') ===
+        String(usuarioAtual?.nome || '').trim().toLocaleLowerCase('pt-BR');
+      return usuarioAtual?.nivel >= 5 || (usuarioAtual?.nivel >= 2 && designado);
+    }
+
+    function statusAtual(pauta) {
+      if (pauta.edicao_status === 'editado') return 'concluida';
+      return pauta.edicao_status || pauta.status;
+    }
 
     function escaparHtml(texto) {
       return String(texto == null ? '' : texto)
@@ -307,8 +335,8 @@
 
       return pautasCache
         .filter(p => {
-          if (status && p.status !== status) return false;
-          if (busca && !(p.titulo || '').toLowerCase().includes(busca)) return false;
+          if (status && statusAtual(p) !== status) return false;
+          if (busca && !(p.busca_conteudo || p.titulo || '').toLocaleLowerCase('pt-BR').includes(busca)) return false;
           return true;
         })
         .sort(compararPautas);
@@ -318,7 +346,7 @@
       const filtradas = pautasFiltradas();
       const area = document.getElementById('area-tabela');
 
-      const pendentes = pautasCache.filter(p => !p.tempo_video_segundos && p.status !== 'concluida').length;
+      const pendentes = pautasCache.filter(p => !p.tempo_video_segundos && statusAtual(p) !== 'concluida').length;
       document.getElementById('contador-pendentes').textContent =
         pendentes > 0 ? `⚠️ ${pendentes} sem Tempo do Vídeo` : '';
 
@@ -352,7 +380,7 @@
                   <div class="linha-tempo-video">
                     <input type="text" class="campo-tempo-video" data-id="${p.id}" placeholder="mm:ss"
                       value="${p.tempo_video_segundos ? formatarMMSS(p.tempo_video_segundos) : ''}">
-                    <button class="btn-salvar-tempo" data-id="${p.id}" title="Salva o tempo e marca a pauta como Concluída">✅</button>
+                    <button class="btn-salvar-tempo" data-id="${p.id}" title="Salva o tempo e marca a pauta como Editado">✅</button>
                   </div>
                 </td>
                 <td>
@@ -384,38 +412,51 @@
       });
     }
 
-    function statusBadgeHtml(p) {
-      const clicavel = CICLO_STATUS_BADGE.includes(p.status);
-      return `<span class="status-badge status-${p.status}${clicavel ? ' clicavel' : ''}"
-        ${clicavel ? `data-id="${p.id}" title="Clique para alternar entre Em Edição, Aguardando Revisão e Concluída"` : ''}>${rotulosStatus[p.status] || p.status}</span>`;
+    async function salvarStatusEdicao(id, status) {
+      const resposta = await fetch('/pautas/' + id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, status_unificado: true })
+      });
+      if (!resposta.ok) {
+        const erro = await resposta.json().catch(() => ({}));
+        alert(erro.erro || 'Não foi possível atualizar o status da edição.');
+        return;
+      }
+      await carregarPautas();
+      renderTabela();
     }
 
-    // Alterna entre Em Edição, Aguardando Revisão e Concluída — é a ÚNICA
-    // forma de marcar Aguardando Revisão no sistema inteiro. Concluída
-    // continua exigindo Tempo do Vídeo preenchido (validação já existe em
-    // pautas.js); se faltar, o backend recusa e o alert abaixo avisa,
-    // sem sujeira de lógica duplicada aqui.
+    function statusBadgeHtml(p) {
+      const atual = statusAtual(p);
+      const designado = String(p.editor_imagens || '').trim().toLocaleLowerCase('pt-BR') ===
+        String(usuarioAtual?.nome || '').trim().toLocaleLowerCase('pt-BR');
+      const tecnicoPodeRevisar = usuarioAtual?.nivel === 2 && atual === 'em_edicao';
+      const clicavel = CICLO_STATUS_BADGE.includes(atual) &&
+        (podeAlterarStatus(p) || tecnicoPodeRevisar);
+      const classe = `status-badge status-${atual}${clicavel ? ' clicavel' : ''}`;
+      const rotulo = rotulosStatus[atual] || atual;
+      return clicavel
+        ? `<button type="button" class="${classe}" data-id="${p.id}" title="Clique para avançar o status">${rotulo}</button>`
+        : `<span class="${classe}">${rotulo}</span>`;
+    }
+
     async function avancarStatusClicado(id) {
       const pauta = pautasCache.find(p => p.id === Number(id));
       if (!pauta) return;
-
-      const indiceAtual = CICLO_STATUS_BADGE.indexOf(pauta.status);
-      const proximo = CICLO_STATUS_BADGE[(indiceAtual + 1) % CICLO_STATUS_BADGE.length];
-
-      const resp = await fetch('/pautas/' + id, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: proximo })
-      });
-
-      if (!resp.ok) {
-        const erro = await resp.json().catch(() => ({}));
-        alert(erro.erro || 'Não foi possível mudar o status.');
-        return;
+      const atual = statusAtual(pauta);
+      const designado = String(pauta.editor_imagens || '').trim().toLocaleLowerCase('pt-BR') ===
+        String(usuarioAtual?.nome || '').trim().toLocaleLowerCase('pt-BR');
+      let proximo;
+      if (usuarioAtual?.nivel === 2 && !designado) {
+        proximo = 'aguardando_revisao';
+      } else if (usuarioAtual?.nivel >= 3 && usuarioAtual.nivel < 5 && !designado) {
+        const cicloProducao = ['em_edicao', 'aguardando_revisao', 'concluida'];
+        proximo = cicloProducao[(cicloProducao.indexOf(atual) + 1) % cicloProducao.length];
+      } else {
+        proximo = CICLO_STATUS_BADGE[(CICLO_STATUS_BADGE.indexOf(atual) + 1) % CICLO_STATUS_BADGE.length];
       }
-
-      await carregarPautas();
-      renderTabela();
+      await salvarStatusEdicao(id, proximo);
     }
 
     async function salvarTempoVideo(id) {
@@ -423,14 +464,14 @@
       const segundos = interpretarMMSS(campo.value);
       if (segundos === null) { alert('Digite o tempo no formato mm:ss (ex: 02:30).'); return; }
 
-      // Salvar o Tempo do Vídeo aqui SEMPRE marca a pauta como Concluída,
+      // Salvar o Tempo do Vídeo aqui SEMPRE marca a pauta como Editado,
       // não importa em qual status ela estava antes (Em Gravação, Em
       // Edição, Aguardando Revisão...) — é o sinal final de que o vídeo
       // está pronto, revisado e com o tempo confirmado.
       const resp = await fetch('/pautas/' + id, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tempo_video_segundos: segundos, status: 'concluida' })
+        body: JSON.stringify({ tempo_video_segundos: segundos, status: 'concluida', status_unificado: true })
       });
 
       if (!resp.ok) {
@@ -456,7 +497,7 @@
     function listaParaImprimirGrade() {
       const modo = document.getElementById('modo-impressao-grade').value;
       if (modo === 'todos') return [...pautasCache].sort(compararPautas);
-      if (modo === 'concluidos') return pautasCache.filter(p => p.status === 'concluida').sort(compararPautas);
+      if (modo === 'concluidos') return pautasCache.filter(p => statusAtual(p) === 'concluida').sort(compararPautas);
       return pautasFiltradas();
     }
 
@@ -465,7 +506,7 @@
       const modo = document.getElementById('modo-impressao-grade').value;
       const statusFiltrado = document.getElementById('filtro-status').value;
       const sufixoTitulo = modo === 'todos' ? ' — Todos'
-        : modo === 'concluidos' ? ' — Concluídos'
+        : modo === 'concluidos' ? ' — Editados'
         : (statusFiltrado ? ' — ' + rotulosStatusImpressao[statusFiltrado] : '');
 
       document.getElementById('titulo-impressao-grade').textContent = 'Edição de Vídeo' + sufixoTitulo;
@@ -493,7 +534,7 @@
     document.getElementById('btn-imprimir-grade').addEventListener('click', executarImpressaoGrade);
 
     (async function init() {
-      await Promise.all([carregarProgramas(), carregarPautas()]);
+      await Promise.all([carregarUsuarioAtual(), carregarProgramas(), carregarPautas()]);
       renderTabela();
     })();
   </script>
